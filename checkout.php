@@ -27,28 +27,6 @@ function generateUniqueTransactionID()
     return uniqid('FITLIFE_', true);
 }
 
-// Function to log subscription
-function logSubscription($plan, $price, $description)
-{
-    global $mysqli;
-
-    // Retrieve user's email from the session
-    $userEmail = isset($_SESSION['username']) ? $_SESSION['username'] : '';
-
-    // Generate a unique transaction ID
-    $transactionID = generateUniqueTransactionID();
-
-    // Insert the transaction into the database
-    $query = "INSERT INTO transactions (transaction_id, user_email, plan, price, description) 
-              VALUES ('$transactionID', '$userEmail', '$plan', $price, '$description')";
-    $result = $mysqli->query($query);
-
-    if (!$result) {
-        // Error handling: Unable to insert into the database
-        echo '<div class="alert alert-danger" role="alert">Error processing subscription. Please try again.</div>';
-    }
-}
-
 // Retrieve user's information from the session (assuming you stored it during login)
 $loggedInUsername = isset($_SESSION['username']) ? $_SESSION['username'] : '';
 $userInfo = [];
@@ -166,22 +144,26 @@ if ($loggedInUsername) {
             background-color: #0056b3;
         }
 
-        .alert {
-            margin-top: 20px;
+        /* Style for form sections */
+        .form-section {
+            border: 1px solid #ddd;
             padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .qr-code-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .qr-code-image {
+            max-width: 800px;
+            max-height: 800px;
+            width: auto;
+            height: auto;
             border-radius: 5px;
-        }
-
-        .alert-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            display: block;
+            margin: 0 auto;
         }
     </style>
 </head>
@@ -292,11 +274,6 @@ if ($loggedInUsername) {
                     echo '<div class="alert alert-danger" role="alert">Invalid file type. Please upload a valid image file.</div>';
                 }
             }
-
-            // Display GCash payment details
-            $gcashNumber = $_POST['gcashNumber'];
-            $referenceNumber = $_POST['referenceNumber'];
-            echo '<div class="alert alert-success" role="alert">GCash Payment Details: Number: ' . $gcashNumber . ', Reference Number: ' . $referenceNumber . '</div>';
         }
         ?>
 
@@ -345,10 +322,14 @@ if ($loggedInUsername) {
             // Handle the case where plan details are not provided
             echo '<div class="alert alert-danger" role="alert">Invalid plan details.</div>';
         }
+
+        // Retrieve additional user input (GCash number and reference number)
+        $gcashNumber = isset($_POST['gcashNumber']) ? $_POST['gcashNumber'] : '';
+        $referenceNumber = isset($_POST['referenceNumber']) ? $_POST['referenceNumber'] : '';
         ?>
 
         <!-- Subscription Checkout Form -->
-        <form method="post" action="" enctype="multipart/form-data">
+        <form method="post" action="">
             <!-- Personal Details Section -->
             <div class="form-section">
                 <h3>Personal Details</h3>
@@ -370,42 +351,42 @@ if ($loggedInUsername) {
                     <input type="email" class="form-control" id="email" name="email"
                         value="<?php echo htmlspecialchars($userInfo['email']); ?>" readonly>
                 </div>
-            </div>
 
-            <!-- QR Code Image Placeholder Section -->
-            <!-- This section is added to display the QR code image placeholder -->
-            <div class="form-section">
-                <h3>GCash Payment</h3>
-                <div class="form-group">
-                    <label for="qrCode">Scan QR Code</label>
-                    <img src="<?php echo $tierQRImages[$plan]; ?>" class="qr-code-image" alt="QR Code" />
-                </div>
-            </div>
 
-            <!-- Proof of Payment Section -->
-            <div class="form-section">
-                <h3>Proof of Payment</h3>
-                <div class="form-group">
-                    <label for="proofOfPayment">Upload a screenshot or photo of your payment transaction:</label>
-                    <input type="file" class="form-control-file" id="proofOfPayment" name="proofOfPayment"
-                        accept="image/*" required>
+                <!-- QR Code Image Placeholder Section -->
+                <!-- This section is added to display the QR code image placeholder -->
+                <div class="form-section">
+                    <h3>GCash Payment</h3>
+                    <div class="form-group">
+                        <label for="qrCode">Scan QR Code</label>
+                        <img src="<?php echo $tierQRImages[$plan]; ?>" class="qr-code-image" alt="QR Code" />
+                    </div>
                 </div>
-            </div>
 
-            <!-- GCash and Reference Number Section -->
-            <div class="form-section">
-                <h3>GCash Payment Details</h3>
-                <div class="form-group">
-                    <label for="gcashNumber">GCash Number:</label>
-                    <input type="text" class="form-control" id="gcashNumber" name="gcashNumber" required>
+                <!-- Proof of Payment Section -->
+                <div class="form-section">
+                    <h3>Proof of Payment</h3>
+                    <div class="form-group">
+                        <label for="proofOfPayment">Upload a screenshot or photo of your payment transaction:</label>
+                        <input type="file" class="form-control-file" id="proofOfPayment" name="proofOfPayment"
+                            accept="image/*" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="referenceNumber">Reference Number:</label>
-                    <input type="text" class="form-control" id="referenceNumber" name="referenceNumber" required>
-                </div>
-            </div>
 
-            <button type="submit" class="btn btn-primary">Complete Subscription</button>
+                <!-- GCash and Reference Number Section -->
+                <div class="form-section">
+                    <h3>GCash Payment Details</h3>
+                    <div class="form-group">
+                        <label for="gcashNumber">GCash Number:</label>
+                        <input type="text" class="form-control" id="gcashNumber" name="gcashNumber" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="referenceNumber">Reference Number:</label>
+                        <input type="text" class="form-control" id="referenceNumber" name="referenceNumber" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Complete Subscription</button>
         </form>
         <!-- End Subscription Checkout Form -->
     </div>
