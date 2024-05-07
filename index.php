@@ -142,8 +142,7 @@ session_start();
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['username'])) {
-                                        // If user is logged in, show a personalized greeting, cart icon, and logout button
-                                        echo '<li class="nav-item"><a class="nav-link" href="cart.php"><i class="fas fa-shopping-cart"></i></a></li>'; // Add this line for the cart icon
+                                        // If user is logged in, show name and logout button
                                         echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="logout.php">Logout</a></li>';
                                     } else {

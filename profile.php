@@ -290,9 +290,7 @@ function calculateBMI($weight, $height)
                                 $currentPage = basename($_SERVER['PHP_SELF']);
 
                                 if (isset($_SESSION['username'])) {
-                                    // If user is logged in, show a personalized greeting, cart icon, and logout button
-                                    echo '<li class="nav-item"><a class="nav-link" href="cart.php"><i class="fas fa-shopping-cart"></i></a></li>'; // Add this line for the cart icon
-                                
+
                                     // Check if the current page is the profile.php, set as active
                                     $profileClass = ($currentPage == 'profile.php') ? 'active' : '';
                                     echo '<li class="nav-item ' . $profileClass . '"><a class="nav-link" href="profile.php">' . $_SESSION['username'] . '</a></li>';
