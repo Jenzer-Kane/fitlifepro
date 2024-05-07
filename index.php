@@ -158,25 +158,7 @@ session_start();
                 </div>
             </div>
         </header>
-        <!-- SOCIAL ICONS -->
-        <div class="left_icons float-left d-table" data-aos="fade-down">
-            <div class="icon_content d-table-cell align-middle">
-                <ul class="list-unstyled p-0 m-0">
-                    <li>
-                        <a href="#"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
-                    </li>
-                    <li>
-                        <a href="#"><i class="fa-brands fa-twitter" aria-hidden="true"></i></a>
-                    </li>
-                    <li>
-                        <a href="#"><i class="fa-brands fa-google-plus-g" aria-hidden="true"></i></a>
-                    </li>
-                    <li class="p-0">
-                        <a href="#"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
-                    </li>
-                </ul>
-            </div>
-        </div>
+
         <!-- BANNER SECTION -->
         <section class="banner-section">
             <div class="container">
@@ -903,18 +885,6 @@ session_start();
                                     </li>
                                 </ul>
                             </div>
-                            <h5>REPREHENDERIT IN VOUTA VELIT ESSE CILLUM</h5>
-                            <p>
-                                Duis aute irure dolor in reprehenderi in voluptate velit esse cillum dolore eu fugiat
-                                nulla pariatur.
-                                in reprehenderit in voluptateesse occaecat cuida at non proident, sunt in culpa qui
-                                officia deserun.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam tempor
-                                eros a tellus auctor, nec suscipit nunc dignissim. Ut suscipit gravida augue sed
-                                elementum. Sed sed luctus nisl. Donec scelerisque nisi in sodales mattis. Vestibulum
-                                suscipit odio ac enim blandit sollicitudin. Aliquam ultrices sem quis urna placerat
-                                interdum. Etiam rutrum, quam sagittis tristique mollis, libero arcu scelerisque erat,
-                                eget tincidunt eros diam quis nunc.
-                            </p>
                             <h5 class="contact">CONTACT US</h5>
                             <h2>SEND US A MESSAGE & JOIN OUR TEAM</h2>
                             <form class="contact-form blog-model-form">
@@ -988,18 +958,6 @@ session_start();
                                     </li>
                                 </ul>
                             </div>
-                            <h5>SOLUTA NOBIS OSE ALIGEN OPTIO CUMUE</h5>
-                            <p>
-                                Duis aute irure dolor in reprehenderi in voluptate velit esse cillum dolore eu fugiat
-                                nulla pariatur.
-                                in reprehenderit in voluptateesse occaecat cuida at non proident, sunt in culpa qui
-                                officia deserun.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam tempor
-                                eros a tellus auctor, nec suscipit nunc dignissim. Ut suscipit gravida augue sed
-                                elementum. Sed sed luctus nisl. Donec scelerisque nisi in sodales mattis. Vestibulum
-                                suscipit odio ac enim blandit sollicitudin. Aliquam ultrices sem quis urna placerat
-                                interdum. Etiam rutrum, quam sagittis tristique mollis, libero arcu scelerisque erat,
-                                eget tincidunt eros diam quis nunc.
-                            </p>
                             <h5 class="contact">CONTACT US</h5>
                             <h2>SEND US A MESSAGE & JOIN OUR TEAM</h2>
                             <form class="contact-form blog-model-form">

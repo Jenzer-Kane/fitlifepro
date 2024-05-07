@@ -190,7 +190,6 @@
             <div class="row">
                 <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                     <div class="team_member_content">
-                        <h5>COLLABORATORS</h5>
                         <h2>MADE POSSIBLE WITH THE HELP OF EXPERTS</h2>
                     </div>
                 </div>

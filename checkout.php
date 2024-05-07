@@ -388,9 +388,7 @@ if ($loggedInUsername) {
 
                 <button type="submit" class="btn btn-primary">Complete Subscription</button>
         </form>
-        <!-- End Subscription Checkout Form -->
     </div>
-    <!-- Add your existing script includes here -->
 </body>
 
 </html>

@@ -4,14 +4,21 @@ session_start();
 // Check if the form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check if the username and password are set in the POST data
-    if (isset ($_POST['username']) && isset ($_POST['password'])) {
+    if (isset($_POST['username']) && isset($_POST['password'])) {
         $username = $_POST['username'];
         $password = $_POST['password'];
+
+        // Check if it's an admin login attempt
+        if ($username === '0000' && $password === 'admin') {
+            $_SESSION['admin'] = true;
+            header("Location: admin_dashboard.php");
+            exit();
+        }
 
         // Database connection
         $conn = new mysqli('localhost', 'root', '', 'fitlifepro_register');
         if ($conn->connect_error) {
-            die ('Connection Failed: ' . $conn->connect_error);
+            die('Connection Failed: ' . $conn->connect_error);
         } else {
             // Retrieve hashed password from the database based on the entered username
             $stmt = $conn->prepare("SELECT password FROM registration WHERE username = ?");
