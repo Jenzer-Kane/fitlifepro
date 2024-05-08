@@ -239,14 +239,19 @@ if ($loggedInUsername) {
 
             // Insert the transaction into the database
             $transactionID = generateUniqueTransactionID();
+            $firstname = $userInfo['firstname'];
+            $lastname = $userInfo['lastname'];
             $userEmail = $_POST['email'];
             $plan = $_GET['plan'];
             $price = $_GET['price'];
             $description = urldecode($_GET['description']);
+            $gcashNumber = $_POST['gcashNumber'];
+            $referenceNumber = $_POST['referenceNumber'];
+
 
             // Insert the transaction into the database
-            $query = "INSERT INTO transactions (transaction_id, user_email, plan, price, description) 
-                      VALUES ('$transactionID', '$userEmail', '$plan', $price, '$description')";
+            $query = "INSERT INTO transactions (transaction_id, firstname, lastname, user_email, plan, price, description, gcash_number, reference_number) 
+          VALUES ('$transactionID', '$firstname', '$lastname', '$userEmail', '$plan', $price, '$description', '$gcashNumber', '$referenceNumber')";
             $result = $mysqli->query($query);
 
             if (!$result) {
@@ -254,27 +259,8 @@ if ($loggedInUsername) {
                 echo '<div class="alert alert-danger" role="alert">Error processing subscription. Please try again.</div>';
             }
 
-            // Validate and process the proof of payment file
-            if (isset($_FILES['proofOfPayment']) && $_FILES['proofOfPayment']['error'] === UPLOAD_ERR_OK) {
-                $targetDir = "uploads/";
-                $proofOfPaymentFileName = basename($_FILES["proofOfPayment"]["name"]);
-                $targetFilePath = $targetDir . $proofOfPaymentFileName;
-                $fileType = pathinfo($targetFilePath, PATHINFO_EXTENSION);
-
-                // Check if the file is a valid image
-                $validImageTypes = array("jpg", "jpeg", "png", "gif");
-                if (in_array(strtolower($fileType), $validImageTypes)) {
-                    // Move the file to the specified directory
-                    if (move_uploaded_file($_FILES["proofOfPayment"]["tmp_name"], $targetFilePath)) {
-                        echo '<div class="alert alert-success" role="alert">Proof of payment uploaded successfully!</div>';
-                    } else {
-                        echo '<div class="alert alert-danger" role="alert">Error uploading proof of payment. Please try again.</div>';
-                    }
-                } else {
-                    echo '<div class="alert alert-danger" role="alert">Invalid file type. Please upload a valid image file.</div>';
-                }
-            }
         }
+
         ?>
 
 
@@ -354,22 +340,11 @@ if ($loggedInUsername) {
 
 
                 <!-- QR Code Image Placeholder Section -->
-                <!-- This section is added to display the QR code image placeholder -->
                 <div class="form-section">
                     <h3>GCash Payment</h3>
                     <div class="form-group">
-                        <label for="qrCode">Scan QR Code</label>
+                        <label for="qrCode">Scan the QR Code and pay required amount.</label>
                         <img src="<?php echo $tierQRImages[$plan]; ?>" class="qr-code-image" alt="QR Code" />
-                    </div>
-                </div>
-
-                <!-- Proof of Payment Section -->
-                <div class="form-section">
-                    <h3>Proof of Payment</h3>
-                    <div class="form-group">
-                        <label for="proofOfPayment">Upload a screenshot or photo of your payment transaction:</label>
-                        <input type="file" class="form-control-file" id="proofOfPayment" name="proofOfPayment"
-                            accept="image/*" required>
                     </div>
                 </div>
 

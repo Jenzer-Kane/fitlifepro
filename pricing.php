@@ -5,18 +5,6 @@ session_start();
 // Database connection file
 require 'database.php';
 
-// Fetch subscriber counts for each tier
-$query = "SELECT plan, subscriber_count FROM subscriptions";
-$result = $mysqli->query($query);
-
-// Initialize an associative array to store subscriber counts
-$subscriberCounts = [];
-if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $subscriberCounts[$row['plan']] = $row['subscriber_count'];
-    }
-}
-
 // Close the database connection
 $mysqli->close();
 ?>

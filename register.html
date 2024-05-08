@@ -263,10 +263,11 @@ body {
             <div class="input-box">
                 <input type="text" class="form-control" placeholder="Last Name" id="lastname" name="lastname" pattern="[A-Za-z ]+" title="Please enter only alphabetical characters and spaces" required>
             </div>
-            <div class="gender">
+            <div class="radio-button">
                 <div>
-                 <label for="male" class="radio-inline"><input type="radio" name="gender" id="male">    Male    </label>
-                    <label for="female" class="radio-inline"><input type="radio" name="gender" id="female">    Female    </label>
+                    <label for="male" class="radio-inline"><input type="radio" name="gender" id="male" value="male" required> Male </label>
+                    <label for="female" class="radio-inline"><input type="radio" name="gender" id="female" value="female" required> Female </label>                    
+                </div>
             </div>
             <div class="input-box">
                 <input type="text" class="form-control" placeholder="Email" id="email" name="email" required>

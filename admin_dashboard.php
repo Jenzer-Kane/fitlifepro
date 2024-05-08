@@ -1,14 +1,18 @@
 <?php
 session_start();
 
+// Include database connection
+include 'database.php';
+
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: admin_login.php");
     exit();
 }
 
-// Admin dashboard content
-// Display subscription requests, monitoring options, etc.
+// Retrieve data from the registration table
+$sql = "SELECT * FROM registration";
+$result = $mysqli->query($sql);
 ?>
 
 <!-- HTML content for admin dashboard -->
@@ -56,17 +60,6 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
 
         }
 
-        .navbar::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('./assets/images/your-banner-image.jpg') center/cover;
-            z-index: -1;
-        }
-
         .navbar-nav {
             margin-left: auto;
         }
@@ -83,11 +76,6 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
             color: #007bff;
         }
 
-        .banner-section {
-            position: relative;
-            z-index: 1;
-            /* Ensure the banner content is above the background image */
-        }
 
         .team_member_box_content2 img {
             border-radius: 50%;
@@ -125,29 +113,39 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
                         </button>
                         <div class="collapse navbar-collapse" id="navbarSupportedContent">
                             <ul class="navbar-nav ml-auto">
+                                <li class="nav-item">
+                                </li>
+                                <li class="nav-item">
+                                </li>
+                                <li class="nav-item">
                                 <li class="nav-item active">
-                                    <a class="nav-link" href="./admin_dashboard.php">Home</a>
+                                    <a class="nav-link" href="./admin_dashboard.php">Members</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./about.php">Subscribers</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./services.php">Requests</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./collaborators.php">Collaborators</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./pricing.php">Pricing</a>
+                                    <a class="nav-link" href="./admin_subscription_approval.php">Transactions</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link contact_btn" href="./contact.php">Contact</a>
+                                </li>
+                                <li class="nav-item">
+                                </li>
+                                <li class="nav-item">
+                                <li class="nav-item">
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link contact_btn" href="./contact.php">Inquiries</a>
                                 </li>
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
                                         // If admin is logged in, display "Admin" instead of username
-                                        echo '<li class="nav-item"><a class="nav-link" href="#">Admin</a></li>';
+                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Admin</a></li>';
+
                                     } elseif (isset($_SESSION['username'])) {
                                         // If user is logged in, show name and logout button
                                         echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
@@ -167,5 +165,47 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
                 </div>
             </div>
         </header>
+    </div> <!-- Closing banner-section-outer -->
+
+    <div class="container">
+        <h2>Members</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Gender</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                if ($result && $result->num_rows > 0) {
+                    // Output data of each row
+                    while ($row = $result->fetch_assoc()) {
+                        // Handle undefined keys
+                        $id = isset($row["id"]) ? $row["id"] : "";
+                        $firstname = isset($row["firstname"]) ? $row["firstname"] : "";
+                        $lastname = isset($row["lastname"]) ? $row["lastname"] : "";
+                        $gender = isset($row["gender"]) ? $row["gender"] : "";
+                        $email = isset($row["email"]) ? $row["email"] : "";
+
+                        // Add style attribute to center align the values
+                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $firstname . "</td><td style='text-align: center;'>" . $lastname . "</td><td style='text-align: center;'>" . $gender . "</td><td style='text-align: center;'>" . $email . "</td></tr>";
+                    }
+                } else {
+                    // Display a message if no data is found
+                    echo "<tr><td colspan='4' style='text-align: center;'>No ID found.</td></tr>";
+                }
+                ?>
+            </tbody>
+        </table>
+    </div>
 
 </html>
+
+<?php
+// Close the database connection
+$mysqli->close();
+?>
