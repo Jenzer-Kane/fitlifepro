@@ -19,7 +19,7 @@ $result = $mysqli->query($sql);
 <html>
 
 <head>
-    <title>Admin Home | FITLIFE PRO</title>
+    <title>Transactions | FITLIFE PRO ADMIN</title>
     <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
@@ -76,7 +76,6 @@ $result = $mysqli->query($sql);
             color: #007bff;
         }
 
-
         .team_member_box_content2 img {
             border-radius: 50%;
             overflow: hidden;
@@ -87,6 +86,11 @@ $result = $mysqli->query($sql);
             /* Set the desired height */
             object-fit: cover;
             /* Maintain the aspect ratio and cover the container */
+        }
+
+        .table-responsive {
+            width: 100%;
+            /* Adjust this value to set the width of the table */
         }
     </style>
 </head>
@@ -167,18 +171,24 @@ $result = $mysqli->query($sql);
         </header>
     </div> <!-- Closing banner-section-outer -->
 
-    <div class="container">
+    <div class="container-fluid"> <!-- Changed from container to container-fluid -->
         <h2>Transactions</h2>
-        <table class="table">
+        <table class="table table-bordered table-striped" style="width: 100%;">
+            <!-- Added style="width: 100%;" to ensure table takes up whole width -->
             <thead>
                 <tr>
                     <th>ID</th>
                     <th>Transaction ID</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
                     <th>User Email</th>
                     <th>Plan</th>
-                    <th>Price</th>
                     <th>Description</th>
-                    <th>Payment Status</th>
+                    <th>Price</th>
+                    <th>GCash Number</th>
+                    <th>Reference Number</th>
+                    <th>Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -189,23 +199,73 @@ $result = $mysqli->query($sql);
                         // Handle undefined keys
                         $id = isset($row["id"]) ? $row["id"] : "";
                         $transaction_id = isset($row["transaction_id"]) ? $row["transaction_id"] : "";
+                        $firstname = isset($row["firstname"]) ? $row["firstname"] : "";
+                        $lastname = isset($row["lastname"]) ? $row["lastname"] : "";
                         $user_email = isset($row["user_email"]) ? $row["user_email"] : "";
                         $plan = isset($row["plan"]) ? $row["plan"] : "";
+                        $description = isset($row["description"]) ? $row["description"] : "";
                         $price = isset($row["price"]) ? $row["price"] : "";
                         $gcash_number = isset($row["gcash_number"]) ? $row["gcash_number"] : "";
                         $reference_number = isset($row["reference_number"]) ? $row["reference_number"] : "";
+                        $status = isset($row["status"]) ? $row["status"] : "";
 
                         // Add style attribute to center align the values
-                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $transaction_id . "</td><td style='text-align: center;'>" . $user_email . "</td><td style='text-align: center;'>" . $plan . "</td><td style='text-align: center;'>" . $price . "</td><td style='text-align: center;'>" . $gcash_number . "</td><td style='text-align: center;'>" . $reference_number . "</td></tr>";
+                        echo "<tr>
+                            <td style='text-align: center;'>" . $id . "</td>
+                            <td style='text-align: center;'>" . $transaction_id . "</td>
+                            <td style='text-align: center;'>" . $firstname . "</td>
+                            <td style='text-align: center;'>" . $lastname . "</td>
+                            <td style='text-align: center;'>" . $user_email . "</td>
+                            <td style='text-align: center;'>" . $plan . "</td>
+                            <td style='text-align: center;'>" . $description . "</td>
+                            <td style='text-align: center;'>" . $price . "</td>
+                            <td style='text-align: center;'>" . $gcash_number . "</td>
+                            <td style='text-align: center;'>" . $reference_number . "</td>
+                            <td style='text-align: center;'>" . $status . "</td>
+                            <td style='text-align: center;'>";
+
+                        if ($status === 'Pending') {
+                            echo "
+                                <form id='emailForm$id' action='process_approval.php' method='post'>
+                                    <input type='hidden' name='reference_number' value='$reference_number'>
+                                    <input type='hidden' name='email' id='email_$id'>
+                                    <input type='hidden' name='plan' id='plan_$id'>
+                                    <input type='hidden' name='description' id='description_$id' value='$description'>
+                                    <input type='hidden' name='price' id='price_$id'>
+                                    <input type='hidden' name='status' id='status_$id' value='Pending'>
+                                    <button type='button' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Approved\", \"$status\")' class='btn btn-success'>Approve</button>
+                                    <button type='button' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Disapproved\", \"$status\")' class='btn btn-danger'>Disapprove</button>                                    
+                                </form>
+                            ";
+                        }
+
+                        echo "</td></tr>";
                     }
                 } else {
                     // Display a message if no data is found
-                    echo "<tr><td colspan='4' style='text-align: center;'>No ID found.</td></tr>";
+                    echo "<tr><td colspan='10' style='text-align: center;'>No transactions found.</td></tr>";
                 }
                 ?>
             </tbody>
         </table>
     </div>
+
+    <script>
+        function populateFields(id, email, plan, price, description) {
+            document.getElementById('email_' + id).value = email;
+            document.getElementById('plan_' + id).value = plan;
+            document.getElementById('price_' + id).value = price;
+            document.getElementById('description_' + id).value = description;
+            document.getElementById('status_' + id).value = status;
+            document.getElementById('emailForm' + id).submit();
+        }
+
+        // JavaScript function to handle the success of approval
+        function handleApprovalSuccess() {
+            alert('Email sent successfully!'); // You can customize this alert message
+            location.reload(); // Reload the page to reflect the updated status
+        }
+    </script>
 
 </html>
 

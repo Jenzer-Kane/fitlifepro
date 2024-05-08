@@ -19,7 +19,7 @@ $result = $mysqli->query($sql);
 <html>
 
 <head>
-    <title>Admin Home | FITLIFE PRO</title>
+    <title>Members | FITLIFE PRO ADMIN</title>
     <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
@@ -87,6 +87,11 @@ $result = $mysqli->query($sql);
             /* Set the desired height */
             object-fit: cover;
             /* Maintain the aspect ratio and cover the container */
+        }
+
+        .table-responsive {
+            width: 100%;
+            /* Adjust this value to set the width of the table */
         }
     </style>
 </head>
@@ -167,9 +172,10 @@ $result = $mysqli->query($sql);
         </header>
     </div> <!-- Closing banner-section-outer -->
 
-    <div class="container">
+    <div class="container-fluid"> <!-- Changed from container to container-fluid -->
         <h2>Members</h2>
-        <table class="table">
+        <table class="table table-bordered table-striped" style="width: 100%;">
+            <!-- Added style="width: 100%;" to ensure table takes up whole width -->
             <thead>
                 <tr>
                     <th>ID</th>
