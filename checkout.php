@@ -175,68 +175,6 @@ if ($loggedInUsername) {
         <?php
         // Check if the form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Handle the subscription checkout logic here
-            // You can process the form data, update the user's subscription status, etc.
-            // For this example, we'll just display a success message and send an email
-            echo '<div class="alert alert-success" role="alert">Subscription successful! Thank you for subscribing to FitLifePro!</div>';
-
-            // Send email using PHPMailer
-            $to = $_POST['email'];
-            $plan = $_GET['plan'];
-            $price = $_GET['price'];
-            $description = urldecode($_GET['description']);
-
-            // Create a PHPMailer instance
-            $mail = new PHPMailer\PHPMailer\PHPMailer();
-
-            try {
-                // Server settings
-                $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com'; // Gmail SMTP server
-                $mail->SMTPAuth = true;
-                $mail->Username = 'fitlifepro2024@gmail.com'; // Gmail email address
-                $mail->Password = 'wnoa azlq gxqc peef'; // The app password  generated
-                $mail->SMTPSecure = 'tls'; // Use 'tls' or 'ssl'
-                $mail->Port = 587; // TCP port to connect to
-        
-                // Sender information
-                $mail->setFrom('fitlifepro2024@gmail.com', 'FitLifePro'); // company email address
-        
-                // Recipient information
-                $mail->addAddress($to);
-
-                // Email content
-                $mail->isHTML(true);
-                $mail->Subject = 'Subscription Confirmation';
-                $mail->Body = 'Thank you for subscribing to our service! Your subscription details: Plan: ' . $plan . ', Price: ' . $price . ', Description: ' . $description;
-
-                // Attach a file based on the subscription tier
-                $attachmentPath = '';
-                switch ($plan) {
-                    case 'essential':
-                        $attachmentPath = './src/ESSENTIALTIER.pdf';
-                        break;
-                    case 'premium':
-                        $attachmentPath = './src/PREMIUMTIER.pdf';
-                        break;
-                    case 'elite':
-                        $attachmentPath = './src/ELITETIER.pdf';
-                        break;
-                    default:
-                        // Handle the case when the plan is not recognized
-                        echo '<div class="alert alert-danger" role="alert">Invalid subscription tier.</div>';
-                        exit;
-                }
-
-                $mail->addAttachment($attachmentPath, $plan . '_TIER.pdf');
-
-                // Send the email
-                $mail->send();
-                echo '<div class="alert alert-success" role="alert">Subscriber content has been delivered to your email successfully!</div>';
-            } catch (Exception $e) {
-                echo '<div class="alert alert-danger" role="alert">Error sending email: ' . $mail->ErrorInfo . '</div>';
-            }
-
             // Insert the transaction into the database
             $transactionID = generateUniqueTransactionID();
             $firstname = $userInfo['firstname'];
@@ -248,22 +186,24 @@ if ($loggedInUsername) {
             $gcashNumber = $_POST['gcashNumber'];
             $referenceNumber = $_POST['referenceNumber'];
 
-
             // Insert the transaction into the database
             $query = "INSERT INTO transactions (transaction_id, firstname, lastname, user_email, plan, price, description, gcash_number, reference_number) 
-          VALUES ('$transactionID', '$firstname', '$lastname', '$userEmail', '$plan', $price, '$description', '$gcashNumber', '$referenceNumber')";
+                      VALUES ('$transactionID', '$firstname', '$lastname', '$userEmail', '$plan', $price, '$description', '$gcashNumber', '$referenceNumber')";
             $result = $mysqli->query($query);
 
             if (!$result) {
                 // Error handling: Unable to insert into the database
                 echo '<div class="alert alert-danger" role="alert">Error processing subscription. Please try again.</div>';
+            } else {
+                // Success message
+                echo '<div class="alert alert-success" role="alert">Thank you for subscribing to FitLifePro! Your subscription has been submitted for approval.</div>';
+                echo '<div class="alert alert-success" role="alert">Please allow up to 24 hours for processing. You will receive an email confirmation once your subscription is approved.</div>';
+
             }
-
         }
-
         ?>
 
-
+        <!-- Subscription Plan Details Section -->
         <?php
         // Define an associative array with tier-specific image placeholders
         $tierImages = [
@@ -308,10 +248,6 @@ if ($loggedInUsername) {
             // Handle the case where plan details are not provided
             echo '<div class="alert alert-danger" role="alert">Invalid plan details.</div>';
         }
-
-        // Retrieve additional user input (GCash number and reference number)
-        $gcashNumber = isset($_POST['gcashNumber']) ? $_POST['gcashNumber'] : '';
-        $referenceNumber = isset($_POST['referenceNumber']) ? $_POST['referenceNumber'] : '';
         ?>
 
         <!-- Subscription Checkout Form -->
@@ -337,31 +273,31 @@ if ($loggedInUsername) {
                     <input type="email" class="form-control" id="email" name="email"
                         value="<?php echo htmlspecialchars($userInfo['email']); ?>" readonly>
                 </div>
+            </div>
 
-
-                <!-- QR Code Image Placeholder Section -->
-                <div class="form-section">
-                    <h3>GCash Payment</h3>
-                    <div class="form-group">
-                        <label for="qrCode">Scan the QR Code and pay required amount.</label>
-                        <img src="<?php echo $tierQRImages[$plan]; ?>" class="qr-code-image" alt="QR Code" />
-                    </div>
+            <!-- QR Code Image Placeholder Section -->
+            <div class="form-section">
+                <h3>GCash Payment</h3>
+                <div class="form-group">
+                    <label for="qrCode">Scan the QR Code and pay required amount.</label>
+                    <img src="<?php echo $tierQRImages[$plan]; ?>" class="qr-code-image" alt="QR Code" />
                 </div>
+            </div>
 
-                <!-- GCash and Reference Number Section -->
-                <div class="form-section">
-                    <h3>GCash Payment Details</h3>
-                    <div class="form-group">
-                        <label for="gcashNumber">GCash Number:</label>
-                        <input type="text" class="form-control" id="gcashNumber" name="gcashNumber" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="referenceNumber">Reference Number:</label>
-                        <input type="text" class="form-control" id="referenceNumber" name="referenceNumber" required>
-                    </div>
+            <!-- GCash and Reference Number Section -->
+            <div class="form-section">
+                <h3>GCash Payment Details</h3>
+                <div class="form-group">
+                    <label for="gcashNumber">GCash Number:</label>
+                    <input type="text" class="form-control" id="gcashNumber" name="gcashNumber" required>
                 </div>
+                <div class="form-group">
+                    <label for="referenceNumber">Reference Number:</label>
+                    <input type="text" class="form-control" id="referenceNumber" name="referenceNumber" required>
+                </div>
+            </div>
 
-                <button type="submit" class="btn btn-primary">Complete Subscription</button>
+            <button type="submit" class="btn btn-primary">Complete Subscription</button>
         </form>
     </div>
 </body>
