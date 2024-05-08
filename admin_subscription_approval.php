@@ -233,8 +233,9 @@ $result = $mysqli->query($sql);
                                     <input type='hidden' name='description' id='description_$id' value='$description'>
                                     <input type='hidden' name='price' id='price_$id'>
                                     <input type='hidden' name='status' id='status_$id' value='Pending'>
-                                    <button type='button' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Approved\", \"$status\")' class='btn btn-success'>Approve</button>
-                                    <button type='button' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Disapproved\", \"$status\")' class='btn btn-danger'>Disapprove</button>                                    
+                                    <button type='submit' name='approve' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Approved\", \"$status\")' class='btn btn-success'>Approve</button>
+                                    <button type='submit' name='disapprove' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Disapproved\", \"$status\")' class='btn btn-danger'>Disapprove</button>
+
                                 </form>
                             ";
                         }
@@ -251,7 +252,8 @@ $result = $mysqli->query($sql);
     </div>
 
     <script>
-        function populateFields(id, email, plan, price, description) {
+        // JavaScript function to populate fields and submit the form
+        function populateFields(id, email, plan, price, description, status) {
             document.getElementById('email_' + id).value = email;
             document.getElementById('plan_' + id).value = plan;
             document.getElementById('price_' + id).value = price;
