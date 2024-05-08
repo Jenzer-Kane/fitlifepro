@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reference_number'], $
             if (sendEmail($email, $plan, $price, $description)) {
                 // Email sent successfully
                 // Redirect back to admin_subscription_approval.php
-                header("Location: admin_subscription_approval.php");
+                header("Location: admin_subscription_approval.php?message=Transaction%20successfully%20approved.");
                 exit();
             } else {
                 // Error sending email

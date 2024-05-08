@@ -146,6 +146,7 @@ $result = $mysqli->query($sql);
                                 </li>
                                 <li class="nav-item">
                                     <?php
+
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
                                         // If admin is logged in, display "Admin" instead of username
                                         echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Admin</a></li>';
@@ -173,6 +174,13 @@ $result = $mysqli->query($sql);
 
     <div class="container-fluid"> <!-- Changed from container to container-fluid -->
         <h2>Transactions</h2>
+        <?php
+        // Display success message if present in the URL
+        $message = isset($_GET['message']) ? $_GET['message'] : '';
+        if (!empty($message)) {
+            echo '<div class="alert alert-success text-right" role="alert">' . htmlspecialchars($message) . '</div>';
+        }
+        ?>
         <table class="table table-bordered table-striped" style="width: 100%;">
             <!-- Added style="width: 100%;" to ensure table takes up whole width -->
             <thead>
