@@ -1,6 +1,27 @@
 <?php
 session_start();
 
+// Function to calculate BMI difference from standard range
+function getBMIDifference($bmi)
+{
+    // Define standard BMI range (adjust as needed)
+    $underweightThreshold = 18.5;
+    $normalWeightThreshold = 24.9;
+    $overweightThreshold = 29.9;
+
+    // Calculate the difference from each threshold
+    $underweightDifference = $bmi - $underweightThreshold;
+    $normalWeightDifference = abs($bmi - $normalWeightThreshold);
+    $overweightDifference = abs($bmi - $overweightThreshold);
+
+    // Return differences as an array
+    return [
+        'underweight' => $underweightDifference,
+        'normalWeight' => $normalWeightDifference,
+        'overweight' => $overweightDifference,
+    ];
+}
+
 // Initialize results arrays
 $intakeResults = null; // For caloric and protein intake
 $bmiResults = null; // For BMI calculation
@@ -35,7 +56,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
     // Retrieve user input for caloric and protein intake
-    $gmiWeight = floatval($_POST['weight']);
     $activityLevel = $_POST['activityLevel'];
     $goal = $_POST['goal'];
 
@@ -69,27 +89,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 }
 
-// Function to calculate BMI difference from standard range
-function getBMIDifference($bmi)
-{
-    // Define standard BMI range (adjust as needed)
-    $underweightThreshold = 18.5;
-    $normalWeightThreshold = 24.9;
-    $overweightThreshold = 29.9;
-
-    // Calculate the difference from each threshold
-    $underweightDifference = $bmi - $underweightThreshold;
-    $normalWeightDifference = abs($bmi - $normalWeightThreshold);
-    $overweightDifference = abs($bmi - $overweightThreshold);
-
-    // Return differences as an array
-    return [
-        'underweight' => $underweightDifference,
-        'normalWeight' => $normalWeightDifference,
-        'overweight' => $overweightDifference,
-    ];
-}
-
 // Function to calculate BMI
 function calculateBMI($weight, $height)
 {
@@ -103,6 +102,7 @@ function calculateBMI($weight, $height)
         return 0;
     }
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -347,21 +347,24 @@ function calculateBMI($weight, $height)
                                 <form method="post" action="" id="calculatorForm" onsubmit="return validateForm()">
                                     <!-- BMI Section -->
                                     <label for="bmiWeight">Weight (kg):</label>
-                                    <input type="text" name="bmiWeight" required>
+                                    <input type="text" name="bmiWeight" id="bmiWeight" required>
 
                                     <label for="bmiHeight">Height (cm):</label>
-                                    <input type="text" name="bmiHeight" required>
+                                    <input type="text" name="bmiHeight" id="bmiHeight" required>
 
-                                    <label for="activityLevel">Activity Level:</label>
+
+                                    <label for="activityLevel">Lifestyle:</label>
                                     <select name="activityLevel" required>
-                                        <option value="sedentary">Sedentary</option>
-                                        <option value="active">Active</option>
+                                        <option value="sedentary">Sedentary - Much resting and very little physical
+                                            exercise.</option>
+                                        <option value="active">Active - Every day tasks require physical activity.
+                                        </option>
                                     </select>
 
                                     <label for="goal">Select your goal:</label>
                                     <select name="goal" required>
-                                        <option value="bulking">Bulking</option>
-                                        <option value="cutting">Cutting</option>
+                                        <option value="bulking">Bulk - I want to get big and strong!</option>
+                                        <option value="cutting">Cut - I want to get lean and toned!</option>
                                     </select>
 
                                     <button type="submit">Calculate</button>
@@ -393,23 +396,40 @@ function calculateBMI($weight, $height)
                                     // Display Your BMI
                                     echo '<p><strong>Your BMI:</strong> ' . number_format($bmi, 2) . '</p>';
 
+                                    // Determine BMI category
+                                    if ($bmi >= 18.5 && $bmi < 25) {
+                                        $bmiCategory = "Normal";
+                                    } elseif ($bmi >= 25 && $bmi < 30) {
+                                        $bmiCategory = "Overweight";
+                                    } elseif ($bmi >= 30) {
+                                        $bmiCategory = "Obese";
+                                    } else {
+                                        $bmiCategory = "Underweight";
+                                    }
+
+                                    // Display BMI category
+                                    echo '<p><strong>Weight Status:</strong> ' . $bmiCategory . '</p>';
+
+
                                     // Display BMI Range
                                     $bmiDifference = $bmiResults['bmiDifference'];
-                                    $lowerNormalRange = $bmi - $bmiDifference['normalWeight'];
-                                    $upperNormalRange = $bmi + $bmiDifference['normalWeight'];
-                                    echo '<p><strong>Normal Range:</strong> ' . number_format($lowerNormalRange, 2) . ' - ' . number_format($upperNormalRange, 2) . ' / (' . number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperNormalRange, $bmiHeight), 2) . ' kg)</p>';
 
                                     // Display Underweight Range
                                     $lowerUnderweightRange = $bmi - $bmiDifference['underweight'];
-                                    echo '<p><strong>Underweight Range:</strong> 0 - ' . number_format($lowerUnderweightRange, 2) . ' / (0 kg - ' . number_format(getWeightFromBMI($lowerUnderweightRange, $bmiHeight), 2) . ' kg)</p>';
+                                    echo '<p><strong>Underweight BMI:</strong> ' . number_format($lowerUnderweightRange, 2) . ' & below ' . ' / (' . number_format(getWeightFromBMI($lowerUnderweightRange, $bmiHeight), 2) . ' kg & below)</p>';
+
+                                    // Display Normal Range
+                                    $lowerNormalRange = $lowerUnderweightRange;
+                                    $upperNormalRange = $bmi + $bmiDifference['normalWeight'];
+                                    echo '<p><strong>Normal BMI:</strong> ' . number_format($lowerNormalRange, 2) . ' - ' . number_format($upperNormalRange, 2) . ' / (' . number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperNormalRange, $bmiHeight), 2) . ' kg)</p>';
 
                                     // Display Overweight Range
                                     $upperOverweightRange = $bmi + $bmiDifference['overweight'];
-                                    echo '<p><strong>Overweight Range:</strong> ' . number_format($upperNormalRange, 2) . ' - ' . number_format($upperOverweightRange, 2) . ' / (' . number_format(getWeightFromBMI($upperNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg)</p>';
+                                    echo '<p><strong>Overweight BMI:</strong> ' . number_format($upperNormalRange, 2) . ' - ' . number_format($upperOverweightRange, 2) . ' / (' . number_format(getWeightFromBMI($upperNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg)</p>';
 
                                     // Display Obese Range
                                     $upperObeseRange = $bmi + $bmiDifference['overweight'] + $bmiDifference['normalWeight'];
-                                    echo '<p><strong>Obese Range:</strong> ' . number_format($upperOverweightRange, 2) . ' and above / (' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg - above)</p>';
+                                    echo '<p><strong>Obese BMI:</strong> ' . number_format($upperOverweightRange, 2) . ' & above / (' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg & above)</p>';
 
                                 }
 
@@ -433,9 +453,7 @@ function calculateBMI($weight, $height)
                                 // Display Caloric and Protein Intake Results
                                 if (isset($intakeResults)) {
                                     echo '<h2>Recommended Calorie and Protein Intake:</h2>';
-                                    echo '<p><strong>Your Weight:</strong> ' . $intakeResults['weight'] . ' kg</p>';
-                                    echo '<p><strong>Your Height:</strong> ' . $intakeResults['height'] . ' cm</p>';
-                                    echo '<p><strong>Goal:</strong> ' . ucfirst($goal) . '</p>';
+                                    echo '<p><strong>Selected Goal:</strong> ' . ucfirst($goal) . '</p>';
                                     echo '<p><strong>Lifestyle:</strong> ' . ucfirst($activityLevel) . '</p>';
                                     echo '<p><strong>Caloric Intake:</strong> ' . $intakeResults['caloricIntake'] . ' calories/day</p>';
                                     echo '<p><strong>Protein Intake:</strong> ' . $intakeResults['proteinIntake'] . ' grams/day</p>';
@@ -497,6 +515,32 @@ function calculateBMI($weight, $height)
             </section>
 
             <script>
+
+                // Weight and Height form function to allow only numbers in the input field
+                function allowOnlyNumbers(event) {
+                    // Allow: backspace, delete, tab, escape, enter and .
+                    if ([46, 8, 9, 27, 13, 110].indexOf(event.keyCode) !== -1 ||
+                        // Allow: Ctrl+A
+                        (event.keyCode === 65 && event.ctrlKey === true) ||
+                        // Allow: Ctrl+C
+                        (event.keyCode === 67 && event.ctrlKey === true) ||
+                        // Allow: Ctrl+X
+                        (event.keyCode === 88 && event.ctrlKey === true) ||
+                        // Allow: home, end, left, right
+                        (event.keyCode >= 35 && event.keyCode <= 39)) {
+                        // let it happen, don't do anything
+                        return;
+                    }
+                    // Ensure that it is a number and stop the keypress
+                    if ((event.shiftKey || (event.keyCode < 48 || event.keyCode > 57)) && (event.keyCode < 96 || event.keyCode > 105)) {
+                        event.preventDefault();
+                    }
+                }
+
+                // Attach the allowOnlyNumbers function to the keydown event of the input fields
+                document.getElementById("bmiWeight").addEventListener("keydown", allowOnlyNumbers);
+                document.getElementById("bmiHeight").addEventListener("keydown", allowOnlyNumbers);
+
                 // BMI Validation Function
                 function validateForm() {
                     var bmiWeightInput = document.querySelector('[name="bmiWeight"]');
