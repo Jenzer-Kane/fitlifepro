@@ -199,6 +199,24 @@ if ($loggedInUsername) {
                 echo '<div class="alert alert-success" role="alert">Thank you for subscribing to FitLifePro! Your subscription has been submitted for approval.</div>';
                 echo '<div class="alert alert-success" role="alert">Please allow up to 24 hours for processing. You will receive an email confirmation once your subscription is approved.</div>';
 
+                // Countdown and redirect
+                echo '<div id="countdown" class="alert alert-info" role="alert">Redirecting in <span id="countdown-number">5</span> seconds...</div>';
+
+                // Redirect to profile.php after countdown
+                echo '<script>
+                        var count = 5;
+                        var countdown = document.getElementById("countdown-number");
+                        var redirectInterval = setInterval(function() {
+                            count--;
+                            countdown.textContent = count;
+                            if (count <= 0) {
+                                clearInterval(redirectInterval);
+                                window.location.href = "profile.php";
+                            }
+                        }, 1000);
+                    </script>';
+
+
             }
         }
         ?>

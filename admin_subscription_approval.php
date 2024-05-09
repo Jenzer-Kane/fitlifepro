@@ -178,7 +178,7 @@ $result = $mysqli->query($sql);
         // Display success message if present in the URL
         $message = isset($_GET['message']) ? $_GET['message'] : '';
         if (!empty($message)) {
-            echo '<div class="alert alert-success text-right" role="alert">' . htmlspecialchars($message) . '</div>';
+            echo '<div class="alert alert-success text-center" role="alert">' . htmlspecialchars($message) . '</div>';
         }
         ?>
         <table class="table table-bordered table-striped" style="width: 100%;">

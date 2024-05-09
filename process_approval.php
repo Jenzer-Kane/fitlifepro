@@ -78,13 +78,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reference_number'], $
 
             if (sendEmail($email, $plan, $price, $description)) {
                 // Email sent successfully
-                // Redirect back to admin_subscription_approval.php
-                header("Location: admin_subscription_approval.php?message=Transaction%20successfully%20approved.");
-                exit();
+                // Fetch transaction details from the database
+                $approvedTransaction = $mysqli->query("SELECT * FROM transactions WHERE reference_number = '$reference_number'");
+                if ($approvedTransaction && $approvedTransaction->num_rows > 0) {
+                    $transactionData = $approvedTransaction->fetch_assoc();
+                    $approvedTransactionDetails = "Transaction approved. Transaction ID: " . $transactionData['transaction_id'] . " | Reference Number: " . $transactionData['reference_number'];
+                    // Redirect back to admin_subscription_approval.php with success message
+                    header("Location: admin_subscription_approval.php?message=" . urlencode($approvedTransactionDetails));
+                    exit();
+                } else {
+                    // Transaction details not found
+                    echo 'Error: Transaction details not found.';
+                }
             } else {
                 // Error sending email
                 echo 'Error sending email.';
             }
+
         } else {
             // Error updating status
             echo 'Error updating status: ' . $mysqli->error;
