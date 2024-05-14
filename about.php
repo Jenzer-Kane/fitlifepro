@@ -150,7 +150,7 @@
                 <div class="col-lg-7 col-md-6 col-sm-12 col-xs-12">
                     <div class="sub-banner_aboutus_image">
                         <figure class="mb-0">
-                            <img src="./assets/images/about_image.jpg" alt="" class="img-fluid">
+                            <img src="./assets/images/about_us.jpg" alt="" class="img-fluid">
                         </figure>
                     </div>
                 </div>
@@ -187,7 +187,8 @@
             </div>
         </div>
     </section>
-    <!-- STATISTICS SECTION -->
+
+    <!-- STATISTICS SECTION CHECK THE ORIGINAL 
 
     <figure class="stats_left_icon left_icon mb-0">
         <img src="./assets/images/stats_left_icon.png" alt="" class="img-fluid">
@@ -196,30 +197,8 @@
         <img src="./assets/images/stats_right_icon.png" alt="" class="img-fluid">
     </figure>
     </div>
-    </div>
+    </div> -->
 
-    <!-- VIDEO SECTION -->
-    <div class="video_section" id="video">
-        <div class="container">
-            <div class="row" data-aos="fade-up">
-                <div class="col-lg-12 col-md-12 col-sm-12">
-                    <div class="position-relative">
-                        <a class="popup-vimeo" href="">
-                            <div class="video_wrapper">
-                                <figure class="video_img mb-0">
-                                    <img class="thumb img-fluid" style="cursor: pointer"
-                                        src="./assets/images/video_img.jpg" alt="">
-                                </figure>
-                                <figure class="video_icon mb-0">
-                                    <img src="./assets/images/video_img_icon.png" alt="" class="img-fluid">
-                                </figure>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     <!-- CHOOSE US SECTION -->
     <section class="choose_us_section">
         <div class="container">

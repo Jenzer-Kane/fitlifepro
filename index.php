@@ -107,7 +107,7 @@ session_start();
                     <!-- Logo outside the navbar -->
                     <a class="navbar-brand mb-0" href="./index.php">
                         <figure class="mb-0">
-                            <img src="./assets/images/fitlife_pro_logo2.png" alt="" class="img-fluid">
+
                         </figure>
                     </a>
                     <!-- Navbar -->
@@ -236,14 +236,14 @@ session_start();
                                     <div class="banner-section-content">
                                         <div class="banner-section-wrapper">
                                             <h3>SUBSCRIBE TO FITLIFE PRO AND TRAIN</h3>
-                                            <h1 data-aos="fade-up">ANYWHERE</h1>
+                                            <h1 data-aos="fade-up">OPTIMALLY</h1>
                                             <figure class="white_line mb-0">
                                                 <img src="./assets/images/banner_white_line.png" alt=""
                                                     class="img-fluid">
                                             </figure>
                                         </div>
-                                        <p data-aos="fade-right">Get body-weight exercises and programs sent to your
-                                            phone. </p>
+                                        <p data-aos="fade-right">Get body-weight exercises and optimal programs to suit
+                                            your fitness goals! </p>
                                         <div class="btn_wrapper" data-aos="fade-up">
                                             <a class="text-decoration-none join_now_btn" href="./pricing.php">Join us
                                                 now

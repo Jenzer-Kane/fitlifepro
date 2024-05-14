@@ -375,6 +375,8 @@ function calculateBMI($weight, $height)
                 </div>
             </section>
 
+
+
             <!-- Results Section -->
             <section class="calculator-results">
                 <div class="container">
