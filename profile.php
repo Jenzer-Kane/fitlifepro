@@ -397,42 +397,40 @@ function calculateBMI($weight, $height)
                                     echo '<p><strong>Your BMI:</strong> ' . number_format($bmi, 2) . '</p>';
 
                                     // Determine BMI category
-                                    if ($bmi >= 18.5 && $bmi < 25) {
-                                        $bmiCategory = "Normal";
-                                    } elseif ($bmi >= 25 && $bmi < 30) {
-                                        $bmiCategory = "Overweight";
-                                    } elseif ($bmi >= 30) {
-                                        $bmiCategory = "Obese";
-                                    } else {
+                                    if ($bmi < 18.50) {
                                         $bmiCategory = "Underweight";
+                                    } elseif ($bmi >= 18.50 && $bmi <= 24.99) {
+                                        $bmiCategory = "Normal";
+                                    } elseif ($bmi >= 25 && $bmi <= 29.99) {
+                                        $bmiCategory = "Overweight";
+                                    } else {
+                                        $bmiCategory = "Obese";
                                     }
 
                                     // Display BMI category
-                                    echo '<p><strong>Weight Status:</strong> ' . $bmiCategory . '</p>';
-
+                                    echo '<p><strong>Weight Category:</strong> ' . $bmiCategory . '</p>';
 
                                     // Display BMI Range
                                     $bmiDifference = $bmiResults['bmiDifference'];
 
                                     // Display Underweight Range
                                     $lowerUnderweightRange = $bmi - $bmiDifference['underweight'];
-                                    echo '<p><strong>Underweight BMI:</strong> ' . number_format($lowerUnderweightRange, 2) . ' & below ' . ' / (' . number_format(getWeightFromBMI($lowerUnderweightRange, $bmiHeight), 2) . ' kg & below)</p>';
+                                    echo '<p><strong>Underweight BMI:</strong> 18.50 & below ' . ' / (' . number_format(getWeightFromBMI(18.5, $bmiHeight), 2) . ' kg & below)</p>';
 
                                     // Display Normal Range
-                                    $lowerNormalRange = $lowerUnderweightRange;
-                                    $upperNormalRange = $bmi + $bmiDifference['normalWeight'];
-                                    echo '<p><strong>Normal BMI:</strong> ' . number_format($lowerNormalRange, 2) . ' - ' . number_format($upperNormalRange, 2) . ' / (' . number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperNormalRange, $bmiHeight), 2) . ' kg)</p>';
+                                    $lowerNormalRange = 18.5;
+                                    $upperNormalRange = 24.9;
+                                    echo '<p><strong>Normal BMI:</strong> 18.50 - 24.99 / (' . number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperNormalRange, $bmiHeight), 2) . ' kg)</p>';
 
                                     // Display Overweight Range
-                                    $upperOverweightRange = $bmi + $bmiDifference['overweight'];
-                                    echo '<p><strong>Overweight BMI:</strong> ' . number_format($upperNormalRange, 2) . ' - ' . number_format($upperOverweightRange, 2) . ' / (' . number_format(getWeightFromBMI($upperNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg)</p>';
+                                    $lowerOverweightRange = 25;
+                                    $upperOverweightRange = 29.9;
+                                    echo '<p><strong>Overweight BMI:</strong> 25 - 29.99 / (' . number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg)</p>';
 
                                     // Display Obese Range
-                                    $upperObeseRange = $bmi + $bmiDifference['overweight'] + $bmiDifference['normalWeight'];
-                                    echo '<p><strong>Obese BMI:</strong> ' . number_format($upperOverweightRange, 2) . ' & above / (' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg & above)</p>';
-
+                                    $lowerObeseRange = 30;
+                                    echo '<p><strong>Obese BMI:</strong> ' . number_format($lowerObeseRange, 2) . ' & above ' . ' / (' . number_format(getWeightFromBMI($lowerObeseRange, $bmiHeight), 2) . ' kg & above)</p>';
                                 }
-
                                 /// Function to convert BMI to weight
                                 function getWeightFromBMI($bmi, $height)
                                 {
@@ -516,6 +514,23 @@ function calculateBMI($weight, $height)
 
             <script>
 
+                // Function to calculate weight from BMI and height
+                function getWeightFromBMI($bmi, $height) {
+                    // Check if height is provided and not zero
+                    if ($height !== null && $height != 0) {
+                        // Height in meters
+                        $heightInMeters = $height / 100;
+
+                        // Calculate weight from BMI
+                        $weight = $bmi * ($heightInMeters * $heightInMeters);
+
+                        return $weight;
+                    } else {
+                        // Return some default value or handle it as per your application logic
+                        return 0;
+                    }
+                }
+
                 // Weight and Height form function to allow only numbers in the input field
                 function allowOnlyNumbers(event) {
                     // Allow: backspace, delete, tab, escape, enter and .
@@ -543,23 +558,17 @@ function calculateBMI($weight, $height)
 
                 // BMI Validation Function
                 function validateForm() {
-                    var bmiWeightInput = document.querySelector('[name="bmiWeight"]');
-                    var bmiHeightInput = document.querySelector('[name="bmiHeight"]');
-                    var weightInput = document.querySelector('[name="weight"]');
-                    var activityLevelSelect = document.querySelector('[name="activityLevel"]');
-                    var goalSelect = document.querySelector('[name="goal"]');
+                    var bmiWeight = document.getElementById('bmiWeight').value;
+                    var bmiHeight = document.getElementById('bmiHeight').value;
 
-                    // Check if all required fields are filled with valid numeric values
-                    if (!isNaN(bmiWeightInput.value.trim()) && !isNaN(bmiHeightInput.value.trim())
-                        && !isNaN(weightInput.value.trim()) && activityLevelSelect.value !== '' && goalSelect.value !== '') {
-                        return true; // Allow form submission
-                    } else {
-                        alert('Please fill in all required fields with valid numeric values.'); // Provide feedback to the user
+                    // Check if bmiWeight and bmiHeight are valid numbers
+                    if (isNaN(bmiWeight) || isNaN(bmiHeight) || bmiWeight <= 0 || bmiHeight <= 0) {
+                        alert('Please enter valid numeric values for weight and height.');
                         return false; // Prevent form submission
                     }
+
+                    return true; // Allow form submission
                 }
-
-
                 function printResult() {
                     // Clone the results section along with styles and fonts
                     var resultsForm = document.querySelector('.results-form').cloneNode(true);
