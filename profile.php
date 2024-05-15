@@ -22,13 +22,31 @@ function getBMIDifference($bmi)
     ];
 }
 
-// Initialize results arrays
-$intakeResults = null; // For caloric and protein intake
-$bmiResults = null; // For BMI calculation
+// Function to calculate BMI
+function calculateBMI($weight, $height)
+{
+    // Check if height is provided and not zero
+    if ($height !== null && $height != 0) {
+        // BMI Formula: BMI = weight (kg) / (height (m) * height (m))
+        $heightInMeters = $height / 100; // Convert height to meters
+        return $weight / ($heightInMeters * $heightInMeters);
+    } else {
+        // Return some default value or handle it as per your application logic
+        return 0;
+    }
+}
 
-// Declare $lowerNormalRange and $upperNormalRange outside the if block
-$lowerNormalRange = null;
-$upperNormalRange = null;
+// Function to calculate body fat percentage using Navy Method for men
+function calculateBodyFatPercentageForMen($waist, $neck, $height)
+{
+    return (495 / (1.0324 - 0.19077 * log10($waist - $neck) + 0.15456 * log10($height))) - 450;
+}
+
+// Function to calculate body fat percentage using Navy Method for women
+function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
+{
+    return (495 / (1.29579 - 0.35004 * log10($waist + $hip - $neck) + 0.22100 * log10($height))) - 450;
+}
 
 // Check if the form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -61,21 +79,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Constants for caloric and protein calculations (adjust as needed)
     $caloriesPerKg = 30; // Adjust based on individual factors
-    $proteinRatioBulking = 1.8; // Adjust based on individual factors for bulking
-    $proteinRatioCutting = 1.2; // Adjust based on individual factors for cutting
+    $proteinRatioBulking = 1.8; // Adjust based on individual factors for weight-gain
+    $proteinRatioCutting = 1.2; // Adjust based on individual factors for weight-loss
 
     // Calculate caloric and protein intake based on the goal
-    if ($goal === 'bulking') {
+    if ($goal === 'weight-gain') {
         // Bulking: aim for 1.8g of protein per kg of body weight and a 300-500 calorie surplus
         $proteinIntake = $bmiWeight * $proteinRatioBulking;
         $caloricIntake = $bmiWeight * $caloriesPerKg + rand(300, 500);
-    } elseif ($goal === 'cutting') {
+    } elseif ($goal === 'weight-loss') {
         // Cutting: aim for 1.2g of protein per kg of body weight and a 200-500 calorie deficit
         $proteinIntake = $bmiWeight * $proteinRatioCutting;
         $caloricIntake = $bmiWeight * $caloriesPerKg - rand(200, 500);
     }
 
-    // Adjust caloric intake based on activity level
+    // caloric intake based on activity level
     if ($activityLevel === 'active') {
         $caloricIntake += 200; // Add 200 calories for active individuals
     }
@@ -87,20 +105,127 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'caloricIntake' => $caloricIntake,
         'proteinIntake' => $proteinIntake,
     ];
-}
 
-// Function to calculate BMI
-function calculateBMI($weight, $height)
-{
-    // Check if height is provided and not zero
-    if ($height !== null && $height != 0) {
-        // BMI Formula: BMI = weight (kg) / (height (m) * height (m))
-        $heightInMeters = $height / 100; // Convert height to meters
-        return $weight / ($heightInMeters * $heightInMeters);
-    } else {
-        // Return some default value or handle it as per your application logic
-        return 0;
+    // Retrieve user input for body fat calculation
+    $age = intval($_POST['age']);
+    $gender = $_POST['gender'];
+    $waist = floatval($_POST['waist']);
+    $neck = floatval($_POST['neck']);
+
+    // Function to calculate Fat Mass (FM)
+    function calculateFatMass($bodyFatPercentage, $weight)
+    {
+        return $bodyFatPercentage * $weight / 100;
     }
+
+    // Function to calculate Lean Mass (LM)
+    function calculateLeanMass($fatMass, $weight)
+    {
+        return $weight - $fatMass;
+    }
+
+    // Function to calculate Ideal Body Weight (IBW) using different formulas
+    function calculateIBW($height, $gender)
+    {
+        // Determine which formula to use based on gender
+        switch ($gender) {
+            case 'male':
+                // G. J. Hamwi Formula (1964)
+                $ibw = 48.0 + 2.7 * ($height - 60);
+                break;
+            case 'female':
+                // G. J. Hamwi Formula (1964)
+                $ibw = 45.5 + 2.2 * ($height - 60);
+                break;
+            default:
+                $ibw = 0;
+                break;
+        }
+        return $ibw;
+    }
+
+    // Perform body fat calculation
+    $bodyFatPercentage = calculateBodyFatPercentageForMen($waist, $neck, $bmiHeight);
+
+    // Calculate Fat Mass (FM)
+    $fatMass = calculateFatMass($bodyFatPercentage, $bmiWeight);
+
+    // Calculate Lean Mass (LM)
+    $leanMass = calculateLeanMass($fatMass, $bmiWeight);
+
+    // Calculate Ideal Body Weight (IBW)
+    $idealBodyWeight = calculateIBW($bmiHeight, $gender);
+
+    // Set body fat results
+    $bodyFatResults = [
+        'bodyFatPercentage' => $bodyFatPercentage,
+        'fatMass' => $fatMass,
+        'leanMass' => $leanMass,
+        'idealBodyWeight' => $idealBodyWeight,
+    ];
+
+    // Function to calculate Ideal Body Weight (IBW) using Hamwi's formula
+    function calculateHamwiIBW($height, $gender)
+    {
+        $heightInInches = $height * 0.393701; // Convert height to inches
+        $baseWeightMale = 48.0;
+        $baseWeightFemale = 45.5;
+
+        if ($gender === 'male') {
+            return $baseWeightMale + 2.7 * ($heightInInches - 60);
+        } elseif ($gender === 'female') {
+            return $baseWeightFemale + 2.2 * ($heightInInches - 60);
+        }
+    }
+
+    // Function to calculate Ideal Body Weight (IBW) using Devine's formula
+    function calculateDevineIBW($height, $gender)
+    {
+        $heightInInches = $height * 0.393701; // Convert height to inches
+        $baseWeightMale = 50.0;
+        $baseWeightFemale = 45.5;
+
+        if ($gender === 'male') {
+            return $baseWeightMale + 2.3 * ($heightInInches - 60);
+        } elseif ($gender === 'female') {
+            return $baseWeightFemale + 2.3 * ($heightInInches - 60);
+        }
+    }
+
+    // Function to calculate Ideal Body Weight (IBW) using Robinson's formula
+    function calculateRobinsonIBW($height, $gender)
+    {
+        $heightInInches = $height * 0.393701; // Convert height to inches
+        $baseWeightMale = 52.0;
+        $baseWeightFemale = 49.0;
+
+        if ($gender === 'male') {
+            return $baseWeightMale + 1.9 * ($heightInInches - 60);
+        } elseif ($gender === 'female') {
+            return $baseWeightFemale + 1.7 * ($heightInInches - 60);
+        }
+    }
+
+    // Function to calculate Ideal Body Weight (IBW) using Miller's formula
+    function calculateMillerIBW($height, $gender)
+    {
+        $heightInInches = $height * 0.393701; // Convert height to inches
+        $baseWeightMale = 56.2;
+        $baseWeightFemale = 53.1;
+
+        if ($gender === 'male') {
+            return $baseWeightMale + 1.41 * ($heightInInches - 60);
+        } elseif ($gender === 'female') {
+            return $baseWeightFemale + 1.36 * ($heightInInches - 60);
+        }
+    }
+
+    // Calculate ideal weight using different formulas
+    $hamwiIBW = calculateHamwiIBW($bmiHeight, $gender);
+    $devineIBW = calculateDevineIBW($bmiHeight, $gender);
+    $robinsonIBW = calculateRobinsonIBW($bmiHeight, $gender);
+    $millerIBW = calculateMillerIBW($bmiHeight, $gender);
+
 }
 
 ?>
@@ -326,296 +451,342 @@ function calculateBMI($weight, $height)
         </section>
     </div>
 
-    <<!DOCTYPE html>
-        <html lang="en">
+    <!DOCTYPE html>
+    <html lang="en">
 
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>BMI, Calorie and Protein Intake Calculator</title>
-        </head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>BMI, Calorie and Protein Intake Calculator</title>
+    </head>
 
-        <body>
-            <section class="calculator-section">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                            <div class="calculator-form form-section">
-                                <h2>BMI, Calorie and Protein Intake Calculator</h2>
+    <body>
+        <section class="calculator-section">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                        <div class="calculator-form form-section">
+                            <h2>BMI, Calorie and Protein Intake Calculator</h2>
 
-                                <!-- BMI, Calorie and Protein Intake Calculator Form -->
-                                <form method="post" action="" id="calculatorForm" onsubmit="return validateForm()">
-                                    <!-- BMI Section -->
-                                    <label for="bmiWeight">Weight (kg):</label>
-                                    <input type="text" name="bmiWeight" id="bmiWeight" required>
+                            <!-- Combined Form -->
+                            <form method="post" action="" id="calculatorForm" onsubmit="return validateForm()">
+                                <!-- BMI Section -->
+                                <label for="bmiWeight">Weight (kg):</label>
+                                <input type="text" name="bmiWeight" id="bmiWeight" required>
 
-                                    <label for="bmiHeight">Height (cm):</label>
-                                    <input type="text" name="bmiHeight" id="bmiHeight" required>
+                                <label for="bmiHeight">Height (cm):</label>
+                                <input type="text" name="bmiHeight" id="bmiHeight" required>
 
+                                <!-- Body Fat Calculator Section -->
+                                <label for="age">Age:</label>
+                                <input type="number" id="age" name="age" required>
 
-                                    <label for="activityLevel">Lifestyle:</label>
-                                    <select name="activityLevel" required>
-                                        <option value="sedentary">Sedentary - Much resting and very little physical
-                                            exercise.</option>
-                                        <option value="active">Active - Every day tasks require physical activity.
-                                        </option>
-                                    </select>
+                                <label for="gender">Gender:</label>
+                                <select id="gender" name="gender" required>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                </select>
 
-                                    <label for="goal">Select your goal:</label>
-                                    <select name="goal" required>
-                                        <option value="bulking">Bulk - I want to get big and strong!</option>
-                                        <option value="cutting">Cut - I want to get lean and toned!</option>
-                                    </select>
+                                <label for="waist">Waist (cm):</label>
+                                <input type="number" id="waist" name="waist" required>
 
-                                    <button type="submit">Calculate</button>
-                                </form>
-                            </div>
+                                <label for="neck">Neck (cm):</label>
+                                <input type="number" id="neck" name="neck" required>
+
+                                <!-- Calorie and Protein Intake Section -->
+                                <label for="activityLevel">Lifestyle:</label>
+                                <select name="activityLevel" required>
+                                    <option value="sedentary">Sedentary - Much resting and very little physical
+                                        exercise.</option>
+                                    <option value="active">Active - Every day tasks require physical activity.</option>
+                                </select>
+
+                                <label for="goal">Select your goal:</label>
+                                <select name="goal" required>
+                                    <option value="weight-gain">Weight-gain - I want to gain weight!</option>
+                                    <option value="weight-loss">Weight-loss - I want to lose weight!</option>
+                                </select>
+
+                                <button type="submit">Calculate</button>
+                            </form>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
+        </section>
 
 
+        <!-- Results Section -->
+        <section class="calculator-results">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                        <div class="results-form form-section">
+                            <?php
+                            if (isset($bmiResults['bmi'])) {
+                                $bmi = $bmiResults['bmi'];
 
-            <!-- Results Section -->
-            <section class="calculator-results">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                            <div class="results-form form-section">
-                                <?php
-                                if (isset($bmiResults['bmi'])) {
-                                    $bmi = $bmiResults['bmi'];
+                                echo '<h2>BMI Results:</h2>';
 
-                                    echo '<h2>BMI Results:</h2>';
+                                // Display Weight
+                                echo (isset($intakeResults['weight'])) ? '<p><strong>Your Weight:</strong> ' . $intakeResults['weight'] . ' kg</p>' : '';
 
-                                    // Display Weight
-                                    echo (isset($intakeResults['weight'])) ? '<p><strong>Your Weight:</strong> ' . $intakeResults['weight'] . ' kg</p>' : '';
+                                // Display Height
+                                echo (isset($intakeResults['height'])) ? '<p><strong>Your Height:</strong> ' . $intakeResults['height'] . ' cm</p>' : '';
 
-                                    // Display Height
-                                    echo (isset($intakeResults['height'])) ? '<p><strong>Your Height:</strong> ' . $intakeResults['height'] . ' cm</p>' : '';
+                                // Display Your BMI
+                                echo '<p><strong>Your BMI:</strong> ' . number_format($bmi, 2) . '</p>';
 
-                                    // Display Your BMI
-                                    echo '<p><strong>Your BMI:</strong> ' . number_format($bmi, 2) . '</p>';
-
-                                    // Determine BMI category
-                                    if ($bmi < 18.50) {
-                                        $bmiCategory = "Underweight";
-                                    } elseif ($bmi >= 18.50 && $bmi <= 24.99) {
-                                        $bmiCategory = "Normal";
-                                    } elseif ($bmi >= 25 && $bmi <= 29.99) {
-                                        $bmiCategory = "Overweight";
-                                    } else {
-                                        $bmiCategory = "Obese";
-                                    }
-
-                                    // Display BMI category
-                                    echo '<p><strong>Weight Category:</strong> ' . $bmiCategory . '</p>';
-
-                                    // Display BMI Range
-                                    $bmiDifference = $bmiResults['bmiDifference'];
-
-                                    // Display Underweight Range
-                                    $lowerUnderweightRange = $bmi - $bmiDifference['underweight'];
-                                    echo '<p><strong>Underweight BMI:</strong> 18.50 & below ' . ' / (' . number_format(getWeightFromBMI(18.5, $bmiHeight), 2) . ' kg & below)</p>';
-
-                                    // Display Normal Range
-                                    $lowerNormalRange = 18.5;
-                                    $upperNormalRange = 24.9;
-                                    echo '<p><strong>Normal BMI:</strong> 18.50 - 24.99 / (' . number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperNormalRange, $bmiHeight), 2) . ' kg)</p>';
-
-                                    // Display Overweight Range
-                                    $lowerOverweightRange = 25;
-                                    $upperOverweightRange = 29.9;
-                                    echo '<p><strong>Overweight BMI:</strong> 25 - 29.99 / (' . number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg)</p>';
-
-                                    // Display Obese Range
-                                    $lowerObeseRange = 30;
-                                    echo '<p><strong>Obese BMI:</strong> ' . number_format($lowerObeseRange, 2) . ' & above ' . ' / (' . number_format(getWeightFromBMI($lowerObeseRange, $bmiHeight), 2) . ' kg & above)</p>';
-                                }
-                                /// Function to convert BMI to weight
-                                function getWeightFromBMI($bmi, $height)
-                                {
-                                    // Check if height is provided and not zero
-                                    if ($height !== null && $height != 0) {
-                                        // BMI Formula: BMI = weight (kg) / (height (m) * height (m))
-                                        $heightInMeters = $height / 100; // Convert height to meters
-                                        $weight = $bmi * ($heightInMeters * $heightInMeters);
-
-                                        // Round the weight to two decimal places
-                                        return round($weight, 2);
-                                    } else {
-                                        // Return some default value or handle it as per your application logic
-                                        return 0;
-                                    }
+                                // Determine BMI category
+                                if ($bmi < 18.50) {
+                                    $bmiCategory = "Underweight";
+                                } elseif ($bmi >= 18.50 && $bmi <= 24.99) {
+                                    $bmiCategory = "Normal";
+                                } elseif ($bmi >= 25 && $bmi <= 29.99) {
+                                    $bmiCategory = "Overweight";
+                                } else {
+                                    $bmiCategory = "Obese";
                                 }
 
-                                // Display Caloric and Protein Intake Results
-                                if (isset($intakeResults)) {
-                                    echo '<h2>Recommended Calorie and Protein Intake:</h2>';
-                                    echo '<p><strong>Selected Goal:</strong> ' . ucfirst($goal) . '</p>';
-                                    echo '<p><strong>Lifestyle:</strong> ' . ucfirst($activityLevel) . '</p>';
-                                    echo '<p><strong>Caloric Intake:</strong> ' . $intakeResults['caloricIntake'] . ' calories/day</p>';
-                                    echo '<p><strong>Protein Intake:</strong> ' . $intakeResults['proteinIntake'] . ' grams/day</p>';
+                                // Display BMI category
+                                echo '<p><strong>Weight Category:</strong> ' . $bmiCategory . '</p>';
 
-                                    echo '<p><strong>Important Note:</strong> You can find the caloric and protein contents of the foods you eat on the nutrition labels on the packages.</p>';
+                                // Display BMI Range
+                                $bmiDifference = $bmiResults['bmiDifference'];
 
-                                    echo '<h2>Food Recommendations:</h2>';
-                                    echo '<h2>' . ucfirst($goal) . '</h2>';
-                                    echo '<ul>';
+                                // Underweight Range
+                                $lowerUnderweightRange = $bmi - $bmiDifference['underweight'];
+                                echo '<p><strong>Underweight BMI:</strong> 18.50 & below ' . ' / (' . number_format(getWeightFromBMI(18.5, $bmiHeight), 2) . ' kg & below)</p>';
+                                //  Normal Range
+                                $lowerNormalRange = 18.5;
+                                $upperNormalRange = 24.9;
+                                //  Overweight Range
+                                $lowerOverweightRange = 25;
+                                $upperOverweightRange = 29.9;
+                                // Obese Range
+                                $lowerObeseRange = 30;
+                                echo '<p><strong>Normal BMI:</strong> 18.50 - 24.99 / (' . number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2) . ' kg)</p>';
+                                echo '<p><strong>Overweight BMI:</strong> 25 - 29.99 / (' . number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg)</p>';
+                                echo '<p><strong>Obese BMI:</strong> ' . number_format($lowerObeseRange, 2) . ' & above ' . ' / (' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg & above)</p>';
+                            }
+                            /// Function to convert BMI to weight
+                            function getWeightFromBMI($bmi, $height)
+                            {
+                                // Check if height is provided and not zero
+                                if ($height !== null && $height != 0) {
+                                    // BMI Formula: BMI = weight (kg) / (height (m) * height (m))
+                                    $heightInMeters = $height / 100; // Convert height to meters
+                                    $weight = $bmi * ($heightInMeters * $heightInMeters);
 
-                                    if ($goal === 'cutting') {
-                                        $cuttingRecommendations = [
-                                            'Chicken breast',
-                                            'Fish (tuna, salmon, tilapia)',
-                                            'Eggs',
-                                            'Spinach',
-                                            'Avocado',
-                                            'Oats',
-                                            'Cottage Cheese',
-                                            'Greek Yogurt',
-                                            'Milk',
-                                            'Nuts and seeds (walnuts, almonds, pumpkin seeds, sunflower seeds)',
-                                            'Sweet potato',
-                                            'Vegetables (broccoli, bell peppers, onions, green beans, asparagus)',
-                                            'Fruits (bananas, apples, oranges, blueberries)'
-                                        ];
-                                        echo 'Cutting is a fitness phase dedicated to shedding excess body fat while preserving muscle mass. This is achieved through a combination of calorie deficit, cardiovascular exercise, and targeted resistance training. The goal is to achieve a lean and defined physique. <br><br/>';
-                                        foreach ($cuttingRecommendations as $recommendation) {
-                                            echo '<li>' . $recommendation . '</li>';
-                                        }
-                                    } elseif ($goal === 'bulking') {
-                                        $bulkingRecommendations = [
-                                            'Steak',
-                                            'Ground beef',
-                                            'Potatoes',
-                                            'Rice',
-                                            'Sweet potato',
-                                            'Whole wheat or wheat bread',
-                                            'Peanut butter'
-
-                                        ];
-                                        echo 'Bulking is a fitness phase emphasizing a calorie surplus to stimulate muscle growth. The objective is to increase overall body mass, particularly muscle, through resistance training and a calorie-rich diet. <br><br/>';
-                                        foreach ($bulkingRecommendations as $recommendation) {
-                                            echo '<li>' . $recommendation . '</li>';
-                                        }
-                                    }
-
-                                    echo '</ul>';
+                                    // Round the weight to two decimal places
+                                    return round($weight, 2);
+                                } else {
+                                    // Return some default value or handle it as per your application logic
+                                    return 0;
                                 }
-                                ?>
-                                <!-- Print Results button -->
-                                <?php if ($intakeResults !== null || $bmiResults !== null): ?>
-                                    <button onclick="printResult()">Print Results</button>
-                                <?php endif; ?>
-                            </div>
+                            }
+
+                            // Display the body fat percentage
+                            echo '<h2>Body Fat Results:</h2>';
+                            echo '<p><strong>Age:</strong> ' . $age . ' years</p>';
+                            echo '<p><strong>Gender:</strong> ' . ucfirst($gender) . '</p>';
+                            echo '<p><strong>Waist Circumference:</strong> ' . $waist . ' cm</p>';
+                            echo '<p><strong>Neck Circumference:</strong> ' . $neck . ' cm</p>';
+                            echo '<p><strong>Height:</strong> ' . $bmiHeight . ' cm</p>';
+                            echo '<p><strong>Body Fat Percentage:</strong> ' . number_format($bodyFatPercentage, 2) . '%</p>';
+                            echo '<p><strong>Fat Body Mass:</strong> ' . number_format($fatMass, 2) . ' kg</p>';
+                            echo '<p><strong>Lean Body Mass:</strong> ' . number_format($leanMass, 2) . ' kg</p>';
+                            // Display results
+                            echo '<h2>Ideal Weight Results:</h2>';
+                            echo '<p>Hamwi (1964): ' . number_format($hamwiIBW, 2) . ' kg</p>';
+                            echo '<p>Devine (1974): ' . number_format($devineIBW, 2) . ' kg</p>';
+                            echo '<p>Robinson (1983): ' . number_format($robinsonIBW, 2) . ' kg</p>';
+                            echo '<p>Miller (1983): ' . number_format($millerIBW, 2) . ' kg</p>';
+
+                            // Display Caloric and Protein Intake Results
+                            if (isset($intakeResults)) {
+                                echo '<h2>Recommended Calorie and Protein Intake:</h2>';
+                                echo '<p><strong>Selected Goal:</strong> ' . ucfirst($goal) . '</p>';
+                                echo '<p><strong>Lifestyle:</strong> ' . ucfirst($activityLevel) . '</p>';
+                                echo '<p><strong>Caloric Intake:</strong> ' . $intakeResults['caloricIntake'] . ' calories/day</p>';
+                                echo '<p><strong>Protein Intake:</strong> ' . $intakeResults['proteinIntake'] . ' grams/day</p>';
+
+                                echo '<p><strong>Important Note:</strong> You can find the caloric and protein contents of the foods you eat on the nutrition labels on the packages.</p>';
+
+                                echo '<h2>Food Recommendations:</h2>';
+                                echo '<h2>' . ucfirst($goal) . '</h2>';
+                                echo '<ul>';
+
+                                if ($goal === 'weight-loss') {
+                                    $weightlossRecommendations = [
+                                        'Chicken breast',
+                                        'Fish (tuna, salmon, tilapia)',
+                                        'Eggs',
+                                        'Spinach',
+                                        'Avocado',
+                                        'Oats',
+                                        'Cottage Cheese',
+                                        'Greek Yogurt',
+                                        'Milk',
+                                        'Nuts and seeds (walnuts, almonds, pumpkin seeds, sunflower seeds)',
+                                        'Sweet potato',
+                                        'Vegetables (broccoli, bell peppers, onions, green beans, asparagus)',
+                                        'Fruits (bananas, apples, oranges, blueberries)'
+                                    ];
+                                    echo 'Cutting is a fitness phase dedicated to shedding excess body fat while preserving muscle mass. This is achieved through a combination of calorie deficit, cardiovascular exercise, and targeted resistance training. The goal is to achieve a lean and defined physique. <br><br/>';
+                                    foreach ($weightlossRecommendations as $recommendation) {
+                                        echo '<li>' . $recommendation . '</li>';
+                                    }
+                                } elseif ($goal === 'weight-gain') {
+                                    $weightgainRecommendations = [
+                                        'Steak',
+                                        'Ground beef',
+                                        'Potatoes',
+                                        'Rice',
+                                        'Sweet potato',
+                                        'Whole wheat or wheat bread',
+                                        'Peanut butter'
+
+                                    ];
+                                    echo 'Weight-gain involves increasing calorie intake and adopting a balanced diet to achieve a healthy body mass. Incorporating strength training exercises can promote muscle growth. <br><br/>';
+                                    foreach ($weightgainRecommendations as $recommendation) {
+                                        echo '<li>' . $recommendation . '</li>';
+                                    }
+                                }
+
+                                echo '</ul>';
+
+                            }
+                            ?>
+                            <!-- Print Results button -->
+                            <?php if ($intakeResults !== null || $bmiResults !== null): ?>
+                                <button onclick="printResult()">Print Results</button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
+            </div>
+        </section>
 
-            <script>
+        <script>
 
-                // Function to calculate weight from BMI and height
-                function getWeightFromBMI($bmi, $height) {
-                    // Check if height is provided and not zero
-                    if ($height !== null && $height != 0) {
-                        // Height in meters
-                        $heightInMeters = $height / 100;
+            // Body Fat Calculator Validation Function
+            function validateBodyFatForm() {
+                var age = document.getElementById('age').value;
+                var waist = document.getElementById('waist').value;
+                var neck = document.getElementById('neck').value;
 
-                        // Calculate weight from BMI
-                        $weight = $bmi * ($heightInMeters * $heightInMeters);
-
-                        return $weight;
-                    } else {
-                        // Return some default value or handle it as per your application logic
-                        return 0;
-                    }
+                // Check if age, waist, and neck are valid numbers
+                if (isNaN(age) || isNaN(waist) || isNaN(neck) || age <= 0 || waist <= 0 || neck <= 0) {
+                    alert('Please enter valid numeric values for age, waist, and neck circumference.');
+                    return false; // Prevent form submission
                 }
 
-                // Weight and Height form function to allow only numbers in the input field
-                function allowOnlyNumbers(event) {
-                    // Allow: backspace, delete, tab, escape, enter and .
-                    if ([46, 8, 9, 27, 13, 110].indexOf(event.keyCode) !== -1 ||
-                        // Allow: Ctrl+A
-                        (event.keyCode === 65 && event.ctrlKey === true) ||
-                        // Allow: Ctrl+C
-                        (event.keyCode === 67 && event.ctrlKey === true) ||
-                        // Allow: Ctrl+X
-                        (event.keyCode === 88 && event.ctrlKey === true) ||
-                        // Allow: home, end, left, right
-                        (event.keyCode >= 35 && event.keyCode <= 39)) {
-                        // let it happen, don't do anything
-                        return;
-                    }
-                    // Ensure that it is a number and stop the keypress
-                    if ((event.shiftKey || (event.keyCode < 48 || event.keyCode > 57)) && (event.keyCode < 96 || event.keyCode > 105)) {
-                        event.preventDefault();
-                    }
+                return true; // Allow form submission
+            }
+
+
+            // Function to calculate weight from BMI and height
+            function getWeightFromBMI($bmi, $height) {
+                // Check if height is provided and not zero
+                if ($height !== null && $height != 0) {
+                    // Height in meters
+                    $heightInMeters = $height / 100;
+
+                    // Calculate weight from BMI
+                    $weight = $bmi * ($heightInMeters * $heightInMeters);
+
+                    return $weight;
+                } else {
+                    // Return some default value or handle it as per your application logic
+                    return 0;
+                }
+            }
+
+            // Weight and Height form function to allow only numbers in the input field
+            function allowOnlyNumbers(event) {
+                // Allow: backspace, delete, tab, escape, enter and .
+                if ([46, 8, 9, 27, 13, 110].indexOf(event.keyCode) !== -1 ||
+                    // Allow: Ctrl+A
+                    (event.keyCode === 65 && event.ctrlKey === true) ||
+                    // Allow: Ctrl+C
+                    (event.keyCode === 67 && event.ctrlKey === true) ||
+                    // Allow: Ctrl+X
+                    (event.keyCode === 88 && event.ctrlKey === true) ||
+                    // Allow: home, end, left, right
+                    (event.keyCode >= 35 && event.keyCode <= 39)) {
+                    // let it happen, don't do anything
+                    return;
+                }
+                // Ensure that it is a number and stop the keypress
+                if ((event.shiftKey || (event.keyCode < 48 || event.keyCode > 57)) && (event.keyCode < 96 || event.keyCode > 105)) {
+                    event.preventDefault();
+                }
+            }
+
+            // Attach the allowOnlyNumbers function to the keydown event of the input fields
+            document.getElementById("bmiWeight").addEventListener("keydown", allowOnlyNumbers);
+            document.getElementById("bmiHeight").addEventListener("keydown", allowOnlyNumbers);
+
+            // BMI Validation Function
+            function validateForm() {
+                var bmiWeight = document.getElementById('bmiWeight').value;
+                var bmiHeight = document.getElementById('bmiHeight').value;
+
+                // Check if bmiWeight and bmiHeight are valid numbers
+                if (isNaN(bmiWeight) || isNaN(bmiHeight) || bmiWeight <= 0 || bmiHeight <= 0) {
+                    alert('Please enter valid numeric values for weight and height.');
+                    return false; // Prevent form submission
                 }
 
-                // Attach the allowOnlyNumbers function to the keydown event of the input fields
-                document.getElementById("bmiWeight").addEventListener("keydown", allowOnlyNumbers);
-                document.getElementById("bmiHeight").addEventListener("keydown", allowOnlyNumbers);
+                return true; // Allow form submission
+            }
+            function printResult() {
+                // Clone the results section along with styles and fonts
+                var resultsForm = document.querySelector('.results-form').cloneNode(true);
 
-                // BMI Validation Function
-                function validateForm() {
-                    var bmiWeight = document.getElementById('bmiWeight').value;
-                    var bmiHeight = document.getElementById('bmiHeight').value;
-
-                    // Check if bmiWeight and bmiHeight are valid numbers
-                    if (isNaN(bmiWeight) || isNaN(bmiHeight) || bmiWeight <= 0 || bmiHeight <= 0) {
-                        alert('Please enter valid numeric values for weight and height.');
-                        return false; // Prevent form submission
-                    }
-
-                    return true; // Allow form submission
+                // Remove the "Print Result" button from the cloned content
+                var printButton = resultsForm.querySelector('button');
+                if (printButton) {
+                    printButton.remove();
                 }
-                function printResult() {
-                    // Clone the results section along with styles and fonts
-                    var resultsForm = document.querySelector('.results-form').cloneNode(true);
 
-                    // Remove the "Print Result" button from the cloned content
-                    var printButton = resultsForm.querySelector('button');
-                    if (printButton) {
-                        printButton.remove();
-                    }
+                // Create a new window for printing
+                var printWindow = window.open('', '_blank');
 
-                    // Create a new window for printing
-                    var printWindow = window.open('', '_blank');
+                // Include necessary stylesheets in the new window
+                var stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
+                stylesheets.forEach(function (stylesheet) {
+                    printWindow.document.head.appendChild(stylesheet.cloneNode(true));
+                });
 
-                    // Include necessary stylesheets in the new window
-                    var stylesheets = document.querySelectorAll('link[rel="stylesheet"]');
-                    stylesheets.forEach(function (stylesheet) {
-                        printWindow.document.head.appendChild(stylesheet.cloneNode(true));
-                    });
+                // Include inline styles in the new window
+                var inlineStyles = document.querySelectorAll('style');
+                inlineStyles.forEach(function (style) {
+                    printWindow.document.head.appendChild(style.cloneNode(true));
+                });
 
-                    // Include inline styles in the new window
-                    var inlineStyles = document.querySelectorAll('style');
-                    inlineStyles.forEach(function (style) {
-                        printWindow.document.head.appendChild(style.cloneNode(true));
-                    });
+                // Append the cloned content to the new window
+                printWindow.document.body.appendChild(resultsForm);
 
-                    // Append the cloned content to the new window
-                    printWindow.document.body.appendChild(resultsForm);
+                // Print the new window
+                printWindow.document.title = 'Calculation Result | FITLIFE PRO';
+                printWindow.print();
+            }
+        </script>
+        <!-- Latest compiled JavaScript -->
+        <script src="assets/js/jquery-3.6.0.min.js"></script>
+        <script src="assets/js/popper.min.js"></script>
+        <script src="assets/js/video-popup.js"></script>
+        <script src="assets/js/bootstrap.min.js"></script>
+        <script src="assets/js/custom.js"></script>
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script src="assets/js/owl.carousel.js"></script>
+        <script src="assets/js/carousel.js"></script>
+        <script src="assets/js/video-section.js"></script>
+        <script src="assets/js/counter.js"></script>
+        <script src="assets/js/animation.js"></script>
+    </body>
 
-                    // Print the new window
-                    printWindow.document.title = 'Calculation Result | FITLIFE PRO';
-                    printWindow.print();
-                }
-            </script>
-            <!-- Latest compiled JavaScript -->
-            <script src="assets/js/jquery-3.6.0.min.js"></script>
-            <script src="assets/js/popper.min.js"></script>
-            <script src="assets/js/video-popup.js"></script>
-            <script src="assets/js/bootstrap.min.js"></script>
-            <script src="assets/js/custom.js"></script>
-            <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-            <script src="assets/js/owl.carousel.js"></script>
-            <script src="assets/js/carousel.js"></script>
-            <script src="assets/js/video-section.js"></script>
-            <script src="assets/js/counter.js"></script>
-            <script src="assets/js/animation.js"></script>
-        </body>
-
-        </html>
+    </html>
