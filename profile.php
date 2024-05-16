@@ -1,6 +1,15 @@
 <?php
 session_start();
 
+// Initialize results arrays
+$intakeResults = null; // For caloric and protein intake
+$bmiResults = null; // For BMI calculation
+$bodyFatResults = null; // For body fat percentage and related calculations
+
+// Declare $lowerNormalRange and $upperNormalRange outside the if block
+$lowerNormalRange = null;
+$upperNormalRange = null;
+
 // Function to calculate BMI difference from standard range
 function getBMIDifference($bmi)
 {
@@ -20,32 +29,6 @@ function getBMIDifference($bmi)
         'normalWeight' => $normalWeightDifference,
         'overweight' => $overweightDifference,
     ];
-}
-
-// Function to calculate BMI
-function calculateBMI($weight, $height)
-{
-    // Check if height is provided and not zero
-    if ($height !== null && $height != 0) {
-        // BMI Formula: BMI = weight (kg) / (height (m) * height (m))
-        $heightInMeters = $height / 100; // Convert height to meters
-        return $weight / ($heightInMeters * $heightInMeters);
-    } else {
-        // Return some default value or handle it as per your application logic
-        return 0;
-    }
-}
-
-// Function to calculate body fat percentage using Navy Method for men
-function calculateBodyFatPercentageForMen($waist, $neck, $height)
-{
-    return (495 / (1.0324 - 0.19077 * log10($waist - $neck) + 0.15456 * log10($height))) - 450;
-}
-
-// Function to calculate body fat percentage using Navy Method for women
-function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
-{
-    return (495 / (1.29579 - 0.35004 * log10($waist + $hip - $neck) + 0.22100 * log10($height))) - 450;
 }
 
 // Check if the form is submitted
@@ -111,124 +94,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $gender = $_POST['gender'];
     $waist = floatval($_POST['waist']);
     $neck = floatval($_POST['neck']);
-
-    // Function to calculate Fat Mass (FM)
-    function calculateFatMass($bodyFatPercentage, $weight)
-    {
-        return $bodyFatPercentage * $weight / 100;
-    }
-
-    // Function to calculate Lean Mass (LM)
-    function calculateLeanMass($fatMass, $weight)
-    {
-        return $weight - $fatMass;
-    }
-
-    // Function to calculate Ideal Body Weight (IBW) using different formulas
-    function calculateIBW($height, $gender)
-    {
-        // Determine which formula to use based on gender
-        switch ($gender) {
-            case 'male':
-                // G. J. Hamwi Formula (1964)
-                $ibw = 48.0 + 2.7 * ($height - 60);
-                break;
-            case 'female':
-                // G. J. Hamwi Formula (1964)
-                $ibw = 45.5 + 2.2 * ($height - 60);
-                break;
-            default:
-                $ibw = 0;
-                break;
-        }
-        return $ibw;
-    }
+    $hip = isset($_POST['hip']) ? floatval($_POST['hip']) : 0;
+    $thigh = isset($_POST['thigh']) ? floatval($_POST['thigh']) : 0;
 
     // Perform body fat calculation
-    $bodyFatPercentage = calculateBodyFatPercentageForMen($waist, $neck, $bmiHeight);
+    if ($gender === 'female') {
+        $bodyFatPercentage = calculateBodyFatPercentageForWomen($waist, $neck, $hip, $bmiHeight);
+    } else {
+        $bodyFatPercentage = calculateBodyFatPercentageForMen($waist, $neck, $bmiHeight);
+    }
 
-    // Calculate Fat Mass (FM)
-    $fatMass = calculateFatMass($bodyFatPercentage, $bmiWeight);
+    // Calculate fat mass and lean mass
+    $fatMass = ($bodyFatPercentage / 100) * $bmiWeight;
+    $leanMass = $bmiWeight - $fatMass;
 
-    // Calculate Lean Mass (LM)
-    $leanMass = calculateLeanMass($fatMass, $bmiWeight);
+    // Calculate ideal body weight using different formulas
+    $heightInInches = $bmiHeight / 2.54; // Convert height to inches
+    $inchesOverFiveFeet = $heightInInches - 60;
 
-    // Calculate Ideal Body Weight (IBW)
-    $idealBodyWeight = calculateIBW($bmiHeight, $gender);
+    if ($gender === 'male') {
+        $hamwiIBW = 48.0 + 2.7 * $inchesOverFiveFeet;
+        $devineIBW = 50.0 + 2.3 * $inchesOverFiveFeet;
+        $robinsonIBW = 52.0 + 1.9 * $inchesOverFiveFeet;
+        $millerIBW = 56.2 + 1.41 * $inchesOverFiveFeet;
+    } else {
+        $hamwiIBW = 45.5 + 2.2 * $inchesOverFiveFeet;
+        $devineIBW = 45.5 + 2.3 * $inchesOverFiveFeet;
+        $robinsonIBW = 49.0 + 1.7 * $inchesOverFiveFeet;
+        $millerIBW = 53.1 + 1.36 * $inchesOverFiveFeet;
+    }
 
-    // Set body fat results
+    // Calculate healthy BMI range
+    $lowerNormalRange = 18.5 * (($bmiHeight / 100) ** 2);
+    $upperNormalRange = 24.9 * (($bmiHeight / 100) ** 2);
+
+    // Store the body fat results for displaying in the HTML later
     $bodyFatResults = [
+        'age' => $age,
+        'gender' => $gender,
+        'waist' => $waist,
+        'neck' => $neck,
+        'hip' => $hip,
+        'thigh' => $thigh,
+        'height' => $bmiHeight,
         'bodyFatPercentage' => $bodyFatPercentage,
         'fatMass' => $fatMass,
         'leanMass' => $leanMass,
-        'idealBodyWeight' => $idealBodyWeight,
+        'hamwiIBW' => $hamwiIBW,
+        'devineIBW' => $devineIBW,
+        'robinsonIBW' => $robinsonIBW,
+        'millerIBW' => $millerIBW,
+        'lowerNormalRange' => $lowerNormalRange,
+        'upperNormalRange' => $upperNormalRange,
     ];
-
-    // Function to calculate Ideal Body Weight (IBW) using Hamwi's formula
-    function calculateHamwiIBW($height, $gender)
-    {
-        $heightInInches = $height * 0.393701; // Convert height to inches
-        $baseWeightMale = 48.0;
-        $baseWeightFemale = 45.5;
-
-        if ($gender === 'male') {
-            return $baseWeightMale + 2.7 * ($heightInInches - 60);
-        } elseif ($gender === 'female') {
-            return $baseWeightFemale + 2.2 * ($heightInInches - 60);
-        }
-    }
-
-    // Function to calculate Ideal Body Weight (IBW) using Devine's formula
-    function calculateDevineIBW($height, $gender)
-    {
-        $heightInInches = $height * 0.393701; // Convert height to inches
-        $baseWeightMale = 50.0;
-        $baseWeightFemale = 45.5;
-
-        if ($gender === 'male') {
-            return $baseWeightMale + 2.3 * ($heightInInches - 60);
-        } elseif ($gender === 'female') {
-            return $baseWeightFemale + 2.3 * ($heightInInches - 60);
-        }
-    }
-
-    // Function to calculate Ideal Body Weight (IBW) using Robinson's formula
-    function calculateRobinsonIBW($height, $gender)
-    {
-        $heightInInches = $height * 0.393701; // Convert height to inches
-        $baseWeightMale = 52.0;
-        $baseWeightFemale = 49.0;
-
-        if ($gender === 'male') {
-            return $baseWeightMale + 1.9 * ($heightInInches - 60);
-        } elseif ($gender === 'female') {
-            return $baseWeightFemale + 1.7 * ($heightInInches - 60);
-        }
-    }
-
-    // Function to calculate Ideal Body Weight (IBW) using Miller's formula
-    function calculateMillerIBW($height, $gender)
-    {
-        $heightInInches = $height * 0.393701; // Convert height to inches
-        $baseWeightMale = 56.2;
-        $baseWeightFemale = 53.1;
-
-        if ($gender === 'male') {
-            return $baseWeightMale + 1.41 * ($heightInInches - 60);
-        } elseif ($gender === 'female') {
-            return $baseWeightFemale + 1.36 * ($heightInInches - 60);
-        }
-    }
-
-    // Calculate ideal weight using different formulas
-    $hamwiIBW = calculateHamwiIBW($bmiHeight, $gender);
-    $devineIBW = calculateDevineIBW($bmiHeight, $gender);
-    $robinsonIBW = calculateRobinsonIBW($bmiHeight, $gender);
-    $millerIBW = calculateMillerIBW($bmiHeight, $gender);
-
 }
 
+// Function to calculate BMI
+function calculateBMI($weight, $height)
+{
+    // Check if height is provided and not zero
+    if ($height !== null && $height != 0) {
+        // BMI Formula: BMI = weight (kg) / (height (m) * height (m))
+        $heightInMeters = $height / 100; // Convert height to meters
+        return $weight / ($heightInMeters * $heightInMeters);
+    } else {
+        // Return some default value or handle it as per your application logic
+        return 0;
+    }
+}
+
+// Function to calculate body fat percentage using Navy Method for men
+function calculateBodyFatPercentageForMen($waist, $neck, $height)
+{
+    return (495 / (1.0324 - 0.19077 * log10($waist - $neck) + 0.15456 * log10($height))) - 450;
+}
+
+// Function to calculate body fat percentage using Navy Method for women
+function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
+{
+    return (495 / (1.29579 - 0.35004 * log10($waist + $hip - $neck) + 0.22100 * log10($height))) - 450;
+}
 ?>
+
 
 <!DOCTYPE html>
 
@@ -457,7 +404,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>BMI, Calorie and Protein Intake Calculator</title>
+        <title>BMI, Body Fat, Calorie and Protein Intake Calculator</title>
     </head>
 
     <body>
@@ -466,7 +413,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="row">
                     <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                         <div class="calculator-form form-section">
-                            <h2>BMI, Calorie and Protein Intake Calculator</h2>
+                            <h2>BMI, Body Fat, Calorie and Protein Intake Calculator</h2>
 
                             <!-- Combined Form -->
                             <form method="post" action="" id="calculatorForm" onsubmit="return validateForm()">
@@ -492,6 +439,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 <label for="neck">Neck (cm):</label>
                                 <input type="number" id="neck" name="neck" required>
+
+                                <!-- Only for females -->
+                                <div id="hipSection" style="display: none;">
+                                    <label for="hip">Hip Circumference (cm):</label>
+                                    <input type="text" name="hip" id="hip">
+
+                                    <label for="thigh">Thigh Circumference (cm):</label>
+                                    <input type="text" name="thigh" id="thigh">
+                                </div>
+
 
                                 <!-- Calorie and Protein Intake Section -->
                                 <label for="activityLevel">Lifestyle:</label>
@@ -586,22 +543,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
                             }
 
-                            // Display the body fat percentage
-                            echo '<h2>Body Fat Results:</h2>';
-                            echo '<p><strong>Age:</strong> ' . $age . ' years</p>';
-                            echo '<p><strong>Gender:</strong> ' . ucfirst($gender) . '</p>';
-                            echo '<p><strong>Waist Circumference:</strong> ' . $waist . ' cm</p>';
-                            echo '<p><strong>Neck Circumference:</strong> ' . $neck . ' cm</p>';
-                            echo '<p><strong>Height:</strong> ' . $bmiHeight . ' cm</p>';
-                            echo '<p><strong>Body Fat Percentage:</strong> ' . number_format($bodyFatPercentage, 2) . '%</p>';
-                            echo '<p><strong>Fat Body Mass:</strong> ' . number_format($fatMass, 2) . ' kg</p>';
-                            echo '<p><strong>Lean Body Mass:</strong> ' . number_format($leanMass, 2) . ' kg</p>';
-                            // Display results
-                            echo '<h2>Ideal Weight Results:</h2>';
-                            echo '<p>Hamwi (1964): ' . number_format($hamwiIBW, 2) . ' kg</p>';
-                            echo '<p>Devine (1974): ' . number_format($devineIBW, 2) . ' kg</p>';
-                            echo '<p>Robinson (1983): ' . number_format($robinsonIBW, 2) . ' kg</p>';
-                            echo '<p>Miller (1983): ' . number_format($millerIBW, 2) . ' kg</p>';
+                            if (isset($bodyFatResults)) {
+                                // Display the body fat percentage
+                                echo '<h2>Body Fat Results:</h2>';
+                                echo '<p><strong>Age:</strong> ' . $age . ' years</p>';
+                                echo '<p><strong>Gender:</strong> ' . ucfirst($gender) . '</p>';
+                                echo '<p><strong>Waist Circumference:</strong> ' . $waist . ' cm</p>';
+                                echo '<p><strong>Neck Circumference:</strong> ' . $neck . ' cm</p>';
+                                echo '<p><strong>Height:</strong> ' . $bmiHeight . ' cm</p>';
+                                echo '<p><strong>Hip Circumference:</strong> ' . $hip . ' cm</p>';
+                                echo '<p><strong>Thigh Circumference:</strong> ' . $thigh . ' cm</p>';
+                                echo '<p><strong>Body Fat Percentage:</strong> ' . number_format($bodyFatPercentage, 2) . '%</p>';
+                                echo '<p><strong>Fat Body Mass:</strong> ' . number_format($fatMass, 2) . ' kg</p>';
+                                echo '<p><strong>Lean Body Mass:</strong> ' . number_format($leanMass, 2) . ' kg</p>';
+                                echo '<p><strong>Important Note:</strong> The results of these calculations are only an estimate since they are based on many different assumptions to make them as applicable to as many people as possible. For more accurate measurements of body fat, the use of instruments such as skin caliper, bioelectric impedance analysis or hydrostatic density testing is necessary.</p>';
+                                // Display results
+                                echo '<h2>Ideal Weight Results:</h2>';
+                                echo '<p>Hamwi (1964): ' . number_format($hamwiIBW, 2) . ' kg</p>';
+                                echo '<p>Devine (1974): ' . number_format($devineIBW, 2) . ' kg</p>';
+                                echo '<p>Robinson (1983): ' . number_format($robinsonIBW, 2) . ' kg</p>';
+                                echo '<p>Miller (1983): ' . number_format($millerIBW, 2) . ' kg</p>';
+                            }
+
 
                             // Display Caloric and Protein Intake Results
                             if (isset($intakeResults)) {
@@ -774,6 +737,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 printWindow.document.title = 'Calculation Result | FITLIFE PRO';
                 printWindow.print();
             }
+
+            // show hip and thigh when gender is female
+            document.getElementById('gender').addEventListener('change', function () {
+                var hipSection = document.getElementById('hipSection');
+                if (this.value === 'female') {
+                    hipSection.style.display = 'block';
+                } else {
+                    hipSection.style.display = 'none';
+                }
+            });
         </script>
         <!-- Latest compiled JavaScript -->
         <script src="assets/js/jquery-3.6.0.min.js"></script>
