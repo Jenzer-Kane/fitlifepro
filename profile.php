@@ -56,27 +56,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'bmiDifference' => getBMIDifference($bmi),
     ];
 
+    // Determine recommended goal based on BMI
+    if ($bmi < 18.50) {
+        $recommendedGoal = 'weight-gain';
+    } elseif ($bmi >= 18.50 && $bmi <= 24.99) {
+        $recommendedGoal = 'maintenance';
+    } else {
+        $recommendedGoal = 'weight-loss';
+    }
+
     // Retrieve user input for caloric and protein intake
     $activityLevel = $_POST['activityLevel'];
-    $goal = $_POST['goal'];
 
     // Constants for caloric and protein calculations (adjust as needed)
     $caloriesPerKg = 30; // Adjust based on individual factors
     $proteinRatioBulking = 1.8; // Adjust based on individual factors for weight-gain
     $proteinRatioCutting = 1.2; // Adjust based on individual factors for weight-loss
 
-    // Calculate caloric and protein intake based on the goal
-    if ($goal === 'weight-gain') {
+    // Calculate caloric and protein intake based on the recommended goal
+    if ($recommendedGoal === 'weight-gain') {
         // Bulking: aim for 1.8g of protein per kg of body weight and a 300-500 calorie surplus
         $proteinIntake = $bmiWeight * $proteinRatioBulking;
         $caloricIntake = $bmiWeight * $caloriesPerKg + rand(300, 500);
-    } elseif ($goal === 'weight-loss') {
+    } elseif ($recommendedGoal === 'weight-loss') {
         // Cutting: aim for 1.2g of protein per kg of body weight and a 200-500 calorie deficit
         $proteinIntake = $bmiWeight * $proteinRatioCutting;
         $caloricIntake = $bmiWeight * $caloriesPerKg - rand(200, 500);
+    } else {
+        // Maintenance: aim for 1.5g of protein per kg of body weight and maintain current caloric intake
+        $proteinIntake = $bmiWeight * 1.5;
+        $caloricIntake = $bmiWeight * $caloriesPerKg;
     }
 
-    // caloric intake based on activity level
+    // Caloric intake based on activity level
     if ($activityLevel === 'active') {
         $caloricIntake += 200; // Add 200 calories for active individuals
     }
@@ -87,7 +99,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'height' => $bmiHeight,
         'caloricIntake' => $caloricIntake,
         'proteinIntake' => $proteinIntake,
+        'goal' => $recommendedGoal,
     ];
+
+    // Assign the goal from intake results
+    $goal = $intakeResults['goal'];
 
     // Retrieve user input for body fat calculation
     $age = intval($_POST['age']);
@@ -458,12 +474,6 @@ function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
                                     <option value="active">Active - Every day tasks require physical activity.</option>
                                 </select>
 
-                                <label for="goal">Select your goal:</label>
-                                <select name="goal" required>
-                                    <option value="weight-gain">Weight-gain - I want to gain weight!</option>
-                                    <option value="weight-loss">Weight-loss - I want to lose weight!</option>
-                                </select>
-
                                 <button type="submit">Calculate</button>
                             </form>
                         </div>
@@ -568,16 +578,17 @@ function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
 
                             // Display Caloric and Protein Intake Results
                             if (isset($intakeResults)) {
-                                echo '<h2>Recommended Calorie and Protein Intake:</h2>';
-                                echo '<p><strong>Selected Goal:</strong> ' . ucfirst($goal) . '</p>';
+                                echo '<h2>Recommended Goal, Calorie and Protein Intake:</h2>';
+                                echo '<p><strong>Recommended Goal:</strong> ' . ucwords(str_replace('-', ' ', $intakeResults['goal'])) . '</p>';
                                 echo '<p><strong>Lifestyle:</strong> ' . ucfirst($activityLevel) . '</p>';
                                 echo '<p><strong>Caloric Intake:</strong> ' . $intakeResults['caloricIntake'] . ' calories/day</p>';
                                 echo '<p><strong>Protein Intake:</strong> ' . $intakeResults['proteinIntake'] . ' grams/day</p>';
 
                                 echo '<p><strong>Important Note:</strong> You can find the caloric and protein contents of the foods you eat on the nutrition labels on the packages.</p>';
 
+                                // Display food recommendations based on goal
                                 echo '<h2>Food Recommendations:</h2>';
-                                echo '<h2>' . ucfirst($goal) . '</h2>';
+                                echo '<h2>' . ucwords(str_replace('-', ' ', $goal)) . '</h2>';
                                 echo '<ul>';
 
                                 if ($goal === 'weight-loss') {
@@ -609,10 +620,26 @@ function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
                                         'Sweet potato',
                                         'Whole wheat or wheat bread',
                                         'Peanut butter'
-
                                     ];
                                     echo 'Weight-gain involves increasing calorie intake and adopting a balanced diet to achieve a healthy body mass. Incorporating strength training exercises can promote muscle growth. <br><br/>';
                                     foreach ($weightgainRecommendations as $recommendation) {
+                                        echo '<li>' . $recommendation . '</li>';
+                                    }
+                                } elseif ($goal === 'maintenance') {
+                                    $maintenanceRecommendations = [
+                                        'Chicken breast',
+                                        'Fish',
+                                        'Eggs',
+                                        'Quinoa',
+                                        'Brown rice',
+                                        'Mixed vegetables',
+                                        'Fruits (apple, orange, berries)',
+                                        'Nuts and seeds',
+                                        'Greek yogurt',
+                                        'Whole grains'
+                                    ];
+                                    echo 'Maintenance involves sustaining your current weight and body composition by balancing caloric intake with energy expenditure. Focus on a varied and balanced diet to maintain overall health. <br><br/>';
+                                    foreach ($maintenanceRecommendations as $recommendation) {
                                         echo '<li>' . $recommendation . '</li>';
                                     }
                                 }
