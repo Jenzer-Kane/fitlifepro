@@ -129,16 +129,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $inchesOverFiveFeet = $heightInInches - 60;
 
     if ($gender === 'male') {
-        $hamwiIBW = 48.0 + 2.7 * $inchesOverFiveFeet;
+        $hamwiIBW = 106 + (6 * $inchesOverFiveFeet);
         $devineIBW = 50.0 + 2.3 * $inchesOverFiveFeet;
         $robinsonIBW = 52.0 + 1.9 * $inchesOverFiveFeet;
         $millerIBW = 56.2 + 1.41 * $inchesOverFiveFeet;
     } else {
-        $hamwiIBW = 45.5 + 2.2 * $inchesOverFiveFeet;
+        $hamwiIBW = 100 + (5 * $inchesOverFiveFeet);
         $devineIBW = 45.5 + 2.3 * $inchesOverFiveFeet;
         $robinsonIBW = 49.0 + 1.7 * $inchesOverFiveFeet;
         $millerIBW = 53.1 + 1.36 * $inchesOverFiveFeet;
     }
+
+    // Convert the weight from pounds to kilograms
+    $hamwiIBW_kg = $hamwiIBW * 0.45359237;
 
     // Calculate healthy BMI range
     $lowerNormalRange = 18.5 * (($bmiHeight / 100) ** 2);
@@ -569,7 +572,7 @@ function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
                                 echo '<p><strong>Important Note:</strong> The results of these calculations are only an estimate since they are based on many different assumptions to make them as applicable to as many people as possible. For more accurate measurements of body fat, the use of instruments such as skin caliper, bioelectric impedance analysis or hydrostatic density testing is necessary.</p>';
                                 // Display results
                                 echo '<h2>Ideal Weight Results:</h2>';
-                                echo '<p>Hamwi (1964): ' . number_format($hamwiIBW, 2) . ' kg</p>';
+                                echo '<p>Hamwi (1964): ' . number_format($hamwiIBW_kg, 2) . ' kg</p>';
                                 echo '<p>Devine (1974): ' . number_format($devineIBW, 2) . ' kg</p>';
                                 echo '<p>Robinson (1983): ' . number_format($robinsonIBW, 2) . ' kg</p>';
                                 echo '<p>Miller (1983): ' . number_format($millerIBW, 2) . ' kg</p>';
@@ -607,7 +610,7 @@ function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
                                         'Vegetables (broccoli, bell peppers, onions, green beans, asparagus)',
                                         'Fruits (bananas, apples, oranges, blueberries)'
                                     ];
-                                    echo 'Cutting is a fitness phase dedicated to shedding excess body fat while preserving muscle mass. This is achieved through a combination of calorie deficit, cardiovascular exercise, and targeted resistance training. The goal is to achieve a lean and defined physique. <br><br/>';
+                                    echo 'Weight loss involves reducing overall body weight through a combination of a calorie deficit, dietary changes, and increased physical activity. The goal is to improve health and fitness by shedding excess fat and achieving a healthier body composition. <br><br/>';
                                     foreach ($weightlossRecommendations as $recommendation) {
                                         echo '<li>' . $recommendation . '</li>';
                                     }
