@@ -1,7 +1,21 @@
+Person A
+Weight - 72kg
+Height - 170cm
+Age - 22
 Waist - 85cm or 33in.
 Neck - 39 cm or 15in.
 Hips - 86 cm or 34 in. 
 Thigh - 56 cm or 22in
+
+
+Person B
+Weight - 77kg
+Height - 162cm
+Age - 48 
+Waist - 99cm or 38in.
+Neck - 44cm or 17in.
+Hips - 100cm or 39in.
+Thigh - 70cm or 27in.
 
 https://dtc.ucsf.edu/pdfs/FoodLists.pdf
 
