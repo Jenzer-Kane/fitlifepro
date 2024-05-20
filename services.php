@@ -144,6 +144,7 @@
                 </div>
             </div>
         </header>
+
         <!-- SUB BANNER SECTION -->
         <section class="banner-section">
             <div class="container">
@@ -308,6 +309,7 @@
             </div>
         </div>
     </section>
+
     <!-- OUR SCHEDULE SECTION -->
     <section class="our_schedule_section">
         <div class="container">

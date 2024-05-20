@@ -5,6 +5,7 @@ session_start();
 $intakeResults = null; // For caloric and protein intake
 $bmiResults = null; // For BMI calculation
 $bodyFatResults = null; // For body fat percentage and related calculations
+$mealPlan = null; // For meal planning
 
 // Declare $lowerNormalRange and $upperNormalRange outside the if block
 $lowerNormalRange = null;
@@ -166,6 +167,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'lowerNormalRange' => $lowerNormalRange,
         'upperNormalRange' => $upperNormalRange,
     ];
+
+    // Generate meal plan
+    $mealPlan = generateMealPlan($caloricIntake, $proteinIntake);
 }
 
 // Function to calculate BMI
@@ -191,10 +195,50 @@ function calculateBodyFatPercentageForMen($waist, $neck, $height)
 // Function to calculate body fat percentage using Navy Method for women
 function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
 {
-    return (495 / (1.29579 - 0.35004 * log10($waist + $hip - $neck) + 0.22100 * log10($height))) - 450;
+    return (495 / (1.29579 - 0.35004 * log10($waist + $hip - $neck) + 0.221 * log10($height))) - 450;
+}
+
+// Function to generate a meal plan
+function generateMealPlan($calories, $protein)
+{
+    // Example meal plan templates (adjust as needed)
+    $breakfast = [
+        'Oatmeal with Protein Powder' => 300,
+        'Greek Yogurt with Berries' => 200,
+    ];
+
+    $lunch = [
+        'Grilled Chicken Salad' => 400,
+        'Quinoa and Black Beans' => 350,
+    ];
+
+    $dinner = [
+        'Salmon with Veggies' => 500,
+        'Lean Beef Stir-fry' => 450,
+    ];
+
+    $snacks = [
+        'Almonds' => 150,
+        'Protein Shake' => 200,
+    ];
+
+    // Calculate total calories and protein for meals
+    $totalCalories = array_sum($breakfast) + array_sum($lunch) + array_sum($dinner) + array_sum($snacks);
+    $totalProtein = $protein; // This should be adjusted based on the meal composition
+
+    // Create meal plan
+    $mealPlan = [
+        'breakfast' => $breakfast,
+        'lunch' => $lunch,
+        'dinner' => $dinner,
+        'snacks' => $snacks,
+        'totalCalories' => $totalCalories,
+        'totalProtein' => $totalProtein,
+    ];
+
+    return $mealPlan;
 }
 ?>
-
 
 <!DOCTYPE html>
 
@@ -732,8 +776,90 @@ function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
                     </section>
                 </div>
             </div>
-        </div>
 
+
+            <!-- Diet Planning Section -->
+            <section class="our_schedule_section">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                        </div>
+                    </div>
+                    <div class="table_wrapper" data-aos="fade <section class=" calculator-results">
+                        <div class="container">
+                            <div class="row">
+                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                    <div class="results-form form-section">
+                                        <?php
+                                        if (isset($intakeResults)) {
+                                            echo '<h2>Diet Planning:</h2>';
+                                            echo '<h3>' . ucwords(str_replace('-', ' ', $goal)) . ' Diet</h3>';
+                                            echo '<p>Here are some sample meal plans tailored to your goal:</p>';
+
+                                            if ($goal === 'weight-loss') {
+                                                echo '<h4>Sample Meal Plan for Weight Loss:</h4>';
+                                                echo '<table class="table table-bordered table-striped">';
+                                                echo '<thead><tr><th>Day</th><th>Meal</th><th>Plan</th></tr></thead>';
+                                                echo '<tbody>';
+                                                echo '<tr><td>Day 1</td><td>Breakfast</td><td>Oatmeal with berries</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Snack</td><td>Greek yogurt with almonds</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Lunch</td><td>Grilled chicken salad</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Snack</td><td>Carrot sticks with hummus</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Dinner</td><td>Baked salmon with steamed vegetables</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Breakfast</td><td>Smoothie with spinach and protein powder</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Snack</td><td>Apple slices with peanut butter</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Lunch</td><td>Turkey wrap with mixed greens</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Snack</td><td>Cottage cheese with cucumber slices</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Dinner</td><td>Grilled shrimp with quinoa and asparagus</td></tr>';
+                                                echo '</tbody>';
+                                                echo '</table>';
+                                            } elseif ($goal === 'weight-gain') {
+                                                echo '<h4>Sample Meal Plan for Weight Gain:</h4>';
+                                                echo '<table class="table table-bordered table-striped">';
+                                                echo '<thead><tr><th>Day</th><th>Meal</th><th>Plan</th></tr></thead>';
+                                                echo '<tbody>';
+                                                echo '<tr><td>Day 1</td><td>Breakfast</td><td>Whole wheat toast with peanut butter</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Snack</td><td>Banana with almond butter</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Lunch</td><td>Beef stir-fry with brown rice</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Snack</td><td>Greek yogurt with granola</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Dinner</td><td>Baked chicken with quinoa and roasted vegetables</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Breakfast</td><td>Omelette with cheese and vegetables</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Snack</td><td>Trail mix with nuts and dried fruits</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Lunch</td><td>Salmon salad with avocado</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Snack</td><td>Smoothie with banana, protein powder, and milk</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Dinner</td><td>Pork chops with sweet potatoes and green beans</td></tr>';
+                                                echo '</tbody>';
+                                                echo '</table>';
+                                            } elseif ($goal === 'maintenance') {
+                                                echo '<h4>Sample Meal Plan for Maintenance:</h4>';
+                                                echo '<table class="table table-bordered table-striped">';
+                                                echo '<thead><tr><th>Day</th><th>Meal</th><th>Plan</th></tr></thead>';
+                                                echo '<tbody>';
+                                                echo '<tr><td>Day 1</td><td>Breakfast</td><td>Scrambled eggs with whole wheat toast</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Snack</td><td>Apple with cheese</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Lunch</td><td>Turkey sandwich with mixed greens</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Snack</td><td>Greek yogurt with mixed nuts</td></tr>';
+                                                echo '<tr><td>Day 1</td><td>Dinner</td><td>Grilled fish with quinoa and roasted vegetables</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Breakfast</td><td>Smoothie with mixed berries and yogurt</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Snack</td><td>Carrot sticks with hummus</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Lunch</td><td>Chicken Caesar salad</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Snack</td><td>Cottage cheese with pineapple</td></tr>';
+                                                echo '<tr><td>Day 2</td><td>Dinner</td><td>Spaghetti with marinara sauce and a side salad</td></tr>';
+                                                echo '</tbody>';
+                                                echo '</table>';
+                                            }
+                                        }
+                                        ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+            </section>
+        </div>
+        </div>
+        </div>
+        </div>
+        </section>
         <script>
             // Body Fat Calculator Validation Function
             function validateBodyFatForm() {
