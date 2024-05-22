@@ -173,7 +173,7 @@
                     </div>
                 </div>
             </div>
-            <div class="table_wrapper" data-aos="fade-up">
+            <div class="table_wrapper border border-black" data-aos="fade-up">
                 <table>
                     <tr>
                         <th>
@@ -321,7 +321,7 @@
                     </div>
                 </div>
             </div>
-            <div class="table_wrapper" data-aos="fade-up">
+            <div class="table_wrapper border border-black" data-aos="fade-up">
                 <table>
                     <tr>
                         <th>
