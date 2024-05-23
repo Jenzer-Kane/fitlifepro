@@ -805,8 +805,12 @@ function generateMealPlan($calories, $protein)
                 <div class="row">
                     <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                         <div class="our_schedule_content">
-                            <h5>MEAL PLAN</h5>
-                            <h2>TAILORED MEAL PLAN FOR YOUR GOAL</h2>
+                            <?php
+                            if (isset($intakeResults)) {
+                                echo '<h5>MEAL PLAN</h5>';
+                                echo '<h2>TAILORED MEAL PLAN FOR YOUR GOAL</h2>';
+                            }
+                            ?>
                         </div>
                         <div class="table_wrapper" data-aos="fade-up">
                             <table>
@@ -848,10 +852,15 @@ function generateMealPlan($calories, $protein)
                                     ?>
                                 </div>
                             </table>
-                            <print><b>Meal plan food suggestions are based on the Philippine Department of Science
+                            <?php
+                            if (isset($intakeResults)) {
+
+                                echo '<b>Meal plan food suggestions are based on the Philippine Department of Science
                                     and
                                     Technology,
-                                    Food and Nutrition Research Institue, Food Exchange List</b></print>
+                                    Food and Nutrition Research Institue, Food Exchange List</b>';
+                            }
+                            ?>
                         </div>
                     </div>
                 </div>
