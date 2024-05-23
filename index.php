@@ -107,7 +107,7 @@ session_start();
                     <!-- Logo outside the navbar -->
                     <a class="navbar-brand mb-0" href="./index.php">
                         <figure class="mb-0">
-
+                            <img src="./assets/images/fitlife_pro_logo2.png" alt="" class="img-fluid">
                         </figure>
                     </a>
                     <!-- Navbar -->
