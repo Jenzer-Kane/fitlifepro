@@ -1085,12 +1085,24 @@ $timeSlots = ['Breakfast', 'Snack 1', 'Lunch', 'Snack 2', 'Dinner'];
                 groupedItems[item.food_exchange_group].push(item);
             });
 
+            // Ensure each category meets the specified minimum count
+            const minCounts = {
+                'Fruit': 5,
+                'Medium Fat Meat': 1,
+                'Low Fat Meat': 5,
+                'High Fat Meat': 1,
+                'Milk': 1,
+                'Rice/Bread': 3
+            };
+
             // Array to hold the shuffled meal plan
             let shuffledPlan = [];
 
-            // Add one item from each group to the shuffled plan
-            Object.values(groupedItems).forEach(group => {
-                shuffledPlan.push(group[Math.floor(Math.random() * group.length)]);
+            // Add at least one item from each group to the shuffled plan
+            Object.entries(groupedItems).forEach(([group, items]) => {
+                const minCount = minCounts[group];
+                const selectedItems = items.slice(0, Math.max(minCount, 1)); // Ensure at least one item from each group
+                shuffledPlan = shuffledPlan.concat(selectedItems);
             });
 
             // Shuffle the remaining items
@@ -1112,14 +1124,14 @@ $timeSlots = ['Breakfast', 'Snack 1', 'Lunch', 'Snack 2', 'Dinner'];
                     cell.setAttribute('data-calories', foodItem['energy_kcal']);
                     cell.setAttribute('data-protein', foodItem['protein_g']);
                     cell.innerHTML = `
-        <div class="mealItemContent">
-            <br>${foodItem['english_name']}<br><br>
-            ${foodItem['filipino_name']}<br><br>
-            <strong>Protein (g):</strong> ${foodItem['protein_g']}<br>
-            <strong>Calories (kcal):</strong> ${foodItem['energy_kcal']}<br>
-            <strong>Measure:</strong> ${foodItem['household_measure']}<br><br>
-        </div>
-    `;
+<div class="mealItemContent">
+    <br>${foodItem['english_name']}<br><br>
+    ${foodItem['filipino_name']}<br><br>
+    <strong>Protein (g):</strong> ${foodItem['protein_g']}<br>
+    <strong>Calories (kcal):</strong> ${foodItem['energy_kcal']}<br>
+    <strong>Measure:</strong> ${foodItem['household_measure']}<br><br>
+</div>
+`;
                     row.appendChild(cell);
                     mealIndex++;
                 }
