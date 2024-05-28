@@ -264,11 +264,33 @@ if (isset($intakeResults['goal'])) {
 $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 $timeSlots = ['Breakfast', 'Snack 1', 'Lunch', 'Snack 2', 'Dinner'];
 
-function getExercises()
+function getExercises($recommendedGoal)
 {
     global $mysqli;
-    $query = "SELECT * FROM exercises";
-    $result = $mysqli->query($query);
+
+    // Define intensity based on recommended goal
+    $intensity = '';
+    switch ($recommendedGoal) {
+        case 'maintenance':
+            $intensity = 'Moderate'; // Moderate or high intensity for maintenance
+            break;
+        case 'weight-loss':
+            $intensity = 'Low'; // Low intensity for weight loss
+            break;
+        case 'weight-gain':
+            $intensity = 'Low'; // Low intensity for weight gain
+            break;
+        default:
+            $intensity = ''; // No specific intensity
+            break;
+    }
+
+    // Query exercises based on recommended goal and intensity
+    $query = "SELECT * FROM exercises WHERE intensity = ?";
+    $statement = $mysqli->prepare($query);
+    $statement->bind_param('s', $intensity);
+    $statement->execute();
+    $result = $statement->get_result();
 
     if ($result) {
         return $result->fetch_all(MYSQLI_ASSOC);
@@ -278,7 +300,8 @@ function getExercises()
     }
 }
 
-$exercise_plan = getExercises();
+
+$exercise_plan = getExercises($intakeResults['goal']);
 
 $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
 ?>
@@ -1013,98 +1036,99 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
                 <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                     <div class="our_schedule_content">
                         <?php if (!empty($exercise_plan)): ?>
-                            <h5>EXERCISE PLAN</h5>
-                            <h2>TAILORED EXERCISE PLAN FOR<br><?php echo strtoupper($goal_name); ?></h2>
+                            <?php if (isset($goal_name)): ?>
+                                <h5>EXERCISE PLAN</h5>
+                                <h2>TAILORED EXERCISE PLAN FOR<br><?php echo strtoupper($goal_name); ?></h2>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="exercise-horizontal-display">
-                <?php
-                $exerciseIndex = 0;
-                $totalExercises = count($exercise_plan);
-                $dailyExerciseTotals = array();
+                <div class="exercise-horizontal-display">
+                    <?php
+                    $exerciseIndex = 0;
+                    $totalExercises = count($exercise_plan);
+                    $dailyExerciseTotals = array();
 
-                foreach ($days as $day): ?>
-                    <div class="border-mealplan mt-5">
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                    <div class="our_schedule_content">
-                                        <h2 class="mt-5"><?php echo $day; ?></h2>
+                    foreach ($days as $day): ?>
+                        <div class="border-mealplan mt-5">
+                            <div class="container">
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                        <div class="our_schedule_content">
+                                            <h2 class="mt-5"><?php echo $day; ?></h2>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <?php if (isset($intakeResults)): ?>
-                            <p><strong>Track your progress by marking the exercises you've completed.</strong></p>
-                        <?php endif; ?>
-                        <!-- Add a container div for each day's table and shuffle button -->
-                        <div class="diet-horizontal-display">
-                            <table class="border border-black" id="exercisePlanTable-<?php echo strtolower($day); ?>">
-                                <thead>
-                                    <tr>
-                                        <th>Time Slot</th>
-                                        <th>Exercise</th>
-                                        <th>Exercise</th>
-                                        <th>Exercise</th>
-                                        <th>Exercise</th>
-                                        <th>Exercise</th>
-                                        <th>Exercise</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($exercisetimeSlots as $timeSlot): ?>
-                                        <?php
-                                        // Select an exercise for the current time slot and day
-                                        $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises];
-
-                                        // Update total reps and duration for the day
-                                        if (!isset($dailyExerciseTotals[$day])) {
-                                            $dailyExerciseTotals[$day] = array('duration' => 0);
-                                        }
-
-                                        ?>
+                            <?php if (isset($intakeResults)): ?>
+                                <p><strong>Track your progress by marking the exercises you've completed.</strong></p>
+                            <?php endif; ?>
+                            <!-- Add a container div for each day's table and shuffle button -->
+                            <div class="diet-horizontal-display">
+                                <table class="border border-black" id="exercisePlanTable-<?php echo strtolower($day); ?>">
+                                    <thead>
                                         <tr>
-                                            <td><?php echo $timeSlot; ?></td>
-                                            <td class="exerciseItem">
-                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
-                                            </td>
-                                            <td class="exerciseItem">
-                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
-                                            </td>
-                                            <td class="exerciseItem">
-                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
-                                            </td>
-                                            <td class="exerciseItem">
-                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
-                                            </td>
-                                            <td class="exerciseItem">
-                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
-                                            </td>
-                                            <td class="exerciseItem">
-                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
-                                            </td>
+                                            <th>Time Slot</th>
+                                            <th>Exercise</th>
+                                            <th>Exercise</th>
+                                            <th>Exercise</th>
+                                            <th>Exercise</th>
+                                            <th>Exercise</th>
+                                            <th>Exercise</th>
                                         </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($exercisetimeSlots as $timeSlot): ?>
+                                            <?php
+                                            // Select an exercise for the current time slot and day
+                                            $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises];
 
-                                        <?php $exerciseIndex++; ?>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <p>Total Exercises Completed: <span id="exerciseCounter-<?php echo strtolower($day); ?>">0</span>
-                        </p>
-                        <!-- Add the shuffle button for each day -->
-                        <div class="calculator-form form-section border-0">
-                            <button class="shuffle-exercises-button" data-day="<?php echo strtolower($day); ?>">Regenerate
-                                Exercises</button>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-    </section>
-    </div>
+                                            // Update total reps and duration for the day
+                                            if (!isset($dailyExerciseTotals[$day])) {
+                                                $dailyExerciseTotals[$day] = array('duration' => 0);
+                                            }
 
+                                            ?>
+                                            <tr>
+                                                <td><?php echo $timeSlot; ?></td>
+                                                <td class="exerciseItem">
+                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                </td>
+                                                <td class="exerciseItem">
+                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                </td>
+                                                <td class="exerciseItem">
+                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                </td>
+                                                <td class="exerciseItem">
+                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                </td>
+                                                <td class="exerciseItem">
+                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                </td>
+                                                <td class="exerciseItem">
+                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                </td>
+                                            </tr>
+
+                                            <?php $exerciseIndex++; ?>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p>Total Exercises Completed: <span id="exerciseCounter-<?php echo strtolower($day); ?>">0</span>
+                            </p>
+                            <!-- Add the shuffle button for each day -->
+                            <div class="calculator-form form-section border-0">
+                                <button class="shuffle-exercises-button" data-day="<?php echo strtolower($day); ?>">Regenerate
+                                    Exercises</button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+        </section>
+        </div>
+    <?php endif; ?>
 
     <script>
         // Body Fat Calculator Validation Function
