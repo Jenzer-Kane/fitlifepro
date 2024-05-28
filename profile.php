@@ -265,7 +265,7 @@ $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Su
 $timeSlots = ['Breakfast', 'Snack 1', 'Lunch', 'Snack 2', 'Dinner'];
 
 
-function getExercises($recommendedGoal)
+function getExercises($recommendedGoal, $exerciseType)
 {
     global $mysqli;
 
@@ -286,10 +286,10 @@ function getExercises($recommendedGoal)
             break;
     }
 
-    // Query exercises based on recommended goal and intensity
-    $query = "SELECT * FROM exercises WHERE intensity = ?";
+    // Query exercises based on recommended goal, intensity, and exercise type
+    $query = "SELECT * FROM exercises WHERE intensity = ? AND exercise_type = ?";
     $statement = $mysqli->prepare($query);
-    $statement->bind_param('s', $intensity);
+    $statement->bind_param('ss', $intensity, $exerciseType);
     $statement->execute();
     $result = $statement->get_result();
 
@@ -317,16 +317,19 @@ function getExercises($recommendedGoal)
     }
 }
 
+// Handle AJAX request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
+    $recommendedGoal = $_POST['recommendedGoal'];
+    $exerciseType = $_POST['exerciseType'];
+    $exercises = getExercises($recommendedGoal, $exerciseType);
+    echo json_encode($exercises);
+    exit;
+}
 
-
-
-$exercise_plan = getExercises($intakeResults['goal']);
-
+$exerciseType = isset($_POST['exerciseType']) ? $_POST['exerciseType'] : 'Bodyweight';
+$exercise_plan = getExercises($intakeResults['goal'], $exerciseType);
 $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
 ?>
-
-?>
-
 
 <!DOCTYPE html>
 
@@ -1143,6 +1146,15 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
                             <div class="calculator-form form-section border-0">
                                 <button class="shuffle-exercises-button" data-day="<?php echo strtolower($day); ?>">Regenerate
                                     Exercises</button>
+                                <form id="exerciseTypeForm">
+                                    <input type="hidden" name="recommendedGoal" value="<?php echo $intakeResults['goal']; ?>">
+                                    <button type="button" class="exercise-type-btn" name="exerciseType"
+                                        value="Bodyweight">Bodyweight</button>
+                                    <button type="button" class="exercise-type-btn" name="exerciseType"
+                                        value="Freeweights">Freeweights</button>
+                                    <button type="button" class="exercise-type-btn" name="exerciseType"
+                                        value="Weightlifting">Weightlifting</button>
+                                </form>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -1345,86 +1357,117 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
 
         // Exercise Planning JAVASCRIPT
         document.addEventListener('DOMContentLoaded', () => {
-            // Attach event listeners when the page loads
             attachExerciseEventListeners();
 
             const shuffleButtons = document.querySelectorAll('.shuffle-exercises-button');
-
             shuffleButtons.forEach(button => {
                 button.addEventListener('click', function () {
                     const day = this.getAttribute('data-day');
                     shuffleExercises(day);
                 });
             });
-        });
 
-        function attachExerciseEventListeners() {
-            const exerciseItems = document.querySelectorAll('.exerciseItem');
-            exerciseItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    item.classList.toggle('completed');
-                    const tableId = item.closest('table').id.split('-')[1]; // Extract table ID
-                    updateCounter(tableId);
-                    hideRegenerateButton(item);
+            const exerciseTypeButtons = document.querySelectorAll('.exercise-type-btn');
+            exerciseTypeButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const exerciseType = this.value;
+                    shuffleExercisesByType(exerciseType);
                 });
             });
-        }
 
-        function shuffleExercises(day) {
-            const tableBody = document.querySelector(`#exercisePlanTable-${day} tbody`);
-            const rows = Array.from(tableBody.rows);
-
-            // Shuffle the rows starting from the second column (excluding timeslot)
-            for (let i = rows.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                // Exclude the first column (timeslot) from shuffling
-                for (let k = 1; k < rows[i].cells.length; k++) {
-                    [rows[i].cells[k].innerHTML, rows[j].cells[k].innerHTML] = [rows[j].cells[k].innerHTML, rows[i].cells[k].innerHTML];
-                }
+            function attachExerciseEventListeners() {
+                const exerciseItems = document.querySelectorAll('.exerciseItem');
+                exerciseItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        item.classList.toggle('completed');
+                        const tableId = item.closest('table').id.split('-')[1]; // Extract table ID
+                        updateCounter(tableId);
+                        hideRegenerateButton(item);
+                    });
+                });
             }
 
-            // Append shuffled rows back to the table body
-            rows.forEach(row => tableBody.appendChild(row));
+            function shuffleExercises(day) {
+                const tableBody = document.querySelector(`#exercisePlanTable-${day} tbody`);
+                const rows = Array.from(tableBody.rows);
 
-            // Update counter after shuffling
-            updateCounter(day);
-        }
+                // Shuffle the rows starting from the second column (excluding timeslot)
+                for (let i = rows.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    // Exclude the first column (timeslot) from shuffling
+                    for (let k = 1; k < rows[i].cells.length; k++) {
+                        [rows[i].cells[k].innerHTML, rows[j].cells[k].innerHTML] = [rows[j].cells[k].innerHTML, rows[i].cells[k].innerHTML];
+                    }
+                }
 
-        function updateCounter(day) {
-            const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
-            document.getElementById(`exerciseCounter-${day}`).innerText = completedExercises;
-        }
+                // Append shuffled rows back to the table body
+                rows.forEach(row => tableBody.appendChild(row));
 
-        function hideRegenerateButton(item) {
-            // Find the parent container of the clicked exercise item
-            const tableContainer = item.closest('.border-mealplan');
+                // Update counter after shuffling
+                updateCounter(day);
+            }
 
-            // Find and hide the "Regenerate Exercises" button within the parent container
-            const regenerateButton = tableContainer.querySelector('.shuffle-exercises-button');
-            regenerateButton.style.display = 'none';
-        }
+            function shuffleExercisesByType(day, exerciseType) {
+                const tableBody = document.querySelector(`#exercisePlanTable-${day} tbody`);
+                const rows = Array.from(tableBody.rows);
 
+                // Filter rows based on the exercise type
+                const filteredRows = rows.filter(row => row.cells[1].textContent.trim() === exerciseType);
 
+                // Shuffle the filtered rows
+                for (let i = filteredRows.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [filteredRows[i], filteredRows[j]] = [filteredRows[j], filteredRows[i]];
+                }
 
+                // Clear table body
+                tableBody.innerHTML = '';
+
+                // Append shuffled filtered rows back to the table body
+                filteredRows.forEach(row => tableBody.appendChild(row));
+
+                // Update counter after shuffling
+                updateCounter(day);
+            }
+
+            function updateCounter(day) {
+                const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
+                document.getElementById(`exerciseCounter-${day}`).innerText = completedExercises;
+            }
+
+            function hideRegenerateButton(item) {
+                // Find the parent container of the clicked exercise item
+                const tableContainer = item.closest('.border-mealplan');
+
+                // Find and hide the "Regenerate Exercises" button within the parent container
+                const regenerateButton = tableContainer.querySelector('.shuffle-exercises-button');
+                regenerateButton.style.display = 'none';
+            }
+        });
     </script>
+</body>
 
-    <style>
-        .mealItem {
-            cursor: pointer;
-        }
+</html>
 
-        .mealItem.consumed {
-            background-color: green;
-            color: white;
-        }
 
-        .exerciseItem {
-            cursor: pointer;
-        }
 
-        .exerciseItem.completed {
-            background-color: green;
-            color: white;
-        }
+<style>
+    .mealItem {
+        cursor: pointer;
+    }
 
-        </script>< !-- Latest compiled JavaScript --><script src="assets/js/jquery-3.6.0.min.js"></script><script src="assets/js/popper.min.js"></script><script src="assets/js/video-popup.js"></script><script src="assets/js/bootstrap.min.js"></script><script src="assets/js/custom.js"></script><script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script><script src="assets/js/owl.carousel.js"></script><script src="assets/js/carousel.js"></script><script src="assets/js/video-section.js"></script><script src="assets/js/counter.js"></script><script src="assets/js/animation.js"></script></body></html>
+    .mealItem.consumed {
+        background-color: green;
+        color: white;
+    }
+
+    .exerciseItem {
+        cursor: pointer;
+    }
+
+    .exerciseItem.completed {
+        background-color: green;
+        color: white;
+    }
+
+    </script>< !-- Latest compiled JavaScript --><script src="assets/js/jquery-3.6.0.min.js"></script><script src="assets/js/popper.min.js"></script><script src="assets/js/video-popup.js"></script><script src="assets/js/bootstrap.min.js"></script><script src="assets/js/custom.js"></script><script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script><script src="assets/js/owl.carousel.js"></script><script src="assets/js/carousel.js"></script><script src="assets/js/video-section.js"></script><script src="assets/js/counter.js"></script><script src="assets/js/animation.js"></script></body></html>
