@@ -420,9 +420,7 @@
             </figure>
         </div>
     </section>
-    <!-- CONTACT US SECTION -->
 
-    <!-- OUR NEWS SECTION -->
     <!-- OUR NEWS SECTION -->
     <section class="our_news_section">
         <div class="container">

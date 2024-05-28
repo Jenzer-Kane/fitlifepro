@@ -318,7 +318,13 @@ function getExercises($recommendedGoal, $exerciseType)
 }
 
 $exerciseType = isset($_POST['exerciseType']) ? $_POST['exerciseType'] : 'Bodyweight';
-$exercise_plan = getExercises($intakeResults['goal'], $exerciseType);
+if (isset($intakeResults['goal'])) {
+    $exercise_plan = getExercises($intakeResults['goal'], $exerciseType);
+} else {
+    // Handle the case when $intakeResults['goal'] is not set
+    $exercise_plan = [];
+}
+
 $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
 ?>
 
@@ -499,10 +505,9 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
         }
 
         .note {
-            font-size: 1.2em;
+            font-size: 1.0em;
             text-align: center;
             position: relative;
-            top: -100px;
         }
 
         .exercise-planning {
@@ -604,7 +609,7 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
                 <div class="row">
                     <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                         <div class="banner-section-content">
-                            <h1 data-aos="fade-up">Profile</h1>
+                            <h1 data-aos="fade-up"><?php echo $_SESSION['username']; ?></h1>
                             <div class="btn_wrapper">
                                 <span class="sub_home_span">Home </span>-<span class="sub_span"> Profile</span>
                             </div>
@@ -1031,18 +1036,46 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
                                 <button class="shuffle-button"
                                     onclick="shuffleMealPlan('<?php echo strtolower($day); ?>')">Regenerate</button>
                             </div>
+                            <div class="note">
+                                <?php
+                                if (isset($intakeResults)) {
+                                    echo '<b>Meal plan food suggestions are based on the Philippine Department of Science and Technology, Food and Nutrition Research Institute, Food Exchange List</b>';
+                                }
+                                ?>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
     </section>
-    <div class="note">
-        <?php
-        if (isset($intakeResults)) {
-            echo '<b>Meal plan food suggestions are based on the Philippine Department of Science and Technology, Food and Nutrition Research Institute, Food Exchange List</b>';
-        }
-        ?>
-    </div>
+
+    <!-- QUOTE SECTION -->
+    <section class="quote_section">
+        <div class="container">
+            <div class="row" data-aos="fade-right">
+                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                    <div class="quote_content">
+                        <h2>“SUCCESS USUALLY COMES TO THOSE WHO ARE TOO BUSY TO BE LOOKING FOR IT.”</h2>
+                        <div class="quote_content_wrapper">
+                            <div class="quote_wrapper">
+                                <h6>ARNOLD SCHWARZENEGGER</h6>
+                                <span>Mr. Olympia 7 Time World Champion</span>
+                                <figure class="quote_image mb-0">
+                                    <img src="./assets/images/ARNOLD.png" alt="" class="img-fluid">
+                                </figure>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <figure class="quote_left_icon left_icon mb-0">
+                <img src="./assets/images/quote_left_icon.png" alt="" class="img-fluid">
+            </figure>
+            <figure class="quote_right_icon right_icon mb-0">
+                <img src="./assets/images/quote_right_icon.png" alt="" class="img-fluid">
+            </figure>
+        </div>
+    </section>
 
     <!-- Exercise Planning Section -->
     <section class="our_schedule_section exercise-planning">
@@ -1142,16 +1175,22 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
                                     </tbody>
                                 </table>
                             </div>
-                            <strong>
-                                <p>Total Exercises Completed: <span id="exerciseCounter-<?php echo strtolower($day); ?>">0</span>
-                            </strong>
-                            </p>
-                            <!-- Add the shuffle button for each day -->
-                            <div class="calculator-form form-section border-0">
-                                <button class="shuffle-exercises-button" data-day="<?php echo strtolower($day); ?>">Regenerate
-                                    Exercises</button>
-                                <div class="exercise-type-buttons mt-2">
-                                    </form>
+                            <div id="total-exercises-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text">
+                                <?php
+                                echo 'Total Exercises Completed: <span id="exerciseCounter-' . strtolower($day) . '">0</span><br>';
+                                ?>
+                                <!-- Add the shuffle button for each day -->
+                                <div class="calculator-form form-section border-0">
+                                    <button class="shuffle-exercises-button" data-day="<?php echo strtolower($day); ?>">Regenerate
+                                        Exercises</button>
+                                    <div class="exercise-type-buttons mt-2"></div>
+                                    <div class="note">
+                                        <?php
+                                        if (isset($intakeResults)) {
+                                            echo '<b>Aim to gradually increase your total exercises by at least 1.</b>';
+                                        }
+                                        ?>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1421,6 +1460,17 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
 
         });
     </script>
+    <script src="assets/js/jquery-3.6.0.min.js"></script>
+    <script src="assets/js/popper.min.js"></script>
+    <script src="assets/js/video-popup.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/custom.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="assets/js/owl.carousel.js"></script>
+    <script src="assets/js/carousel.js"></script>
+    <script src="assets/js/video-section.js"></script>
+    <script src="assets/js/counter.js"></script>
+    <script src="assets/js/animation.js"></script>
 </body>
 
 </html>
