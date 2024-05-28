@@ -94,11 +94,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($recommendedGoal === 'weight-gain') {
         // Bulking: aim for 1.8g of protein per kg of body weight and a 500 calorie surplus
         $proteinIntake = $bmiWeight * $proteinRatioBulking;
-        $caloricIntake = $bmiWeight * $caloriesPerKg + 500;
+        $caloricIntake = $bmiWeight * $caloriesPerKg + 1000;
     } elseif ($recommendedGoal === 'weight-loss') {
         // Cutting: aim for 1.2g of protein per kg of body weight and a 500 calorie deficit
         $proteinIntake = $bmiWeight * $proteinRatioCutting;
-        $caloricIntake = $bmiWeight * $caloriesPerKg - 500;
+        $caloricIntake = $bmiWeight * $caloriesPerKg - 1000;
     } else {
         // Maintenance: aim for 1.5g of protein per kg of body weight and maintain current caloric intake
         $proteinIntake = $bmiWeight * 1.5;
@@ -315,15 +315,6 @@ function getExercises($recommendedGoal, $exerciseType)
         echo "Error retrieving exercises: " . $mysqli->error;
         return [];
     }
-}
-
-// Handle AJAX request
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
-    $recommendedGoal = $_POST['recommendedGoal'];
-    $exerciseType = $_POST['exerciseType'];
-    $exercises = getExercises($recommendedGoal, $exerciseType);
-    echo json_encode($exercises);
-    exit;
 }
 
 $exerciseType = isset($_POST['exerciseType']) ? $_POST['exerciseType'] : 'Bodyweight';
@@ -1116,45 +1107,52 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
                                             <tr>
                                                 <td><?php echo $timeSlot; ?></td>
                                                 <td class="exerciseItem">
-                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
+                                                    <strong><?php echo $exerciseItem['intensity'];
+                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
                                                 </td>
                                                 <td class="exerciseItem">
-                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
+                                                    <strong><?php echo $exerciseItem['intensity'];
+                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
                                                 </td>
                                                 <td class="exerciseItem">
-                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
+                                                    <strong><?php echo $exerciseItem['intensity'];
+                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
                                                 </td>
                                                 <td class="exerciseItem">
-                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
+                                                    <strong><?php echo $exerciseItem['intensity'];
+                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
                                                 </td>
                                                 <td class="exerciseItem">
-                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
+                                                    <strong><?php echo $exerciseItem['intensity'];
+                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
                                                 </td>
                                                 <td class="exerciseItem">
-                                                    <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
+                                                    <strong><?php echo $exerciseItem['intensity'];
+                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
                                                 </td>
                                             </tr>
-
                                             <?php $exerciseIndex++; ?>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
                             </div>
-                            <p>Total Exercises Completed: <span id="exerciseCounter-<?php echo strtolower($day); ?>">0</span>
+                            <strong>
+                                <p>Total Exercises Completed: <span id="exerciseCounter-<?php echo strtolower($day); ?>">0</span>
+                            </strong>
                             </p>
                             <!-- Add the shuffle button for each day -->
                             <div class="calculator-form form-section border-0">
                                 <button class="shuffle-exercises-button" data-day="<?php echo strtolower($day); ?>">Regenerate
                                     Exercises</button>
-                                <form id="exerciseTypeForm">
-                                    <input type="hidden" name="recommendedGoal" value="<?php echo $intakeResults['goal']; ?>">
-                                    <button type="button" class="exercise-type-btn" name="exerciseType"
-                                        value="Bodyweight">Bodyweight</button>
-                                    <button type="button" class="exercise-type-btn" name="exerciseType"
-                                        value="Freeweights">Freeweights</button>
-                                    <button type="button" class="exercise-type-btn" name="exerciseType"
-                                        value="Weightlifting">Weightlifting</button>
-                                </form>
+                                <div class="exercise-type-buttons mt-2">
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -1371,7 +1369,7 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
             exerciseTypeButtons.forEach(button => {
                 button.addEventListener('click', function () {
                     const exerciseType = this.value;
-                    shuffleExercisesByType(exerciseType);
+                    fetchExercises(exerciseType);
                 });
             });
 
@@ -1407,29 +1405,6 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
                 updateCounter(day);
             }
 
-            function shuffleExercisesByType(day, exerciseType) {
-                const tableBody = document.querySelector(`#exercisePlanTable-${day} tbody`);
-                const rows = Array.from(tableBody.rows);
-
-                // Filter rows based on the exercise type
-                const filteredRows = rows.filter(row => row.cells[1].textContent.trim() === exerciseType);
-
-                // Shuffle the filtered rows
-                for (let i = filteredRows.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [filteredRows[i], filteredRows[j]] = [filteredRows[j], filteredRows[i]];
-                }
-
-                // Clear table body
-                tableBody.innerHTML = '';
-
-                // Append shuffled filtered rows back to the table body
-                filteredRows.forEach(row => tableBody.appendChild(row));
-
-                // Update counter after shuffling
-                updateCounter(day);
-            }
-
             function updateCounter(day) {
                 const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
                 document.getElementById(`exerciseCounter-${day}`).innerText = completedExercises;
@@ -1443,6 +1418,7 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
                 const regenerateButton = tableContainer.querySelector('.shuffle-exercises-button');
                 regenerateButton.style.display = 'none';
             }
+
         });
     </script>
 </body>
