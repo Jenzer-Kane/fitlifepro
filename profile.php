@@ -264,6 +264,7 @@ if (isset($intakeResults['goal'])) {
 $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 $timeSlots = ['Breakfast', 'Snack 1', 'Lunch', 'Snack 2', 'Dinner'];
 
+
 function getExercises($recommendedGoal)
 {
     global $mysqli;
@@ -293,7 +294,23 @@ function getExercises($recommendedGoal)
     $result = $statement->get_result();
 
     if ($result) {
-        return $result->fetch_all(MYSQLI_ASSOC);
+        $exercises = $result->fetch_all(MYSQLI_ASSOC);
+        $exercisePlan = [];
+        $categories = ['Strength', 'Cardio', 'Core', 'Back'];
+
+        // Shuffle and select random exercises for each category
+        foreach ($categories as $category) {
+            $categoryExercises = array_filter($exercises, function ($exercise) use ($category) {
+                return $exercise['category'] === $category;
+            });
+            shuffle($categoryExercises);
+            $exercisePlan = array_merge($exercisePlan, $categoryExercises);
+        }
+
+        // Shuffle the final exercise plan to mix all categories randomly
+        shuffle($exercisePlan);
+
+        return $exercisePlan;
     } else {
         echo "Error retrieving exercises: " . $mysqli->error;
         return [];
@@ -301,9 +318,13 @@ function getExercises($recommendedGoal)
 }
 
 
+
+
 $exercise_plan = getExercises($intakeResults['goal']);
 
 $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
+?>
+
 ?>
 
 
