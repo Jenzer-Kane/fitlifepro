@@ -265,11 +265,28 @@ $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Su
 $timeSlots = ['Breakfast', 'Snack 1', 'Lunch', 'Snack 2', 'Dinner'];
 $exercisetimeSlots = ['213', 'Snack 1', 'Lunch', 'Snack 2', 'Dinner'];
 
-function getExercises()
+function getExercises($recommendedGoal)
 {
     include 'database.php';
 
-    $query = "SELECT * FROM exercises";
+    // Adjust the SQL query based on the recommended goal
+    switch ($recommendedGoal) {
+        case 'weight-loss':
+            $intensity = 'Low';
+            break;
+        case 'weight-gain':
+            $intensity = 'High';
+            break;
+        case 'maintenance':
+            $intensity = 'Moderate';
+            break;
+        default:
+            $intensity = '';
+            break;
+    }
+
+    // Fetch exercises based on the recommended goal and intensity
+    $query = "SELECT * FROM exercises WHERE intensity = '$intensity'";
     $result = $mysqli->query($query);
 
     if ($result) {
@@ -280,7 +297,6 @@ function getExercises()
     }
 }
 
-$exercise_plan = getExercises();
 
 ?>
 
@@ -1293,7 +1309,19 @@ $exercise_plan = getExercises();
             attachEventListeners();
         }
 
-
+        // Adjust the frequency of showing workouts based on the recommended goal
+        function adjustWorkoutFrequency(recommendedGoal) {
+            switch (recommendedGoal) {
+                case 'weight-loss':
+                    return 'Less frequently (e.g., every 2-3 days)';
+                case 'weight-gain':
+                    return 'More frequently (e.g., every day or every other day)';
+                case 'maintenance':
+                    return 'Frequently (e.g., every day or every other day)';
+                default:
+                    return 'Unknown';
+            }
+        }
     </script>
 
     <style>
