@@ -263,30 +263,11 @@ if (isset($intakeResults['goal'])) {
 
 $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 $timeSlots = ['Breakfast', 'Snack 1', 'Lunch', 'Snack 2', 'Dinner'];
-$exercisetimeSlots = ['213', 'Snack 1', 'Lunch', 'Snack 2', 'Dinner'];
 
-function getExercises($recommendedGoal)
+function getExercises()
 {
-    include 'database.php';
-
-    // Adjust the SQL query based on the recommended goal
-    switch ($recommendedGoal) {
-        case 'weight-loss':
-            $intensity = 'Low';
-            break;
-        case 'weight-gain':
-            $intensity = 'High';
-            break;
-        case 'maintenance':
-            $intensity = 'Moderate';
-            break;
-        default:
-            $intensity = '';
-            break;
-    }
-
-    // Fetch exercises based on the recommended goal and intensity
-    $query = "SELECT * FROM exercises WHERE intensity = '$intensity'";
+    global $mysqli;
+    $query = "SELECT * FROM exercises";
     $result = $mysqli->query($query);
 
     if ($result) {
@@ -297,9 +278,10 @@ function getExercises($recommendedGoal)
     }
 }
 
+$exercise_plan = getExercises();
 
+$exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
 ?>
-
 
 
 <!DOCTYPE html>
@@ -338,6 +320,10 @@ function getExercises($recommendedGoal)
     <link href="assets/css/owl.theme.default.min.css" rel="stylesheet" type="text/css">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/1.1.0/magnific-popup.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
     <style>
         .navbar {
             background-color: rgba(0, 0, 0, 0.6);
@@ -908,8 +894,8 @@ function getExercises($recommendedGoal)
                 <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                     <div class="our_schedule_content">
                         <?php if (!empty($meal_plan)): ?>
-                            <h5>MEAL PLAN</h5>
-                            <h2>TAILORED MEAL PLAN FOR<br>
+                            <h5>DIET PLAN</h5>
+                            <h2>TAILORED DIET PLAN FOR<br>
                                 <?php echo strtoupper($goal_name); ?>
                             </h2>
                         </div>
@@ -939,11 +925,11 @@ function getExercises($recommendedGoal)
                             </div>
                         </div>
                         <?php
-                        // Display Caloric and Protein Intake Results
+
                         if (isset($intakeResults)) {
-                            echo '<p>Regenerate the meal plan with the Regenerate button.</strong></p>';
-                            echo '<p>Click the food you have already consumed to track your progress, this disables the Regenerate button.</p>';
-                            echo '<p><strong>Note:</strong> You can eat the foods in any order, as long as you meet the recommended daily macronutrients.</strong></p>';
+                            echo '<p>Regenerate the recommended meal plan with the Regenerate button.</strong></p>';
+                            echo '<p>Click the food you have consumed to track your progress, this disables the Regenerate button.</p>';
+                            echo '<p><strong>Note:</strong> You can also eat the foods in any order, as long as you meet the recommended daily macronutrients.</strong></p>';
                         } ?>
                         <!-- Add a container div for each day's table and shuffle button -->
                         <div class="diet-horizontal-display">
@@ -1020,14 +1006,13 @@ function getExercises($recommendedGoal)
         ?>
     </div>
 
-
     <!-- Exercise Planning Section -->
     <section class="our_schedule_section exercise-planning">
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                     <div class="our_schedule_content">
-                        <?php if (!empty($meal_plan)): ?>
+                        <?php if (!empty($exercise_plan)): ?>
                             <h5>EXERCISE PLAN</h5>
                             <h2>TAILORED EXERCISE PLAN FOR<br><?php echo strtoupper($goal_name); ?></h2>
                         </div>
@@ -1036,12 +1021,10 @@ function getExercises($recommendedGoal)
             </div>
             <div class="exercise-horizontal-display">
                 <?php
-                // Initialize counters for round-robin distribution
                 $exerciseIndex = 0;
                 $totalExercises = count($exercise_plan);
                 $dailyExerciseTotals = array();
 
-                // Loop through each day to create a separate section
                 foreach ($days as $day): ?>
                     <div class="border-mealplan mt-5">
                         <div class="container">
@@ -1063,11 +1046,11 @@ function getExercises($recommendedGoal)
                                     <tr>
                                         <th>Time Slot</th>
                                         <th>Exercise</th>
-                                        <th>Description</th>
-                                        <th>Duration</th>
-                                        <th>Category</th>
-                                        <th>Intensity</th>
-                                        <th>Exercise Type</th>
+                                        <th>Exercise</th>
+                                        <th>Exercise</th>
+                                        <th>Exercise</th>
+                                        <th>Exercise</th>
+                                        <th>Exercise</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1084,32 +1067,37 @@ function getExercises($recommendedGoal)
                                         ?>
                                         <tr>
                                             <td><?php echo $timeSlot; ?></td>
-                                            <td><?php echo $exerciseItem['name'];
-                                            ?><br> <?php echo $exerciseItem['duration']; ?></td>
-                                            <td><?php echo $exerciseItem['name'];
-                                            ?><br> <?php echo $exerciseItem['duration']; ?></td>
-                                            <td><?php echo $exerciseItem['name'];
-                                            ?><br> <?php echo $exerciseItem['duration']; ?></td>
-                                            <td><?php echo $exerciseItem['name'];
-                                            ?><br> <?php echo $exerciseItem['duration']; ?></td>
-                                            <td><?php echo $exerciseItem['name'];
-                                            ?><br> <?php echo $exerciseItem['duration']; ?></td>
-                                            <td><?php echo $exerciseItem['name'];
-                                            ?><br> <?php echo $exerciseItem['duration']; ?></td>
+                                            <td class="exerciseItem">
+                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                            </td>
+                                            <td class="exerciseItem">
+                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                            </td>
+                                            <td class="exerciseItem">
+                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                            </td>
+                                            <td class="exerciseItem">
+                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                            </td>
+                                            <td class="exerciseItem">
+                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                            </td>
+                                            <td class="exerciseItem">
+                                                <?php echo $exerciseItem['name']; ?><br><?php echo $exerciseItem['duration']; ?>
+                                            </td>
                                         </tr>
+
                                         <?php $exerciseIndex++; ?>
                                     <?php endforeach; ?>
-
                                 </tbody>
                             </table>
                         </div>
-                        <!-- Add the total reps and duration for each day -->
-                        <div id="total-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text"
-                            data-reps="0" data-duration="0">
-                            <?php
-                            echo 'Total Repetitions: <span id="reps-' . strtolower($day) . '">0</span><br>';
-                            echo 'Total Duration (mins): <span id="duration-' . strtolower($day) . '">0</span><br>';
-                            ?>
+                        <p>Total Exercises Completed: <span id="exerciseCounter-<?php echo strtolower($day); ?>">0</span>
+                        </p>
+                        <!-- Add the shuffle button for each day -->
+                        <div class="calculator-form form-section border-0">
+                            <button class="shuffle-exercises-button" data-day="<?php echo strtolower($day); ?>">Regenerate
+                                Exercises</button>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -1309,19 +1297,70 @@ function getExercises($recommendedGoal)
             attachEventListeners();
         }
 
-        // Adjust the frequency of showing workouts based on the recommended goal
-        function adjustWorkoutFrequency(recommendedGoal) {
-            switch (recommendedGoal) {
-                case 'weight-loss':
-                    return 'Less frequently (e.g., every 2-3 days)';
-                case 'weight-gain':
-                    return 'More frequently (e.g., every day or every other day)';
-                case 'maintenance':
-                    return 'Frequently (e.g., every day or every other day)';
-                default:
-                    return 'Unknown';
-            }
+
+        // Exercise Planning JAVASCRIPT
+        document.addEventListener('DOMContentLoaded', () => {
+            // Attach event listeners when the page loads
+            attachExerciseEventListeners();
+
+            const shuffleButtons = document.querySelectorAll('.shuffle-exercises-button');
+
+            shuffleButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const day = this.getAttribute('data-day');
+                    shuffleExercises(day);
+                });
+            });
+        });
+
+        function attachExerciseEventListeners() {
+            const exerciseItems = document.querySelectorAll('.exerciseItem');
+            exerciseItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    item.classList.toggle('completed');
+                    const tableId = item.closest('table').id.split('-')[1]; // Extract table ID
+                    updateCounter(tableId);
+                    hideRegenerateButton(item);
+                });
+            });
         }
+
+        function shuffleExercises(day) {
+            const tableBody = document.querySelector(`#exercisePlanTable-${day} tbody`);
+            const rows = Array.from(tableBody.rows);
+
+            // Shuffle the rows starting from the second column (excluding timeslot)
+            for (let i = rows.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                // Exclude the first column (timeslot) from shuffling
+                for (let k = 1; k < rows[i].cells.length; k++) {
+                    [rows[i].cells[k].innerHTML, rows[j].cells[k].innerHTML] = [rows[j].cells[k].innerHTML, rows[i].cells[k].innerHTML];
+                }
+            }
+
+            // Append shuffled rows back to the table body
+            rows.forEach(row => tableBody.appendChild(row));
+
+            // Update counter after shuffling
+            updateCounter(day);
+        }
+
+        function updateCounter(day) {
+            const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
+            document.getElementById(`exerciseCounter-${day}`).innerText = completedExercises;
+        }
+
+        function hideRegenerateButton(item) {
+            // Find the parent container of the clicked exercise item
+            const tableContainer = item.closest('.border-mealplan');
+
+            // Find and hide the "Regenerate Exercises" button within the parent container
+            const regenerateButton = tableContainer.querySelector('.shuffle-exercises-button');
+            regenerateButton.style.display = 'none';
+        }
+
+
+
     </script>
 
     <style>
@@ -1330,6 +1369,15 @@ function getExercises($recommendedGoal)
         }
 
         .mealItem.consumed {
+            background-color: green;
+            color: white;
+        }
+
+        .exerciseItem {
+            cursor: pointer;
+        }
+
+        .exerciseItem.completed {
             background-color: green;
             color: white;
         }
