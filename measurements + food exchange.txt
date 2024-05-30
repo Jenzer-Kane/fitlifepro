@@ -1,4 +1,4 @@
-Person A
+Person A (MALE - NORMAL)
 Weight - 72kg
 Height - 170cm
 Age - 22
@@ -8,7 +8,7 @@ Hips - 86 cm or 34 in.
 Thigh - 56 cm or 22in
 
 
-Person B
+Person B (MALE - OBESE)
 Weight - 77kg
 Height - 162cm
 Age - 48 
@@ -16,6 +16,27 @@ Waist - 99cm or 38in.
 Neck - 44cm or 17in.
 Hips - 100cm or 39in.
 Thigh - 70cm or 27in.
+
+
+Person C (FEMALE - NORMAL):
+
+Weight: 64kg
+Height: 160cm
+Age: 25
+Waist: 75cm
+Neck: 35cm
+Hips: 85cm
+Thigh: 55cm
+
+Person D (FEMALE - OBESE):
+
+Weight: 81kg
+Height: 170cm
+Age: 40
+Waist: 100cm
+Neck: 42cm
+Hips: 110cm
+Thigh: 65cm
 
 https://dtc.ucsf.edu/pdfs/FoodLists.pdf
 
