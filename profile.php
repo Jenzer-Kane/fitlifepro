@@ -1432,17 +1432,31 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                 const tableBody = document.querySelector(`#exercisePlanTable-${day} tbody`);
                 const rows = Array.from(tableBody.rows);
 
-                // Shuffle the rows starting from the second column (excluding timeslot)
-                for (let i = rows.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    // Exclude the first column (timeslot) from shuffling
-                    for (let k = 1; k < rows[i].cells.length; k++) {
-                        [rows[i].cells[k].innerHTML, rows[j].cells[k].innerHTML] = [rows[j].cells[k].innerHTML, rows[i].cells[k].innerHTML];
+                // Extract all cells (excluding the first column) into a flat array
+                let cells = [];
+                rows.forEach(row => {
+                    for (let i = 1; i < row.cells.length; i++) {
+                        cells.push(row.cells[i]);
                     }
+                });
+
+                // Shuffle the cells array
+                for (let i = cells.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [cells[i].innerHTML, cells[j].innerHTML] = [cells[j].innerHTML, cells[i].innerHTML];
                 }
 
-                // Append shuffled rows back to the table body
-                rows.forEach(row => tableBody.appendChild(row));
+                // Append shuffled cells back into rows
+                let cellIndex = 0;
+                rows.forEach(row => {
+                    for (let i = 1; i < row.cells.length; i++) {
+                        row.cells[i].innerHTML = cells[cellIndex].innerHTML;
+                        cellIndex++;
+                    }
+                });
+
+                // Reattach event listeners after shuffling
+                attachExerciseEventListeners();
 
                 // Update counter after shuffling
                 updateCounter(day);
@@ -1461,8 +1475,8 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                 const regenerateButton = tableContainer.querySelector('.shuffle-exercises-button');
                 regenerateButton.style.display = 'none';
             }
-
         });
+
     </script>
     <script src="assets/js/jquery-3.6.0.min.js"></script>
     <script src="assets/js/popper.min.js"></script>
