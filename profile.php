@@ -1115,7 +1115,8 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                             <?php if (isset($intakeResults)): ?>
                                 <p>Track your progress by marking the exercises you've completed.</>
                                 </p>
-                                <p><strong>Tip: Aim to do exercises from all 3 categories in a day (Cardio, Strength, Core).</strong>
+                                <p><strong>Tip: Aim to do atleast 5 exercises from all 3 categories in a day (Cardio, Strength,
+                                        Core).</strong>
                                 </p>
                             <?php endif; ?>
                             <!-- Add a container div for each day's table and shuffle button -->
@@ -1184,6 +1185,7 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                             </div>
                             <div id="total-exercises-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text">
                                 <?php
+                                echo 'Minimum Exercises to Complete: <span class="minimum-to-complete">5</span><br>';
                                 echo 'Total Exercises Completed: <span id="exerciseCounter-' . strtolower($day) . '">0</span><br>';
                                 ?>
                                 <!-- Add the shuffle button for each day -->
@@ -1479,6 +1481,27 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                 const regenerateButton = tableContainer.querySelector('.shuffle-exercises-button');
                 regenerateButton.style.display = 'none';
             }
+
+            function updateCounter(day) {
+                const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
+                const minimumExercises = 5;
+                const exerciseCounter = document.getElementById(`exerciseCounter-${day}`);
+                exerciseCounter.innerText = completedExercises;
+
+                if (completedExercises >= minimumExercises) {
+                    exerciseCounter.classList.add('minimum-hit');
+                    const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
+                    minimumToComplete.innerHTML = `<span style="color: green;">${minimumExercises} - Minimum hit! Good job!</span>`;
+                } else {
+                    exerciseCounter.classList.remove('minimum-hit');
+                    const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
+                    minimumToComplete.innerHTML = `${minimumExercises}`;
+                }
+            }
+
+
+
+
         });
 
 
