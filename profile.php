@@ -325,7 +325,7 @@ if (isset($intakeResults['goal'])) {
     $exercise_plan = [];
 }
 
-$exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
+$exercisetimeSlots = ['Any', '-', '-', '-', '-'];
 ?>
 
 <!DOCTYPE html>
@@ -603,6 +603,7 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
             </div>
         </header>
 
+
         <!-- SUB BANNER SECTION -->
         <section class="banner-section">
             <div class="container">
@@ -619,6 +620,7 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
             </div>
         </section>
     </div>
+
 
     <!DOCTYPE html>
     <html lang="en">
@@ -938,7 +940,7 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
                     <div class="our_schedule_content">
                         <?php if (!empty($meal_plan)): ?>
                             <h5>DIET PLAN</h5>
-                            <h2>TAILORED DIET PLAN FOR<br>
+                            <h2>RECOMMENDED DIET PLAN FOR<br>
                                 <?php echo strtoupper($goal_name); ?>
                             </h2>
                         </div>
@@ -1049,6 +1051,7 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
             <?php endif; ?>
     </section>
 
+
     <!-- QUOTE SECTION -->
     <section class="quote_section">
         <div class="container">
@@ -1077,6 +1080,7 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
         </div>
     </section>
 
+
     <!-- Exercise Planning Section -->
     <section class="our_schedule_section exercise-planning">
         <div class="container">
@@ -1086,7 +1090,7 @@ $exercisetimeSlots = ['Morning', 'Noon', 'Afternoon', 'Evening', 'Night'];
                         <?php if (!empty($exercise_plan)): ?>
                             <?php if (isset($goal_name)): ?>
                                 <h5>EXERCISE PLAN</h5>
-                                <h2>TAILORED EXERCISE PLAN FOR<br><?php echo strtoupper($goal_name); ?></h2>
+                                <h2>RECOMMENDED EXERCISE PLAN FOR<br><?php echo strtoupper($goal_name); ?></h2>
                             </div>
                         </div>
                     </div>

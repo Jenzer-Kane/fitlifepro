@@ -195,14 +195,14 @@ session_start();
                                 <div class="carousel-item">
                                     <div class="banner-section-content">
                                         <div class="banner-section-wrapper">
-                                            <h3>Featuring Routine Curator for</h3>
+                                            <h3>Featuring Routines for</h3>
                                             <h1 data-aos="fade-up">WEIGHTS</h1>
                                             <figure class="white_line mb-0">
                                                 <img src="./assets/images/banner_white_line.png" alt=""
                                                     class="img-fluid">
                                             </figure>
                                         </div>
-                                        <p data-aos="fade-right">Get personalized weight-lifting routines according to
+                                        <p data-aos="fade-right">Get optimal weight-lifting routines according to
                                             your physique goals.</p>
                                         <div class="btn_wrapper" data-aos="fade-up">
                                             <a class="text-decoration-none join_now_btn" href="./pricing.php">Join us
@@ -267,6 +267,8 @@ session_start();
             </a>
         </div>
     </div>
+
+
     <!-- ABOUT US SECTION -->
     <section class="aboutus_section">
         <div class="container">
@@ -300,6 +302,7 @@ session_start();
         </div>
     </section>
     <!-- CHOOSE US SECTION -->
+
 
     <!-- OUR SERVICES SECTION -->
     <section class="our_services_section">
@@ -614,6 +617,7 @@ session_start();
     </section>
     <!-- CONTACT US SECTION -->
 
+
     <!-- OUR NEWS SECTION -->
     <section class="our_news_section">
         <div class="container">
@@ -685,6 +689,8 @@ session_start();
             </div>
         </div>
     </section>
+
+
     <!-- FOOTER SECTION -->
     <section class="footer-section">
         <div class="container">
@@ -772,6 +778,8 @@ session_start();
             <img src="./assets/images/footer_right_icon.png" alt="" class="img-fluid">
         </figure>
     </section>
+
+
     <!-- BLOG SECTION POPUP -->
     <div id="blog-model-1" class="modal fade blog-model-con" tabindex="-1" style="display: none;" aria-hidden="true">
         <div class="modal-dialog">
@@ -1004,6 +1012,8 @@ session_start();
             </div>
         </div>
     </div>
+
+
     <!-- Latest compiled JavaScript -->
     <script src="assets/js/jquery-3.6.0.min.js"></script>
     <script src="assets/js/popper.min.js"></script>
