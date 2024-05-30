@@ -262,7 +262,7 @@ if (isset($intakeResults['goal'])) {
 }
 
 $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-$timeSlots = ['Breakfast', 'Snack 1', 'Lunch', 'Snack 2', 'Dinner'];
+$timeSlots = ['Breakfast', 'Lunch', 'Snack', 'Snack', 'Snack', 'Dinner'];
 
 
 function getExercises($recommendedGoal, $exerciseType)
@@ -1113,7 +1113,10 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                                 </div>
                             </div>
                             <?php if (isset($intakeResults)): ?>
-                                <p><strong>Track your progress by marking the exercises you've completed.</strong></p>
+                                <p>Track your progress by marking the exercises you've completed.</>
+                                </p>
+                                <p><strong>Tip: Aim to do exercises from all 3 categories in a day (Cardio, Strength, Core).</strong>
+                                </p>
                             <?php endif; ?>
                             <!-- Add a container div for each day's table and shuffle button -->
                             <div class="diet-horizontal-display">
@@ -1191,7 +1194,7 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                                     <div class="note">
                                         <?php
                                         if (isset($intakeResults)) {
-                                            echo '<b>Aim to gradually increase your total exercises by at least 1.</b>';
+                                            echo '<b>Aim to gradually increase your total exercises by at least 1, every 1-2 weeks.</b>';
                                         }
                                         ?>
                                     </div>
@@ -1396,7 +1399,6 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
         }
 
 
-        // Exercise Planning JAVASCRIPT
         document.addEventListener('DOMContentLoaded', () => {
             attachExerciseEventListeners();
 
@@ -1419,12 +1421,7 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
             function attachExerciseEventListeners() {
                 const exerciseItems = document.querySelectorAll('.exerciseItem');
                 exerciseItems.forEach(item => {
-                    item.addEventListener('click', () => {
-                        item.classList.toggle('completed');
-                        const tableId = item.closest('table').id.split('-')[1]; // Extract table ID
-                        updateCounter(tableId);
-                        hideRegenerateButton(item);
-                    });
+                    item.addEventListener('click', toggleCompleted);
                 });
             }
 
@@ -1462,6 +1459,13 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                 updateCounter(day);
             }
 
+            function toggleCompleted() {
+                this.classList.toggle('completed');
+                const tableId = this.closest('table').id.split('-')[1]; // Extract table ID
+                updateCounter(tableId);
+                hideRegenerateButton(this);
+            }
+
             function updateCounter(day) {
                 const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
                 document.getElementById(`exerciseCounter-${day}`).innerText = completedExercises;
@@ -1476,6 +1480,7 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                 regenerateButton.style.display = 'none';
             }
         });
+
 
     </script>
     <script src="assets/js/jquery-3.6.0.min.js"></script>
