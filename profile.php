@@ -46,7 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             VALUES ('$username', '$age', '$waist', '$neck', '$gender', '$hip', '$thigh', '$activityLevel', '$bmiWeight', '$bmiHeight')";
 
     if ($mysqli->query($sql) === TRUE) {
-        echo "Body Status updated successfully!";
+        echo "Body Status updated successfully.";
     } else {
         echo "Error: " . $sql . "<br>" . $mysqli->error;
     }
@@ -1114,14 +1114,15 @@ $mysqli->close();
                         value="<?php echo $bodyFatPercentage; ?>">
                     <input type="hidden" name="fatMass" id="fatMass" value="<?php echo $fatMass; ?>">
                     <input type="hidden" name="leanMass" id="leanMass" value="<?php echo $leanMass; ?>">
-                    <input type="hidden" name="hamwilBW_kg" id="hamwilBW_kg" value="<?php echo $hamwilBW_kg; ?>">
-                    <input type="hidden" name="devineBW" id="devineBW" value="<?php echo $devineBW; ?>">
+                    <input type="hidden" name="hamwiIBW_kg" id="hamwiIBW_kg" value="<?php echo $hamwiIBW_kg; ?>">
+                    <input type="hidden" name="devineIBW" id="devineIBW" value="<?php echo $devineIBW; ?>">
                     <input type="hidden" name="robinsonIBW" id="robinsonIBW" value="<?php echo $robinsonIBW; ?>">
                     <input type="hidden" name="millerIBW" id="millerIBW" value="<?php echo $millerIBW; ?>">
                     <input type="hidden" name="caloricIntake" id="caloricIntake" value="<?php echo $caloricIntake; ?>">
                     <input type="hidden" name="proteinIntake" id="proteinIntake" value="<?php echo $proteinIntake; ?>">
-                    <button type="submit">Submit Results</button>
+                    <button type="submit">Save Results</button>
                 </form>
+                <div id="message"></div>
             </div>
         </div>
     </div>
@@ -1309,7 +1310,8 @@ $mysqli->close();
                             <?php if (isset($intakeResults)): ?>
                                 <p>Track your progress by marking the exercises you've completed.</>
                                 </p>
-                                <p><strong>Tip: Aim to do atleast 5 exercises from all 3 categories in a day (Cardio, Strength,
+                                <p><strong>Tip: Aim to do atleast 5 exercises from all 3 categories in a day (Cardio,
+                                        Strength,
                                         Core).</strong>
                                 </p>
                             <?php endif; ?>
@@ -1693,6 +1695,7 @@ $mysqli->close();
                 }
             }
 
+
             document.addEventListener('DOMContentLoaded', () => {
                 // Example function to populate the hidden inputs with results
                 function populateResults() {
@@ -1703,7 +1706,7 @@ $mysqli->close();
                     document.getElementById('fatMass').value = fatMass;
                     document.getElementById('leanMass').value = leanMass;
                     document.getElementById('hamwilBW_kg').value = hamwilBW_kg;
-                    document.getElementById('devineBW').value = devineBW;
+                    document.getElementById('devineIBW').value = devineIBW;
                     document.getElementById('robinsonIBW').value = robinsonIBW;
                     document.getElementById('millerIBW').value = millerIBW;
                     document.getElementById('caloricIntake').value = caloricIntake;
@@ -1712,6 +1715,27 @@ $mysqli->close();
 
                 // Call this function when your calculations are done
                 populateResults();
+            });
+
+            $(document).ready(function () {
+                $("#resultsForm").on("submit", function (event) {
+                    event.preventDefault(); // Prevent the default form submission
+
+                    $.ajax({
+                        type: "POST",
+                        url: "store_results.php", // Your PHP script to handle the form submission
+                        data: $(this).serialize(), // Serialize the form data
+                        success: function (response) {
+                            $("#message").html(response); // Display the response message
+                            if (response.includes("")) {
+                                // Optional: handle success case
+                            }
+                        },
+                        error: function () {
+                            $("#message").html("There was an error processing the form.");
+                        }
+                    });
+                });
             });
         });
 

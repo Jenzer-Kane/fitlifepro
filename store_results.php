@@ -30,23 +30,20 @@ $bmiCategory = $_POST['bmiCategory'];
 $bodyFatPercentage = $_POST['bodyFatPercentage'];
 $fatMass = $_POST['fatMass'];
 $leanMass = $_POST['leanMass'];
-$hamwilBW_kg = $_POST['hamwilBW_kg'];
-$devineBW = $_POST['devineBW'];
+$hamwiIBW_kg = $_POST['hamwiIBW_kg'];
+$devineIBW = $_POST['devineIBW'];
 $robinsonIBW = $_POST['robinsonIBW'];
 $millerIBW = $_POST['millerIBW'];
 $caloricIntake = $_POST['caloricIntake'];
 $proteinIntake = $_POST['proteinIntake'];
 
 // Prepare and bind
-$stmt = $mysqli->prepare("INSERT INTO users_results (username, bmi, bmiCategory, bodyFatPercentage, fatMass, leanMass, hamwilBW_kg, devineBW, robinsonIBW, millerIBW, caloricIntake, proteinIntake, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())");
-$stmt->bind_param("ssssssssssss", $username, $bmi, $bmiCategory, $bodyFatPercentage, $fatMass, $leanMass, $hamwilBW_kg, $devineBW, $robinsonIBW, $millerIBW, $caloricIntake, $proteinIntake);
+$stmt = $mysqli->prepare("INSERT INTO users_results (username, bmi, bmiCategory, bodyFatPercentage, fatMass, leanMass, hamwiIBW_kg, devineIBW, robinsonIBW, millerIBW, caloricIntake, proteinIntake, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp())");
+$stmt->bind_param("ssssssssssss", $username, $bmi, $bmiCategory, $bodyFatPercentage, $fatMass, $leanMass, $hamwiIBW_kg, $devineIBW, $robinsonIBW, $millerIBW, $caloricIntake, $proteinIntake);
 
 // Execute the statement
 if ($stmt->execute()) {
-    echo "New record created successfully";
-    // Redirect to profile.php after success message
-    header("Location: profile.php");
-    exit; // Ensure no further code is executed after the redirect
+    echo "Results saved successfully.";
 } else {
     echo "Error: " . $stmt->error;
 }
