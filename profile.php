@@ -481,31 +481,95 @@ if ($savedUserInfo) {
     $bmiHeight = $savedUserInfo['bmiHeight'];
     $activityLevel = $savedUserInfo['activityLevel'];
 
-    // Store the body fat results for displaying in the HTML later
-    $bodyFatResults = [
-        'age' => $age,
-        'gender' => $gender,
-        'waist' => $waist,
-        'neck' => $neck,
-        'hip' => $hip,
-        'thigh' => $thigh,
-        'height' => $bmiHeight,
-        'bodyFatPercentage' => $bodyFatPercentage,
-        'fatMass' => $fatMass,
-        'leanMass' => $leanMass,
-        'hamwiIBW' => $hamwiIBW,
-        'devineIBW' => $devineIBW,
-        'robinsonIBW' => $robinsonIBW,
-        'millerIBW' => $millerIBW,
-        'lowerNormalRange' => $lowerNormalRange,
-        'upperNormalRange' => $upperNormalRange,
-        'activityLevel' => $activityLevel
-    ];
+    // Get the username from the session
+    $username = $_SESSION['username'];
 
+    // Fetch user results
+    $userResults = fetchUserResults($username);
+
+    // Check if results are available
+    if ($userResults) {
+        // Store the body fat results for displaying in the HTML later
+        $bodyFatResults = [
+            'age' => $age,
+            'gender' => $gender,
+            'waist' => $waist,
+            'neck' => $neck,
+            'hip' => $hip,
+            'thigh' => $thigh,
+            'height' => $bmiHeight,
+            'bmi' => $userResults['bmi'],
+            'bmiCategory' => $userResults['bmiCategory'],
+            'recommendedGoal' => $userResults['recommendedGoal'],
+            'bodyFatPercentage' => $userResults['bodyFatPercentage'],
+            'fatMass' => $userResults['fatMass'],
+            'leanMass' => $userResults['leanMass'],
+            'hamwiIBW_kg' => $userResults['hamwiIBW_kg'],
+            'devineIBW' => $userResults['devineIBW'],
+            'robinsonIBW' => $userResults['robinsonIBW'],
+            'millerIBW' => $userResults['millerIBW'],
+            'caloricIntake' => $userResults['caloricIntake'],
+            'proteinIntake' => $userResults['proteinIntake'],
+            'activityLevel' => $activityLevel
+        ];
+    } else {
+        // Handle case where no results are found
+        $bodyFatResults = null;
+    }
+} else {
+    // Handle case where user information is not retrieved
+    $bodyFatResults = null;
 }
 
 // Close the database connection
 $mysqli->close();
+
+// Function to fetch user results from the database
+function fetchUserResults($username)
+{
+    global $mysqli;
+
+    // Prepare and bind
+    $stmt = $mysqli->prepare("SELECT * FROM users_results WHERE username = ?");
+    $stmt->bind_param("s", $username);
+
+    // Execute the statement
+    $stmt->execute();
+
+    // Get result
+    $result = $stmt->get_result();
+
+    // Check if results exist
+    if ($result->num_rows > 0) {
+        // Results exist, fetch them
+        $row = $result->fetch_assoc();
+
+        // Return the results as an associative array
+        return [
+            'bmi' => $row['bmi'],
+            'bmiCategory' => $row['bmiCategory'],
+            'bodyFatPercentage' => $row['bodyFatPercentage'],
+            'fatMass' => $row['fatMass'],
+            'leanMass' => $row['leanMass'],
+            'hamwiIBW_kg' => $row['hamwiIBW_kg'],
+            'devineIBW' => $row['devineIBW'],
+            'robinsonIBW' => $row['robinsonIBW'],
+            'millerIBW' => $row['millerIBW'],
+            'caloricIntake' => $row['caloricIntake'],
+            'proteinIntake' => $row['proteinIntake'],
+            'recommendedGoal' => $row['recommendedGoal'],
+        ];
+    } else {
+        // No results found
+        return null;
+    }
+
+    // Close statement
+    $stmt->close();
+}
+
+// Close the database connection
+//$mysqli->close();
 ?>
 
 <!DOCTYPE html>
@@ -888,38 +952,50 @@ $mysqli->close();
                         <div class="row">
                             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                 <div class="results-form form-section">
+                                    <!-- DATABASE STUFF -->
+                                    <?php
+                                    if ($bodyFatResults) {
+                                        echo '<h2>BMI:</h2>';
+                                        echo '<p><strong>Your Weight:</strong> ' . $savedUserInfo['bmiWeight'] . ' kg</p>';
+                                        echo '<p><strong>Your Height:</strong> ' . $savedUserInfo['bmiHeight'] . ' cm</p>';
+                                        echo '<p><strong>Your BMI:</strong> ' . number_format($bodyFatResults['bmi'], 2) . ' cm</p>';
+                                        echo '<p><strong>Weight Category:</strong> ' . $bodyFatResults['bmiCategory'] . '</p>';
+                                        echo '<p><strong>Underweight BMI:</strong> 18.50 & below ' . ' / (' . number_format(getWeightFromBMI(18.5, $bmiHeight), 2) . ' kg & below)</p>';
+                                        $lowerNormalRange = 18.5;
+                                        $upperNormalRange = 24.9;
+
+                                        $lowerOverweightRange = 25;
+                                        $upperOverweightRange = 29.9;
+
+                                        $lowerObeseRange = 30;
+                                        echo '<p><strong>Normal BMI:</strong> 18.50 - 24.99 / (' . number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2) . ' kg)</p>';
+                                        echo '<p><strong>Overweight BMI:</strong> 25 - 29.99 / (' . number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg)</p>';
+                                        echo '<p><strong>Obese BMI:</strong> ' . number_format($lowerObeseRange, 2) . ' & above ' . ' / (' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg & above)</p>';
+                                    } else {
+                                        echo '<p></p>';
+                                    }
+                                    ?>
+
+                                    <!-- SESSION STUFF -->
                                     <?php
                                     if (isset($bmiResults['bmi'])) {
                                         $bmi = $bmiResults['bmi'];
 
                                         echo '<h2>BMI:</h2>';
 
-                                        // Display Weight
                                         echo (isset($intakeResults['weight'])) ? '<p><strong>Your Weight:</strong> ' . $intakeResults['weight'] . ' kg</p>' : '';
-
-                                        // Display Height
                                         echo (isset($intakeResults['height'])) ? '<p><strong>Your Height:</strong> ' . $intakeResults['height'] . ' cm</p>' : '';
-
-                                        // Display Your BMI
                                         echo '<p><strong>Your BMI:</strong> ' . number_format($bmi, 2) . '</p>';
-
-
-                                        // Display BMI category
                                         echo '<p><strong>Weight Category:</strong> ' . $bmiCategory . '</p>';
-
-                                        // Display BMI Range
                                         $bmiDifference = $bmiResults['bmiDifference'];
-
-                                        // Underweight Range
                                         $lowerUnderweightRange = $bmi - $bmiDifference['underweight'];
                                         echo '<p><strong>Underweight BMI:</strong> 18.50 & below ' . ' / (' . number_format(getWeightFromBMI(18.5, $bmiHeight), 2) . ' kg & below)</p>';
-                                        //  Normal Range
                                         $lowerNormalRange = 18.5;
                                         $upperNormalRange = 24.9;
-                                        //  Overweight Range
+
                                         $lowerOverweightRange = 25;
                                         $upperOverweightRange = 29.9;
-                                        // Obese Range
+
                                         $lowerObeseRange = 30;
                                         echo '<p><strong>Normal BMI:</strong> 18.50 - 24.99 / (' . number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2) . ' kg)</p>';
                                         echo '<p><strong>Overweight BMI:</strong> 25 - 29.99 / (' . number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2) . ' kg - ' . number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2) . ' kg)</p>';
@@ -939,6 +1015,25 @@ $mysqli->close();
                         <div class="row">
                             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                 <div class="results-form form-section">
+                                    <!-- DATABASE STUFF -->
+                                    <?php if ($bodyFatResults) {
+                                        echo '<h2>Body Fat:</h2>';
+                                        echo '<p><strong>Age:</strong> ' . $savedUserInfo['age'] . ' years</p>';
+                                        echo '<p><strong>Gender:</strong> ' . ucfirst($savedUserInfo['gender']) . '</p>';
+                                        echo '<p><strong>Waist Circumference:</strong> ' . $savedUserInfo['waist'] . ' cm</p>';
+                                        echo '<p><strong>Neck Circumference:</strong> ' . $savedUserInfo['neck'] . ' cm</p>';
+                                        echo '<p><strong>Height:</strong> ' . $savedUserInfo['bmiHeight'] . ' cm</p>';
+                                        echo '<p><strong>Hip Circumference:</strong> ' . $savedUserInfo['hip'] . ' cm</p>';
+                                        echo '<p><strong>Thigh Circumference:</strong> ' . $savedUserInfo['thigh'] . ' cm</p>';
+                                        echo '<p><strong>Body Fat Percentage:</strong> ' . number_format($bodyFatResults['bodyFatPercentage'], 2) . '%</p>';
+                                        echo '<p><strong>Fat Body Mass:</strong> ' . number_format($bodyFatResults['fatMass'], 2) . ' kg</p>';
+                                        echo '<p><strong>Lean Body Mass:</strong> ' . number_format($bodyFatResults['leanMass'], 2) . ' kg</p>';
+                                        echo '<p><strong>Important Note:</strong> The results of these calculations are only an estimate since they are based on many different assumptions to make them as applicable to as many people as possible. For more accurate measurements of body fat, the use of instruments such as skin caliper, bioelectric impedance analysis, or hydrostatic density testing is necessary.</p>';
+                                    } else {
+                                        echo '<p></p>';
+                                    }
+                                    ?>
+                                    <!-- SESSION STUFF -->
                                     <?php
                                     if (isset($intakeResults)) {
                                         // Display the body fat percentage
@@ -985,6 +1080,17 @@ $mysqli->close();
                         <div class="row">
                             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                 <div class="results-form form-section">
+                                    <!-- DATABASE STUFF -->
+                                    <?php
+                                    if (isset($bodyFatResults)) {
+                                        echo '<h2>Ideal Weight:</h2>';
+                                        echo '<p><strong>Hamwi (1964):</strong> ' . number_format($bodyFatResults['hamwiIBW_kg'], 2) . ' kg</p>';
+                                        echo '<p><strong>Devine (1974):</strong> ' . number_format($bodyFatResults['devineIBW'], 2) . ' kg</p>';
+                                        echo '<p><strong>Robinson (1983):</strong> ' . number_format($bodyFatResults['robinsonIBW'], 2) . ' kg</p>';
+                                        echo '<p><strong>Miller (1983):</strong> ' . number_format($bodyFatResults['millerIBW'], 2) . ' kg</p>';
+                                    }
+                                    ?>
+                                    <!-- SESSION STUFF -->
                                     <?php
                                     if (isset($intakeResults)) {
                                         // Display results
@@ -1008,14 +1114,26 @@ $mysqli->close();
                         <div class="row">
                             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                 <div class="results-form form-section">
+                                    <!-- DATABASE STUFF -->
+                                    <?php if (isset($bodyFatResults)) {
+                                        echo '<h2>Recommended Goal, Calorie and Protein Intake:</h2>';
+                                        echo '<p><strong>Recommended Goal:</strong> ' . ucwords(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])) . '</p>';
+                                        echo '<p><strong>Lifestyle:</strong> ' . ucfirst($bodyFatResults['activityLevel']) . '</p>';
+                                        echo '<p><strong>Caloric Intake:</strong> ' .
+                                            number_format($bodyFatResults['caloricIntake']) . ' calories/day</p>';
+                                        echo '<p><strong>Protein Intake:</strong> ' .
+                                            number_format($bodyFatResults['proteinIntake']) . ' grams/day</p>';
+                                    }
+                                    ?>
+
+                                    <!-- SESSION STUFF -->
                                     <?php
-                                    // Display Caloric and Protein Intake Results
                                     if (isset($intakeResults)) {
                                         echo '<h2>Recommended Goal, Calorie and Protein Intake:</h2>';
                                         echo '<p><strong>Recommended Goal:</strong> ' . ucwords(str_replace('-', ' ', $intakeResults['goal'])) . '</p>';
                                         echo '<p><strong>Lifestyle:</strong> ' . ucfirst($activityLevel) . '</p>';
-                                        echo '<p><strong>Caloric Intake:</strong> ' . $intakeResults['caloricIntake'] . ' calories/day</p>';
-                                        echo '<p><strong>Protein Intake:</strong> ' . $intakeResults['proteinIntake'] . ' grams/day</p>';
+                                        echo '<p><strong>Caloric Intake:</strong> ' . number_format($intakeResults['caloricIntake']) . ' calories/day</p>';
+                                        echo '<p><strong>Protein Intake:</strong> ' . number_format($intakeResults['proteinIntake']) . ' grams/day</p>';
 
                                         echo '<p><strong>Important Note:</strong> You can find the caloric and protein contents of the foods you eat on the nutrition labels on the packages.</p>';
                                     }
@@ -1033,6 +1151,76 @@ $mysqli->close();
                         <div class="row">
                             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                 <div class="results-form form-section">
+
+                                    <?php
+                                    if (isset($bodyFatResults)) {
+                                        // Display food recommendations based on goal
+                                        echo '<h2>Food Recommendations:</h2>';
+                                        echo '<h2>' . ucwords(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])) . '</h2>';
+                                        echo '<ul>';
+
+                                        if ($bodyFatResults['recommendedGoal'] === 'weight-loss') {
+                                            $weightlossRecommendations = [
+                                                'Chicken breast',
+                                                'Fish (tuna, tilapia, salmon)',
+                                                'Eggs',
+                                                'Spinach',
+                                                'Avocado',
+                                                'Oats',
+                                                'Cottage Cheese',
+                                                'Greek Yogurt',
+                                                'Milk',
+                                                'Nuts and seeds (walnuts, almonds, pumpkin seeds, sunflower seeds)',
+                                                'Sweet potato',
+                                                'Vegetables (broccoli, bell peppers, onions, green beans, asparagus)',
+                                                'Fruits (bananas, apples, oranges, blueberries)'
+                                            ];
+                                            echo 'Weight loss involves reducing overall body weight through a combination of a calorie deficit, dietary
+                                        changes, and increased physical activity. The goal is to improve health and fitness by shedding excess fat
+                                        and achieving a healthier body composition. <br><br />';
+                                            foreach ($weightlossRecommendations as $recommendation) {
+                                                echo '<li>' . $recommendation . '</li>';
+                                            }
+                                        } elseif ($bodyFatResults['recommendedGoal'] === 'weight-gain') {
+                                            $weightgainRecommendations = [
+                                                'Steak',
+                                                'Ground beef',
+                                                'Potatoes',
+                                                'Rice',
+                                                'Sweet potato',
+                                                'Whole wheat or wheat bread',
+                                                'Peanut butter'
+                                            ];
+                                            echo 'Weight-gain involves increasing calorie intake and adopting a balanced diet to achieve a healthy body
+            mass. Incorporating strength training exercises can promote muscle growth. <br><br />';
+                                            foreach ($weightgainRecommendations as $recommendation) {
+                                                echo '<li>' . $recommendation . '</li>';
+                                            }
+                                        } elseif ($bodyFatResults['recommendedGoal'] === 'maintenance') {
+                                            $maintenanceRecommendations = [
+                                                '<p><strong>Chicken breast</p></strong>',
+                                                '<p><strong>Fish</p></strong>',
+                                                '<p><strong>Eggs</p></strong>',
+                                                '<p><strong>Quinoa</p></strong>',
+                                                '<p><strong>Brown rice</p></strong>',
+                                                '<p><strong>Mixed vegetables</p></strong>',
+                                                '<p><strong>Fruits (apple, orange, berries)</p></strong>',
+                                                '<p><strong>Nuts and seeds</p></strong>',
+                                                '<p><strong>Greek yogurt</p></strong>',
+                                                '<p><strong>Whole grains</p></strong>'
+                                            ];
+                                            echo '<p><strong>Maintenance involves sustaining your current weight and body composition by balancing
+                                        caloric intake with energy expenditure. Focus on a varied and balanced diet to maintain overall
+                                        health.</p></strong> <br><br />';
+                                            foreach ($maintenanceRecommendations as $recommendation) {
+                                                echo '<li>' . $recommendation . '</li>';
+                                            }
+                                        }
+                                        echo '</ul>';
+                                    }
+                                    ?>
+
+
                                     <?php
                                     if (isset($intakeResults)) {
                                         // Display food recommendations based on goal
@@ -1110,6 +1298,8 @@ $mysqli->close();
                 <form id="resultsForm" method="POST" action="store_results.php">
                     <input type="hidden" name="bmi" id="bmi" value="<?php echo $bmi; ?>">
                     <input type="hidden" name="bmiCategory" id="bmiCategory" value="<?php echo $bmiCategory; ?>">
+                    <input type="hidden" name="recommendedGoal" id="recommendedGoal"
+                        value="<?php echo $recommendedGoal; ?>">
                     <input type="hidden" name="bodyFatPercentage" id="bodyFatPercentage"
                         value="<?php echo $bodyFatPercentage; ?>">
                     <input type="hidden" name="fatMass" id="fatMass" value="<?php echo $fatMass; ?>">
@@ -1123,6 +1313,7 @@ $mysqli->close();
                     <button type="submit">Save Results</button>
                 </form>
                 <div id="message"></div>
+                <p><strong>Remember to save your results!</strong></p>
             </div>
         </div>
     </div>
