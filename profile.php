@@ -481,7 +481,6 @@ if ($savedUserInfo) {
     $bmiHeight = $savedUserInfo['bmiHeight'];
     $activityLevel = $savedUserInfo['activityLevel'];
 
-
     // Store the body fat results for displaying in the HTML later
     $bodyFatResults = [
         'age' => $age,
@@ -502,13 +501,11 @@ if ($savedUserInfo) {
         'upperNormalRange' => $upperNormalRange,
         'activityLevel' => $activityLevel
     ];
-}
 
+}
 
 // Close the database connection
 $mysqli->close();
-
-
 ?>
 
 <!DOCTYPE html>
@@ -879,7 +876,6 @@ $mysqli->close();
         </div>
     </section>
 
-
     <!-- BMI Results Section -->
     <div class="our_schedule_content">
         <h2>----- RESULTS -----</h2>
@@ -1110,9 +1106,25 @@ $mysqli->close();
                     </div>
                 </section>
             </div>
+            <div class="calculator-form form-section border-white">
+                <form id="resultsForm" method="POST" action="store_results.php">
+                    <input type="hidden" name="bmi" id="bmi" value="<?php echo $bmi; ?>">
+                    <input type="hidden" name="bmiCategory" id="bmiCategory" value="<?php echo $bmiCategory; ?>">
+                    <input type="hidden" name="bodyFatPercentage" id="bodyFatPercentage"
+                        value="<?php echo $bodyFatPercentage; ?>">
+                    <input type="hidden" name="fatMass" id="fatMass" value="<?php echo $fatMass; ?>">
+                    <input type="hidden" name="leanMass" id="leanMass" value="<?php echo $leanMass; ?>">
+                    <input type="hidden" name="hamwilBW_kg" id="hamwilBW_kg" value="<?php echo $hamwilBW_kg; ?>">
+                    <input type="hidden" name="devineBW" id="devineBW" value="<?php echo $devineBW; ?>">
+                    <input type="hidden" name="robinsonIBW" id="robinsonIBW" value="<?php echo $robinsonIBW; ?>">
+                    <input type="hidden" name="millerIBW" id="millerIBW" value="<?php echo $millerIBW; ?>">
+                    <input type="hidden" name="caloricIntake" id="caloricIntake" value="<?php echo $caloricIntake; ?>">
+                    <input type="hidden" name="proteinIntake" id="proteinIntake" value="<?php echo $proteinIntake; ?>">
+                    <button type="submit">Submit Results</button>
+                </form>
+            </div>
         </div>
     </div>
-
 
     <!-- Diet Planning Section -->
     <section class="our_schedule_section diet-planning">
@@ -1681,6 +1693,26 @@ $mysqli->close();
                 }
             }
 
+            document.addEventListener('DOMContentLoaded', () => {
+                // Example function to populate the hidden inputs with results
+                function populateResults() {
+                    document.getElementById('username').value = $_SESSION['username']; // Replace with actual username logic
+                    document.getElementById('bmi').value = calculatedBMI;
+                    document.getElementById('bmiCategory').value = bmiCategory;
+                    document.getElementById('bodyFatPercentage').value = bodyFatPercentage;
+                    document.getElementById('fatMass').value = fatMass;
+                    document.getElementById('leanMass').value = leanMass;
+                    document.getElementById('hamwilBW_kg').value = hamwilBW_kg;
+                    document.getElementById('devineBW').value = devineBW;
+                    document.getElementById('robinsonIBW').value = robinsonIBW;
+                    document.getElementById('millerIBW').value = millerIBW;
+                    document.getElementById('caloricIntake').value = caloricIntake;
+                    document.getElementById('proteinIntake').value = proteinIntake;
+                }
+
+                // Call this function when your calculations are done
+                populateResults();
+            });
         });
 
 
