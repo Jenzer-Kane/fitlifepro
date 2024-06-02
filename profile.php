@@ -1294,27 +1294,31 @@ function fetchUserResults($username)
                     </div>
                 </section>
             </div>
-            <div class="calculator-form form-section border-white">
-                <form id="resultsForm" method="POST" action="store_results.php">
-                    <input type="hidden" name="bmi" id="bmi" value="<?php echo $bmi; ?>">
-                    <input type="hidden" name="bmiCategory" id="bmiCategory" value="<?php echo $bmiCategory; ?>">
-                    <input type="hidden" name="recommendedGoal" id="recommendedGoal"
-                        value="<?php echo $recommendedGoal; ?>">
-                    <input type="hidden" name="bodyFatPercentage" id="bodyFatPercentage"
-                        value="<?php echo $bodyFatPercentage; ?>">
-                    <input type="hidden" name="fatMass" id="fatMass" value="<?php echo $fatMass; ?>">
-                    <input type="hidden" name="leanMass" id="leanMass" value="<?php echo $leanMass; ?>">
-                    <input type="hidden" name="hamwiIBW_kg" id="hamwiIBW_kg" value="<?php echo $hamwiIBW_kg; ?>">
-                    <input type="hidden" name="devineIBW" id="devineIBW" value="<?php echo $devineIBW; ?>">
-                    <input type="hidden" name="robinsonIBW" id="robinsonIBW" value="<?php echo $robinsonIBW; ?>">
-                    <input type="hidden" name="millerIBW" id="millerIBW" value="<?php echo $millerIBW; ?>">
-                    <input type="hidden" name="caloricIntake" id="caloricIntake" value="<?php echo $caloricIntake; ?>">
-                    <input type="hidden" name="proteinIntake" id="proteinIntake" value="<?php echo $proteinIntake; ?>">
-                    <button type="submit">Save Results</button>
-                </form>
-                <div id="message"></div>
-                <p><strong>Remember to save your results!</strong></p>
-            </div>
+            <?php
+            if (isset($intakeResults)) {
+                echo '
+    <div class="calculator-form form-section border-white">
+        <form id="resultsForm" method="POST" action="store_results.php">
+            <input type="hidden" name="bmi" id="bmi" value="' . $bmi . '">
+            <input type="hidden" name="bmiCategory" id="bmiCategory" value="' . $bmiCategory . '">
+            <input type="hidden" name="recommendedGoal" id="recommendedGoal" value="' . $recommendedGoal . '">
+            <input type="hidden" name="bodyFatPercentage" id="bodyFatPercentage" value="' . $bodyFatPercentage . '">
+            <input type="hidden" name="fatMass" id="fatMass" value="' . $fatMass . '">
+            <input type="hidden" name="leanMass" id="leanMass" value="' . $leanMass . '">
+            <input type="hidden" name="hamwiIBW_kg" id="hamwiIBW_kg" value="' . $hamwiIBW_kg . '">
+            <input type="hidden" name="devineIBW" id="devineIBW" value="' . $devineIBW . '">
+            <input type="hidden" name="robinsonIBW" id="robinsonIBW" value="' . $robinsonIBW . '">
+            <input type="hidden" name="millerIBW" id="millerIBW" value="' . $millerIBW . '">
+            <input type="hidden" name="caloricIntake" id="caloricIntake" value="' . $caloricIntake . '">
+            <input type="hidden" name="proteinIntake" id="proteinIntake" value="' . $proteinIntake . '">
+            <button type="submit">Save Results</button>
+        </form>
+        <div id="message"></div>
+        <p><strong>Remember to save your results, so they appear next time you visit your profile.</strong></p>
+    </div>';
+            }
+            ?>
+
         </div>
     </div>
 
