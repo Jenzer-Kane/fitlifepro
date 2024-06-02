@@ -3,6 +3,16 @@ session_start();
 
 include 'database.php';
 
+// Initialize variables
+$gender = null;
+$waist = null;
+$neck = null;
+$bmiHeight = null;
+$bmiWeight = null;
+$age = null;
+$hip = null;
+$thigh = null;
+
 // Function to calculate BMI
 function calculateBMI($weight, $height)
 {
@@ -16,6 +26,32 @@ function calculateBMI($weight, $height)
         return 0;
     }
 }
+
+// Process user input and insert into the database
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Assume you have variables like $age, $waist, $neck, $gender, $hip, and $thigh from user input
+    $age = $_POST["age"];
+    $waist = $_POST["waist"];
+    $neck = $_POST["neck"];
+    $gender = $_POST["gender"];
+    $hip = $_POST["hip"];
+    $thigh = $_POST["thigh"];
+    $activityLevel = $_POST["activityLevel"];
+    $bmiWeight = $_POST["bmiWeight"]; // Updated variable name
+    $bmiHeight = $_POST["bmiHeight"]; // Updated variable name
+    $username = $_SESSION['username']; // Assuming the username is stored in the session
+
+    // Insert user input into database
+    $sql = "INSERT INTO users_info (username, age, waist, neck, gender, hip, thigh, activityLevel, bmiWeight, bmiHeight) 
+            VALUES ('$username', '$age', '$waist', '$neck', '$gender', '$hip', '$thigh', '$activityLevel', '$bmiWeight', '$bmiHeight')";
+
+    if ($mysqli->query($sql) === TRUE) {
+        echo "Body Status updated successfully!";
+    } else {
+        echo "Error: " . $sql . "<br>" . $mysqli->error;
+    }
+}
+
 
 // Initialize results arrays
 $intakeResults = null; // For caloric and protein intake
@@ -82,6 +118,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $recommendedGoal = 'weight-loss';
     }
 
+    // Determine BMI category
+    if ($bmi < 18.50) {
+        $bmiCategory = "Underweight";
+    } elseif ($bmi >= 18.50 && $bmi <= 24.99) {
+        $bmiCategory = "Normal";
+    } elseif ($bmi >= 25 && $bmi <= 29.99) {
+        $bmiCategory = "Overweight";
+    } else {
+        $bmiCategory = "Obese";
+    }
+
     // Retrieve user input for caloric and protein intake
     $activityLevel = $_POST['activityLevel'];
 
@@ -130,60 +177,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $hip = isset($_POST['hip']) ? floatval($_POST['hip']) : 0;
     $thigh = isset($_POST['thigh']) ? floatval($_POST['thigh']) : 0;
 
-    // Perform body fat calculation
-    if ($gender === 'female') {
-        $bodyFatPercentage = calculateBodyFatPercentageForWomen($waist, $neck, $hip, $bmiHeight);
-    } else {
-        $bodyFatPercentage = calculateBodyFatPercentageForMen($waist, $neck, $bmiHeight);
-    }
+    // Establish database connection
+    include 'database.php';
 
-    // Calculate fat mass and lean mass
-    $fatMass = ($bodyFatPercentage / 100) * $bmiWeight;
-    $leanMass = $bmiWeight - $fatMass;
-
-    // Calculate ideal body weight using different formulas
-    $heightInInches = $bmiHeight / 2.54; // Convert height to inches
-    $inchesOverFiveFeet = $heightInInches - 60;
-
-    if ($gender === 'male') {
-        $hamwiIBW = 106 + (6 * $inchesOverFiveFeet);
-        $devineIBW = 50.0 + 2.3 * $inchesOverFiveFeet;
-        $robinsonIBW = 52.0 + 1.9 * $inchesOverFiveFeet;
-        $millerIBW = 56.2 + 1.41 * $inchesOverFiveFeet;
-    } else {
-        $hamwiIBW = 100 + (5 * $inchesOverFiveFeet);
-        $devineIBW = 45.5 + 2.3 * $inchesOverFiveFeet;
-        $robinsonIBW = 49.0 + 1.7 * $inchesOverFiveFeet;
-        $millerIBW = 53.1 + 1.36 * $inchesOverFiveFeet;
-    }
-
-    // Convert the weight from pounds to kilograms
-    $hamwiIBW_kg = $hamwiIBW * 0.45359237;
-
-    // Calculate healthy BMI range
-    $lowerNormalRange = 18.5 * (($bmiHeight / 100) ** 2);
-    $upperNormalRange = 24.9 * (($bmiHeight / 100) ** 2);
-
-    // Store the body fat results for displaying in the HTML later
-    $bodyFatResults = [
-        'age' => $age,
-        'gender' => $gender,
-        'waist' => $waist,
-        'neck' => $neck,
-        'hip' => $hip,
-        'thigh' => $thigh,
-        'height' => $bmiHeight,
-        'bodyFatPercentage' => $bodyFatPercentage,
-        'fatMass' => $fatMass,
-        'leanMass' => $leanMass,
-        'hamwiIBW' => $hamwiIBW,
-        'devineIBW' => $devineIBW,
-        'robinsonIBW' => $robinsonIBW,
-        'millerIBW' => $millerIBW,
-        'lowerNormalRange' => $lowerNormalRange,
-        'upperNormalRange' => $upperNormalRange,
-    ];
 }
+
+// Perform body fat calculation
+if ($gender === 'female') {
+    $bodyFatPercentage = calculateBodyFatPercentageForWomen($waist, $neck, $hip, $bmiHeight);
+} else {
+    $bodyFatPercentage = calculateBodyFatPercentageForMen($waist, $neck, $bmiHeight);
+}
+
+// Calculate fat mass and lean mass
+$fatMass = ($bodyFatPercentage / 100) * $bmiWeight;
+$leanMass = $bmiWeight - $fatMass;
+
+// Calculate ideal body weight using different formulas
+$heightInInches = $bmiHeight / 2.54; // Convert height to inches
+$inchesOverFiveFeet = $heightInInches - 60;
+
+if ($gender === 'male') {
+    $hamwiIBW = 106 + (6 * $inchesOverFiveFeet);
+    $devineIBW = 50.0 + 2.3 * $inchesOverFiveFeet;
+    $robinsonIBW = 52.0 + 1.9 * $inchesOverFiveFeet;
+    $millerIBW = 56.2 + 1.41 * $inchesOverFiveFeet;
+} else {
+    $hamwiIBW = 100 + (5 * $inchesOverFiveFeet);
+    $devineIBW = 45.5 + 2.3 * $inchesOverFiveFeet;
+    $robinsonIBW = 49.0 + 1.7 * $inchesOverFiveFeet;
+    $millerIBW = 53.1 + 1.36 * $inchesOverFiveFeet;
+}
+
+// Convert the weight from pounds to kilograms
+$hamwiIBW_kg = $hamwiIBW * 0.45359237;
+
+// Calculate healthy BMI range
+$lowerNormalRange = 18.5 * (($bmiHeight / 100) ** 2);
+$upperNormalRange = 24.9 * (($bmiHeight / 100) ** 2);
+
+// Store the body fat results for displaying in the HTML later
+$bodyFatResults = [
+    'age' => $age,
+    'gender' => $gender,
+    'waist' => $waist,
+    'neck' => $neck,
+    'hip' => $hip,
+    'thigh' => $thigh,
+    'height' => $bmiHeight,
+    'bodyFatPercentage' => $bodyFatPercentage,
+    'fatMass' => $fatMass,
+    'leanMass' => $leanMass,
+    'hamwiIBW' => $hamwiIBW,
+    'devineIBW' => $devineIBW,
+    'robinsonIBW' => $robinsonIBW,
+    'millerIBW' => $millerIBW,
+    'lowerNormalRange' => $lowerNormalRange,
+    'upperNormalRange' => $upperNormalRange,
+];
+
 
 // Function to calculate body fat percentage using Navy Method for men
 function calculateBodyFatPercentageForMen($waist, $neck, $height)
@@ -267,7 +319,8 @@ $timeSlots = ['Breakfast', 'Lunch', 'Snack', 'Snack', 'Snack', 'Dinner'];
 
 function getExercises($recommendedGoal, $exerciseType)
 {
-    global $mysqli;
+
+    include 'database.php';
 
     // Define intensity based on recommended goal
     $intensity = '';
@@ -310,6 +363,9 @@ function getExercises($recommendedGoal, $exerciseType)
         // Shuffle the final exercise plan to mix all categories randomly
         shuffle($exercisePlan);
 
+        // Close the statement
+        $statement->close();
+
         return $exercisePlan;
     } else {
         echo "Error retrieving exercises: " . $mysqli->error;
@@ -326,6 +382,133 @@ if (isset($intakeResults['goal'])) {
 }
 
 $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
+
+function retrieveSavedUserInfo()
+{
+    global $mysqli;
+
+    // Check if the username is set in the session
+    if (!isset($_SESSION['username'])) {
+        return null;
+    }
+
+    // Prepare the query to retrieve saved user information based on the username
+    $sql = "SELECT age, waist, neck, gender, hip, thigh, activityLevel, bmiWeight, bmiHeight FROM users_info WHERE username = ?";
+
+    // Prepare the statement
+    $stmt = $mysqli->prepare($sql);
+
+    // Check if statement preparation was successful
+    if (!$stmt) {
+        // If preparation failed, return null
+        return null;
+    }
+
+    // Bind parameters
+    $stmt->bind_param("s", $_SESSION['username']);
+
+    // Execute the query
+    $stmt->execute();
+
+    // Check for execution errors
+    if ($stmt->errno) {
+        // If there's an error, return null
+        return null;
+    }
+
+    // Bind result variables
+    $stmt->bind_result($age, $waist, $neck, $gender, $hip, $thigh, $activityLevel, $bmiWeight, $bmiHeight);
+
+    // Fetch the data
+    $stmt->fetch();
+
+    // Close the statement
+    $stmt->close();
+
+    // Check if any data is retrieved
+    if ($age !== null && $waist !== null && $neck !== null && $gender !== null && $activityLevel !== null) {
+        // Return the retrieved user information
+        return [
+            'age' => $age,
+            'waist' => $waist,
+            'neck' => $neck,
+            'gender' => $gender,
+            'hip' => $hip,
+            'thigh' => $thigh,
+            'activityLevel' => $activityLevel,
+            'bmiWeight' => $bmiWeight,
+            'bmiHeight' => $bmiHeight
+        ];
+    } else {
+        // No saved information found
+        return getDefaultUserInfo();
+    }
+}
+
+// Function to return default user information
+function getDefaultUserInfo()
+{
+    // Define default values
+    $defaultUserInfo = [
+        'age' => 0,
+        'waist' => 0,
+        'neck' => 0,
+        'gender' => '',
+        'hip' => 0,
+        'thigh' => 0,
+        'activityLevel' => '',
+        'bmiWeight' => 0,
+        'bmiHeight' => 0
+    ];
+
+    return $defaultUserInfo;
+}
+
+// Retrieve saved user information
+$savedUserInfo = retrieveSavedUserInfo();
+
+// Check if user information is retrieved successfully
+if ($savedUserInfo) {
+    // Assign retrieved user information to variables
+
+    $age = $savedUserInfo['age'];
+    $waist = $savedUserInfo['waist'];
+    $neck = $savedUserInfo['neck'];
+    $gender = $savedUserInfo['gender'];
+    $hip = $savedUserInfo['hip'];
+    $thigh = $savedUserInfo['thigh'];
+    $bmiWeight = $savedUserInfo['bmiWeight'];
+    $bmiHeight = $savedUserInfo['bmiHeight'];
+    $activityLevel = $savedUserInfo['activityLevel'];
+
+
+    // Store the body fat results for displaying in the HTML later
+    $bodyFatResults = [
+        'age' => $age,
+        'gender' => $gender,
+        'waist' => $waist,
+        'neck' => $neck,
+        'hip' => $hip,
+        'thigh' => $thigh,
+        'height' => $bmiHeight,
+        'bodyFatPercentage' => $bodyFatPercentage,
+        'fatMass' => $fatMass,
+        'leanMass' => $leanMass,
+        'hamwiIBW' => $hamwiIBW,
+        'devineIBW' => $devineIBW,
+        'robinsonIBW' => $robinsonIBW,
+        'millerIBW' => $millerIBW,
+        'lowerNormalRange' => $lowerNormalRange,
+        'upperNormalRange' => $upperNormalRange,
+        'activityLevel' => $activityLevel
+    ];
+}
+
+
+// Close the database connection
+$mysqli->close();
+
+
 ?>
 
 <!DOCTYPE html>
@@ -621,7 +804,6 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
         </section>
     </div>
 
-
     <!DOCTYPE html>
     <html lang="en">
 
@@ -630,6 +812,7 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>BMI, Body Fat, Calorie and Protein Intake Calculator</title>
     </head>
+
     <section class="calculator-section">
         <div class="container">
             <div class="row">
@@ -638,45 +821,53 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                         <h2>BMI, Body Fat, Calorie and Protein Intake Calculator</h2>
 
                         <!-- Combined Form -->
-                        <form method="post" action="" id="calculatorForm" onsubmit="return validateForm()">
+                        <form method="post" action="" id="calculatorForm">
                             <!-- BMI Section -->
                             <label for="bmiWeight">Weight (kg):</label>
-                            <input type="text" name="bmiWeight" id="bmiWeight" required>
+                            <input type="text" name="bmiWeight" id="bmiWeight"
+                                value="<?php echo isset($bmiWeight) ? $bmiWeight : ''; ?>" required>
 
                             <label for="bmiHeight">Height (cm):</label>
-                            <input type="text" name="bmiHeight" id="bmiHeight" required>
+                            <input type="text" name="bmiHeight" id="bmiHeight"
+                                value="<?php echo isset($bmiHeight) ? $bmiHeight : ''; ?>" required>
 
                             <!-- Body Fat Calculator Section -->
                             <label for="age">Age:</label>
-                            <input type="number" id="age" name="age" required>
+                            <input type="number" id="age" name="age" value="<?php echo isset($age) ? $age : ''; ?>"
+                                required>
 
                             <label for="gender">Gender:</label>
                             <select id="gender" name="gender" required>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
+                                <option value="male" <?php echo isset($gender) && $gender === 'male' ? 'selected' : ''; ?>>Male</option>
+                                <option value="female" <?php echo isset($gender) && $gender === 'female' ? 'selected' : ''; ?>>Female</option>
                             </select>
 
                             <label for="waist">Waist (cm):</label>
-                            <input type="number" id="waist" name="waist" required>
+                            <input type="number" id="waist" name="waist"
+                                value="<?php echo isset($waist) ? $waist : ''; ?>" required>
 
                             <label for="neck">Neck (cm):</label>
-                            <input type="number" id="neck" name="neck" required>
+                            <input type="number" id="neck" name="neck" value="<?php echo isset($neck) ? $neck : ''; ?>"
+                                required>
 
                             <!-- Only for females -->
                             <div id="hipSection" style="display: none;">
                                 <label for="hip">Hip Circumference (cm):</label>
-                                <input type="text" name="hip" id="hip">
+                                <input type="number" id="hip" name="hip" value="<?php echo isset($hip) ? $hip : ''; ?>"
+                                    required>
+
 
                                 <label for="thigh">Thigh Circumference (cm):</label>
-                                <input type="text" name="thigh" id="thigh">
+                                <input type="number" id="thigh" name="thigh"
+                                    value="<?php echo isset($thigh) ? $thigh : ''; ?>" required>
                             </div>
 
-                            <!-- Calorie and Protein Intake Section -->
+
                             <label for="activityLevel">Lifestyle:</label>
                             <select name="activityLevel" required>
-                                <option value="sedentary">Sedentary - Much resting and very little physical
-                                    exercise.</option>
-                                <option value="active">Active - Every day tasks require physical activity.
+                                <option value="sedentary" <?php echo isset($activityLevel) && $activityLevel === 'sedentary' ? 'selected' : ''; ?>>Sedentary - Much resting and very
+                                    little physical exercise.</option>
+                                <option value="active" <?php echo isset($activityLevel) && $activityLevel === 'active' ? 'selected' : ''; ?>>Active - Every day tasks require physical activity.</option>
                                 </option>
                             </select>
 
@@ -716,16 +907,6 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                                         // Display Your BMI
                                         echo '<p><strong>Your BMI:</strong> ' . number_format($bmi, 2) . '</p>';
 
-                                        // Determine BMI category
-                                        if ($bmi < 18.50) {
-                                            $bmiCategory = "Underweight";
-                                        } elseif ($bmi >= 18.50 && $bmi <= 24.99) {
-                                            $bmiCategory = "Normal";
-                                        } elseif ($bmi >= 25 && $bmi <= 29.99) {
-                                            $bmiCategory = "Overweight";
-                                        } else {
-                                            $bmiCategory = "Obese";
-                                        }
 
                                         // Display BMI category
                                         echo '<p><strong>Weight Category:</strong> ' . $bmiCategory . '</p>';
@@ -763,7 +944,7 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                 <div class="results-form form-section">
                                     <?php
-                                    if (isset($bodyFatResults)) {
+                                    if (isset($intakeResults)) {
                                         // Display the body fat percentage
                                         echo '<h2>Body Fat:</h2>';
                                         echo '<p><strong>Age:</strong> ' . $age . ' years</p>';
@@ -809,7 +990,7 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                 <div class="results-form form-section">
                                     <?php
-                                    if (isset($bodyFatResults)) {
+                                    if (isset($intakeResults)) {
                                         // Display results
                                         echo '<h2>Ideal Weight:</h2>';
                                         echo '<p>Hamwi (1964): ' . number_format($hamwiIBW_kg, 2) . ' kg</p>';
@@ -931,6 +1112,7 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
             </div>
         </div>
     </div>
+
 
     <!-- Diet Planning Section -->
     <section class="our_schedule_section diet-planning">
@@ -1498,9 +1680,6 @@ $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
                     minimumToComplete.innerHTML = `${minimumExercises}`;
                 }
             }
-
-
-
 
         });
 
