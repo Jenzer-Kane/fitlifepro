@@ -791,6 +791,18 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
             position: relative;
         }
 
+        .quote_image img {
+            border-radius: 50%;
+            overflow: hidden;
+            /* Ensure the image stays within the circular boundary */
+            width: 100px;
+            /* Set the desired width */
+            height: 100px;
+            /* Set the desired height */
+            object-fit: cover;
+            /* Maintain the aspect ratio and cover the container */
+        }
+
         .exercise-planning {
             margin: 0 auto;
         }
@@ -1463,7 +1475,6 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
         }
         ?>
     </div>
-
 
     <!-- Diet Planning Section -->
     <section class="our_schedule_section diet-planning">

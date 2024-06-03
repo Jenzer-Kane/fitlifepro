@@ -195,6 +195,8 @@ $result = $mysqli->query($sql);
                     <th>Price</th>
                     <th>GCash Number</th>
                     <th>Reference Number</th>
+                    <th>Date Requested</th>
+                    <th>Date End</th>
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
@@ -215,6 +217,8 @@ $result = $mysqli->query($sql);
                         $price = isset($row["price"]) ? $row["price"] : "";
                         $gcash_number = isset($row["gcash_number"]) ? $row["gcash_number"] : "";
                         $reference_number = isset($row["reference_number"]) ? $row["reference_number"] : "";
+                        $created_at = isset($row["created_at"]) ? date("F j, Y", strtotime($row["created_at"])) : "";
+                        $date_end = isset($row["date_end"]) ? date("F j, Y", strtotime($row["date_end"])) : "";
                         $status = isset($row["status"]) ? $row["status"] : "";
 
                         // Add style attribute to center align the values
@@ -229,6 +233,8 @@ $result = $mysqli->query($sql);
                             <td style='text-align: center;'>" . $price . "</td>
                             <td style='text-align: center;'>" . $gcash_number . "</td>
                             <td style='text-align: center;'>" . $reference_number . "</td>
+                            <td style='text-align: center;'>" . $created_at . "</td>
+                            <td style='text-align: center;'>" . $date_end . "</td>
                             <td style='text-align: center;'>" . $status . "</td>
                             <td style='text-align: center;'>";
 
