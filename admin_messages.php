@@ -11,7 +11,7 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
 }
 
 // Retrieve data from the registration table
-$sql = "SELECT * FROM registration";
+$sql = "SELECT * FROM contact_form";
 $result = $mysqli->query($sql);
 ?>
 
@@ -123,7 +123,7 @@ $result = $mysqli->query($sql);
                                 <li class="nav-item">
                                 </li>
                                 <li class="nav-item">
-                                <li class="nav-item active">
+                                <li class="nav-item">
                                     <a class="nav-link" href="./admin_dashboard.php">Members</a>
                                 </li>
                                 <li class="nav-item">
@@ -142,7 +142,7 @@ $result = $mysqli->query($sql);
                                 <li class="nav-item">
                                 <li class="nav-item">
                                 </li>
-                                <li class="nav-item">
+                                <li class="nav-item active">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
                                 </li>
                                 <li class="nav-item">
@@ -179,10 +179,11 @@ $result = $mysqli->query($sql);
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                    <th>Gender</th>
+                    <th>Full Name</th>
                     <th>Email</th>
+                    <th>Subject</th>
+                    <th>Email</th>
+                    <th>Time</th>
                 </tr>
             </thead>
             <tbody>
@@ -192,13 +193,14 @@ $result = $mysqli->query($sql);
                     while ($row = $result->fetch_assoc()) {
                         // Handle undefined keys
                         $id = isset($row["id"]) ? $row["id"] : "";
-                        $firstname = isset($row["firstname"]) ? $row["firstname"] : "";
-                        $lastname = isset($row["lastname"]) ? $row["lastname"] : "";
-                        $gender = isset($row["gender"]) ? $row["gender"] : "";
+                        $name = isset($row["name"]) ? $row["name"] : "";
                         $email = isset($row["email"]) ? $row["email"] : "";
+                        $subject = isset($row["subject"]) ? $row["subject"] : "";
+                        $message = isset($row["message"]) ? $row["message"] : "";
+                        $created_at = isset($row["created_at"]) ? $row["created_at"] : "";
 
                         // Add style attribute to center align the values
-                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $firstname . "</td><td style='text-align: center;'>" . $lastname . "</td><td style='text-align: center;'>" . $gender . "</td><td style='text-align: center;'>" . $email . "</td></tr>";
+                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $name . "</td><td style='text-align: center;'>" . $email . "</td><td style='text-align: center;'>" . $subject . "</td><td style='text-align: center;'>" . $message . "</td><td style='text-align: center;'>" . $created_at . "</td></tr>";
                     }
                 } else {
                     // Display a message if no data is found

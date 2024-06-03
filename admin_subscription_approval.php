@@ -142,7 +142,7 @@ $result = $mysqli->query($sql);
                                 <li class="nav-item">
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link contact_btn" href="./contact.php">Inquiries</a>
+                                    <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
                                 </li>
                                 <li class="nav-item">
                                     <?php

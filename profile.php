@@ -970,9 +970,10 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                                 </option>
                             </select>
                             <!-- Show Calculate button if no data from DB is showing -->
-                            <button type="submit">Calculate</button>
-                            <!-- Show Recalculate button if data from DB is showing -->
-                            <?php if (isset($bodyFatResults)): ?>
+                            <?php if (!isset($bodyFatResults) && !isset($intakeResults)): ?>
+                                <button type="submit">Calculate</button>
+                            <?php else: ?>
+                                <!-- Show Recalculate button if data from DB is showing -->
                                 <button type="submit">Re-calculate</button>
                             <?php endif; ?>
 
@@ -1454,16 +1455,16 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
             <input type="hidden" name="millerIBW" id="millerIBW" value="' . $millerIBW . '">
             <input type="hidden" name="caloricIntake" id="caloricIntake" value="' . $caloricIntake . '">
             <input type="hidden" name="proteinIntake" id="proteinIntake" value="' . $proteinIntake . '">
-            <button type="submit">Save Results</button>
+            <button type="submit">Update Results</button>
         </form>
         <div id="message"></div>
-        <p><strong>Remember to save your results, so they appear next time you visit your profile.</strong></p>
+        <p><strong>Remember to Update your results, so they appear next time you visit your profile.</strong></p>
     </div>';
         }
         ?>
-
-
     </div>
+
+
     <!-- Diet Planning Section -->
     <section class="our_schedule_section diet-planning">
         <div class="container">
