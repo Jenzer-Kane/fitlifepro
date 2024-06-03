@@ -216,8 +216,8 @@ $result = $mysqli->query($sql);
                         $price = isset($row["price"]) ? $row["price"] : "";
                         $gcash_number = isset($row["gcash_number"]) ? $row["gcash_number"] : "";
                         $reference_number = isset($row["reference_number"]) ? $row["reference_number"] : "";
-                        $created_at = isset($row["created_at"]) ? date("F j, Y", strtotime($row["created_at"])) : "";
-                        $date_end = isset($row["date_end"]) ? date("F j, Y", strtotime($row["date_end"])) : "";
+                        $created_at = isset($row["created_at"]) ? date("F j, Y g:i A", strtotime($row["created_at"])) : "";
+                        $date_end = isset($row["date_end"]) ? date("F j, Y g:i A", strtotime($row["date_end"])) : "";
                         $status = isset($row["status"]) ? $row["status"] : "";
 
                         // Add style attribute to center align the values

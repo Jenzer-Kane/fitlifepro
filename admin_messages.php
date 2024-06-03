@@ -183,7 +183,7 @@ $result = $mysqli->query($sql);
                     <th>Email</th>
                     <th>Subject</th>
                     <th>Message</th>
-                    <th>Date Created</th>
+                    <th>Date Received</th>
                 </tr>
             </thead>
             <tbody>
@@ -197,7 +197,9 @@ $result = $mysqli->query($sql);
                         $email = isset($row["email"]) ? $row["email"] : "";
                         $subject = isset($row["subject"]) ? $row["subject"] : "";
                         $message = isset($row["message"]) ? $row["message"] : "";
-                        $created_at = isset($row["created_at"]) ? date("F j, Y", strtotime($row["created_at"])) : "";
+                        $created_at = isset($row["created_at"]) ? date("F j, Y g:i A", strtotime($row["created_at"])) : "";
+
+
 
                         // Add style attribute to center align the values
                         echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $name . "</td><td style='text-align: center;'>" . $email . "</td><td style='text-align: center;'>" . $subject . "</td><td style='text-align: center;'>" . $message . "</td><td style='text-align: center;'>" . $created_at . "</td></tr>";

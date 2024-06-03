@@ -183,6 +183,7 @@ $result = $mysqli->query($sql);
                     <th>Last Name</th>
                     <th>Gender</th>
                     <th>Email</th>
+                    <th>Date Registered</th>
                 </tr>
             </thead>
             <tbody>
@@ -196,9 +197,10 @@ $result = $mysqli->query($sql);
                         $lastname = isset($row["lastname"]) ? $row["lastname"] : "";
                         $gender = isset($row["gender"]) ? $row["gender"] : "";
                         $email = isset($row["email"]) ? $row["email"] : "";
+                        $created_at = isset($row["created_at"]) ? date("F j, Y g:i A", strtotime($row["created_at"])) : "";
 
                         // Add style attribute to center align the values
-                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $firstname . "</td><td style='text-align: center;'>" . $lastname . "</td><td style='text-align: center;'>" . $gender . "</td><td style='text-align: center;'>" . $email . "</td></tr>";
+                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $firstname . "</td><td style='text-align: center;'>" . $lastname . "</td><td style='text-align: center;'>" . $gender . "</td><td style='text-align: center;'>" . $email . "</td><td style='text-align: center;'>" . $created_at . "</td></tr>";
                     }
                 } else {
                     // Display a message if no data is found
