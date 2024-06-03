@@ -28,7 +28,7 @@ if (
     if ($conn->connect_error) {
         die('Connection Failed: ' . $conn->connect_error);
     } else {
-        $stmt = $conn->prepare("INSERT INTO registration(username, firstname, lastname, gender, email, password, verification_code) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO registration(username, firstname, lastname, gender, email, password, verification_code, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 0)");
         $stmt->bind_param("sssssss", $username, $firstname, $lastname, $gender, $email, $hashedPassword, $verificationCode);
 
         // Execute the prepared statement

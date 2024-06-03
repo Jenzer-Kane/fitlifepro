@@ -20,21 +20,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($conn->connect_error) {
             die('Connection Failed: ' . $conn->connect_error);
         } else {
-            // Retrieve hashed password from the database based on the entered username
-            $stmt = $conn->prepare("SELECT password FROM registration WHERE username = ?");
+            // Retrieve user data from the database based on the entered username
+            $stmt = $conn->prepare("SELECT password, is_verified FROM registration WHERE username = ?");
             $stmt->bind_param("s", $username);
             $stmt->execute();
-            $stmt->bind_result($hashedPassword);
+            $stmt->bind_result($hashedPassword, $isVerified);
             $stmt->fetch();
             $stmt->close();
 
             if ($hashedPassword !== null) {
                 // Verify the entered password against the hashed password
                 if (password_verify($password, $hashedPassword)) {
-                    // Password is correct
-                    $_SESSION['username'] = $username; // Store username in the session for future use
-                    header("Location: index.php"); // Redirect to the index page
-                    exit();
+                    if ($isVerified == 1) {
+                        // Password is correct and email is verified
+                        $_SESSION['username'] = $username; // Store username in the session for future use
+                        header("Location: index.php"); // Redirect to the index page
+                        exit();
+                    } else {
+                        // Email not verified
+                        echo "Your email is not verified. Please check your email for the verification code.";
+                        // Optionally, redirect to verification page
+                        header("Location: verify_email.html");
+                        exit();
+                    }
                 } else {
                     // Incorrect password
                     echo "<span style='color:red;'>Incorrect password.</span> Please try again.";

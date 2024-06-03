@@ -63,18 +63,19 @@ try {
     $mail->Body = $message;
 
     $mail->send();
+    echo "Great! All you need is to verify your email.";
     echo "Verification code sent successfully to $userEmail";
 
     // Countdown message for redirection
-    echo '<p id="countdown">Redirecting in 5 seconds...</p>';
+    echo '<p id="countdown">Redirecting in 10 seconds...</p>';
     // Redirect to login.php after 5 seconds
     echo '<script>
-             let seconds = 5;
+             let seconds = 10;
              setInterval(function() {
                  document.getElementById("countdown").innerHTML = "Redirecting in " + seconds + " seconds...";
                  seconds--;
                  if (seconds < 0) {
-                     window.location.href = "login.php";
+                     window.location.href = "verify_email.html";
                  }
              }, 1000);
            </script>';
