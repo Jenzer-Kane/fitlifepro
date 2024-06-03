@@ -197,7 +197,7 @@ $result = $mysqli->query($sql);
                         $email = isset($row["email"]) ? $row["email"] : "";
                         $subject = isset($row["subject"]) ? $row["subject"] : "";
                         $message = isset($row["message"]) ? $row["message"] : "";
-                        $created_at = isset($row["created_at"]) ? date("F j, Y g:i A", strtotime($row["created_at"])) : "";
+                        $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
 
 
 
