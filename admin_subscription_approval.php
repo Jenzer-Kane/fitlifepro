@@ -185,7 +185,6 @@ $result = $mysqli->query($sql);
             <!-- Added style="width: 100%;" to ensure table takes up whole width -->
             <thead>
                 <tr>
-                    <th>ID</th>
                     <th>Transaction ID</th>
                     <th>First Name</th>
                     <th>Last Name</th>
@@ -223,7 +222,6 @@ $result = $mysqli->query($sql);
 
                         // Add style attribute to center align the values
                         echo "<tr>
-                            <td style='text-align: center;'>" . $id . "</td>
                             <td style='text-align: center;'>" . $transaction_id . "</td>
                             <td style='text-align: center;'>" . $firstname . "</td>
                             <td style='text-align: center;'>" . $lastname . "</td>

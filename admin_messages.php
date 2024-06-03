@@ -183,7 +183,7 @@ $result = $mysqli->query($sql);
                     <th>Email</th>
                     <th>Subject</th>
                     <th>Message</th>
-                    <th>Time</th>
+                    <th>Date Created</th>
                 </tr>
             </thead>
             <tbody>
