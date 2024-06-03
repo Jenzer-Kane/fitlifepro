@@ -17,6 +17,9 @@ if (
     $email = $_POST['email'];
     $password = $_POST['password'];
 
+    // Generate a verification code
+    $verificationCode = substr(md5(uniqid(mt_rand(), true)), 0, 6);
+
     // Hash the password
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
@@ -25,37 +28,20 @@ if (
     if ($conn->connect_error) {
         die('Connection Failed: ' . $conn->connect_error);
     } else {
-        $stmt = $conn->prepare("INSERT INTO registration(username, firstname, lastname, gender, email, password) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssss", $username, $firstname, $lastname, $gender, $email, $hashedPassword);
+        $stmt = $conn->prepare("INSERT INTO registration(username, firstname, lastname, gender, email, password, verification_code) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssssss", $username, $firstname, $lastname, $gender, $email, $hashedPassword, $verificationCode);
 
         // Execute the prepared statement
         $executionResult = $stmt->execute();
 
         if ($executionResult) {
-            echo "Registration Successful!";
+            // Store necessary information in session
+            $_SESSION['username'] = $username;
+            $_SESSION['email'] = $email;
 
-            // Redirect after successful registration
-            echo '<html>
-                    <head>
-                        <title>Redirecting...</title>
-                        <script>
-                            var countdown = 5;
-                            function updateCountdown() {
-                                document.getElementById("countdown").innerHTML = countdown;
-                                countdown--;
-                                if (countdown < 0) {
-                                    window.location.href = "login.html";
-                                } else {
-                                    setTimeout(updateCountdown, 1000);
-                                }
-                            }
-                            setTimeout(updateCountdown, 1000);
-                        </script>
-                    </head>
-                    <body>
-                        <p>Redirecting in <span id="countdown">5</span> seconds...</p>
-                    </body>
-                </html>';
+            // Redirect the user to the verification page
+            header("Location: verify_email.php");
+            exit();
         } else {
             // Check for duplicate entry error
             if ($conn->errno == 1062) {
