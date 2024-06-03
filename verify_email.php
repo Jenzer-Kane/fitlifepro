@@ -63,7 +63,7 @@ try {
     $mail->Body = $message;
 
     $mail->send();
-    echo "Great! All you need is to verify your email.<br>";
+    echo "<span style='font-size:20px;'>Great! All you need is to verify your email.<br>";
     echo "A Verification Code has been sent to $userEmail";
 
     // Countdown message for redirection

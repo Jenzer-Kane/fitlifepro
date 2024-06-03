@@ -45,7 +45,7 @@ if (
         } else {
             // Check for duplicate entry error
             if ($conn->errno == 1062) {
-                echo "<span style='color:red;'>Username or Email already exists.</span> Please choose a different one.";
+                echo "<span style='color:red; font-size:20px;'>Username or Email already exists.</span><span style='font-size:20px;'> Please choose a different one.";
                 echo '<html>
                     <head>
                         <title>Redirecting...</title>

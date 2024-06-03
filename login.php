@@ -38,14 +38,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         exit();
                     } else {
                         // Email not verified
-                        echo "Your email is not verified. Please check your email for the verification code.";
+                        echo '<div style="color:red; font-size:20px;">Your email is not verified. Please check your email for the verification code.</div>';
                         // Optionally, redirect to verification page
                         header("Location: verify_email.html");
                         exit();
                     }
                 } else {
                     // Incorrect password
-                    echo "<span style='color:red;'>Incorrect password.</span> Please try again.";
+                    echo "<span style='color:red; font-size:20px;'>Incorrect password.</span><span style='font-size:20px;'> Please try again.";
                     echo '<html>
                         <head>
                             <title>Redirecting...</title>
@@ -71,12 +71,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } else {
                 // Invalid username
-                echo "<span style='color:red;'>Invalid username.</span> Please try again.";
+                echo "<span style='color:red; font-size:20px;'>Invalid username.</span><span style='font-size:20px;'> Please try again.";
                 echo '<html>
                     <head>
                         <title>Redirecting...</title>
                         <script>
-                            var countdown = 5;
+                            var countdown = 3;
                             function updateCountdown() {
                                 document.getElementById("countdown").innerHTML = countdown;
                                 countdown--;
@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </script>
                     </head>
                     <body>
-                        <p>Redirecting in <span id="countdown">5</span> seconds...</p>
+                        <p>Redirecting in <span id="countdown">3</span> seconds...</p>
                     </body>
                 </html>';
                 exit();
