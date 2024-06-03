@@ -991,7 +991,7 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
     <div class="results-container" style="border: 1px solid #ddd; padding: 15px;">
         <div class="our_schedule_content">
             <?php if (isset($bodyFatResults)): ?>
-                <h2 class="mt-5">Last saved on <br></h2>
+                <h2 class="mt-5">Last generated on <br></h2>
                 <h5><?php echo $formattedDate; ?> </h5>
             <?php endif; ?>
         </div>
@@ -1455,10 +1455,10 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
             <input type="hidden" name="millerIBW" id="millerIBW" value="' . $millerIBW . '">
             <input type="hidden" name="caloricIntake" id="caloricIntake" value="' . $caloricIntake . '">
             <input type="hidden" name="proteinIntake" id="proteinIntake" value="' . $proteinIntake . '">
-            <button type="submit">Update Results</button>
+            <button type="submit">Set Results</button>
         </form>
         <div id="message"></div>
-        <p><strong>Remember to Update your results, so they appear next time you visit your profile.</strong></p>
+        <p><strong>Remember to Set your results, so they appear next time you visit your profile.</strong></p>
     </div>';
         }
         ?>

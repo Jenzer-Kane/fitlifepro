@@ -44,7 +44,7 @@ $stmt->bind_param("sssssssssssss", $username, $bmi, $bmiCategory, $bodyFatPercen
 
 // Execute the statement
 if ($stmt->execute()) {
-    echo "Results saved successfully.";
+    echo "Results set successfully.";
 } else {
     echo "Error: " . $stmt->error;
 }

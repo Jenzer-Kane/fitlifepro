@@ -28,7 +28,7 @@ Neck: 35cm
 Hips: 85cm
 Thigh: 55cm
 
-Person D (FEMALE - OBESE):
+Person D (FEMALE - OVERWEIGHT):
 
 Weight: 81kg
 Height: 170cm
