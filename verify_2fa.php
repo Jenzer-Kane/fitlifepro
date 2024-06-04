@@ -1,8 +1,119 @@
+<?php
+session_start();
+
+// Include PHPMailer classes
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+// Load Composer's autoloader
+require 'vendor/autoload.php'; // Adjust the path as necessary
+
+// Check if the necessary session data is set
+if (!isset($_SESSION['email'])) {
+    // Redirect to the login page if not set
+    header("Location: login.html");
+    exit();
+}
+
+// Function to generate a random 2FA code
+function generate2FACode($length = 6)
+{
+    return strtoupper(substr(str_shuffle(str_repeat($x = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', ceil($length / strlen($x)))), 1, $length));
+}
+
+// Generate a 2FA code if it's not already set
+if (!isset($_SESSION['2fa_code'])) {
+    $twoFactorCode = generate2FACode();
+    $_SESSION['2fa_code'] = $twoFactorCode;
+
+    // Send 2FA code to the user's email
+    $userEmail = $_SESSION['email'];
+    $subject = "FitLifePro - Two Factor Authentication Code";
+    $message = "Your two factor authentication code is: $twoFactorCode";
+
+    // Create a new PHPMailer instance
+    $mail = new PHPMailer(true);
+
+    try {
+        // SMTP configuration
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'fitlifepro2024@gmail.com'; // Gmail email address
+        $mail->Password = 'wnoa azlq gxqc peef'; // The app password generated
+        $mail->SMTPSecure = 'tls';
+        $mail->Port = 587;
+
+        // Recipients
+        $mail->setFrom('fitlifepro2024@gmail.com', 'FitLifePro');
+        $mail->addAddress($userEmail); // Add a recipient
+
+        // Content
+        $mail->isHTML(true); // Set email format to HTML
+        $mail->Subject = $subject;
+        $mail->Body = $message;
+
+        $mail->send();
+    } catch (Exception $e) {
+        echo "Failed to send 2FA code. Please try again later. Mailer Error: {$mail->ErrorInfo}";
+        exit();
+    }
+}
+
+// Check if the form is submitted
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Check if the 2FA code is set in the POST data
+    if (isset($_POST['two_factor_code'])) {
+        $enteredCode = $_POST['two_factor_code'];
+
+        // Verify the entered 2FA code against the session-stored code
+        if ($enteredCode === $_SESSION['2fa_code']) {
+            // Clear the 2FA code from the session after successful verification
+            unset($_SESSION['2fa_code']);
+
+            // Set a session variable to indicate the user is authenticated
+            $_SESSION['authenticated'] = true;
+
+            // Redirect to pricing.php after successful verification
+            header("Location: pricing.php");
+            exit();
+        } else {
+            // Incorrect 2FA code
+            echo "<span style='color:red; font-size:20px;'>Incorrect 2FA code.</span><span style='font-size:20px;'> Please try again.";
+            echo '<html>
+                <head>
+                    <title>Redirecting...</title>
+                    <script>
+                        var countdown = 3;
+                        function updateCountdown() {
+                            document.getElementById("countdown").innerHTML = countdown;
+                            countdown--;
+                            if (countdown < 0) {
+                                window.location.href = "verify_2fa.php";
+                            } else {
+                                setTimeout(updateCountdown, 1000);
+                            }
+                        }
+                        setTimeout(updateCountdown, 1000);
+                    </script>
+                </head>
+                <body>
+                    <p>Redirecting in <span id="countdown">3</span> seconds...</p>
+                </body>
+            </html>';
+            exit();
+        }
+    } else {
+        echo "Form data not received correctly.";
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="zxx">
 
 <head>
-    <title>Register | FITLIFE PRO</title>
+    <title>Verification | FITLIFE PRO</title>
     <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
@@ -40,7 +151,7 @@
             background-color: rgba(0, 0, 0, 0.6);
             position: relative;
             z-index: 2;
-   
+
         }
 
         .navbar::before {
@@ -72,12 +183,14 @@
 
         .banner-section {
             position: relative;
-            z-index: 1; /* Ensure the banner content is above the background image */
+            z-index: 1;
+            /* Ensure the banner content is above the background image */
         }
 
         .banner_video {
             position: relative;
-            z-index: 1; /* Ensure the video icon is above the background image */
+            z-index: 1;
+            /* Ensure the video icon is above the background image */
         }
     </style>
 </head>
@@ -96,7 +209,9 @@
                     </a>
                     <!-- Navbar -->
                     <nav class="navbar navbar-expand-lg navbar-light">
-                        <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                        <button class="navbar-toggler collapsed" type="button" data-toggle="collapse"
+                            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                            aria-expanded="false" aria-label="Toggle navigation">
                             <span class="navbar-toggler-icon"></span>
                             <span class="navbar-toggler-icon"></span>
                             <span class="navbar-toggler-icon"></span>
@@ -104,221 +219,210 @@
                         <div class="collapse navbar-collapse" id="navbarSupportedContent">
                             <ul class="navbar-nav ml-auto">
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./index.php">Home</a>
+                                    <a class="nav-link" href="">Home</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./about.php">About</a>
+                                    <a class="nav-link" href="">About</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./services.php">Services</a>
+                                    <a class="nav-link" href="">Services</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./collaborators.php">Collaborators</a>
+                                    <a class="nav-link" href="">Collaborators</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./pricing.php">Pricing</a>
+                                    <a class="nav-link" href="">Pricing</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link contact_btn" href="./contact.php">Contact</a>
+                                    <a class="nav-link contact_btn" href="">Contact</a>
                                 </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="./login.html">Login</a>
-                        </li>
-                        <li class="nav-item active">
-                            <a class="nav-link" href="./register.html">Register</a>
-                        </li>
-                    </ul>
+                                <?php
+                                if (isset($_SESSION['username'])) {
+                                    // If user is logged in, show name and logout button
+                                    echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="">' . $_SESSION['username'] . '</a>' . '</a></li>';
+                                    echo '<li class="nav-item"><a class="nav-link login_btn" href="logout.php">Logout</a></li>';
+                                } else {
+                                    // If user is not logged in, show login and register buttons
+                                    echo '<li class="nav-item"><a class="nav-link login_btn" href="./login.html">Login</a></li>';
+                                    echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
+                                }
+                                ?>
+                            </ul>
+                        </div>
+                    </nav>
                 </div>
-            </nav>
-        </div>
-    </header>
+        </header>
 
 
-<!-- BODY -->
-    <style>
-body {
-    background-size: cover;
-}
-    .wrapper-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        width: 100%; /* Ensure full width */
-    }
-        .wrapper {
-            width: 420px;
-            background: transparent;
-            border: 2px solid rgba(255, 255, 255, .2);
-            backdrop-filter: blur(20px);
-            box-shadow: 0 0 10px rgba(0, 0, 0, .2);
-            color: #fff;
-            border-radius: 10px;
-            padding: 30px 40px;
-        }
+        <!-- BODY -->
+        <style>
+            body {
+                background-size: cover;
+            }
 
-        .wrapper h1 {
-            font-size: 36px;
-            text-align: center;
-        }
+            .wrapper-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                width: 100%;
+                /* Ensure full width */
+            }
 
-        .wrapper .input-box {
-            width: 100%;
-            height: 50px;
-            margin: 30px 0;
-        }
+            .wrapper {
+                width: 420px;
+                background: transparent;
+                border: 2px solid rgba(255, 255, 255, .2);
+                backdrop-filter: blur(20px);
+                box-shadow: 0 0 10px rgba(0, 0, 0, .2);
+                color: #fff;
+                border-radius: 10px;
+                padding: 30px 40px;
+            }
 
-        .input-box input{
-            width: 100%;
-            height: 50px;
-            background: transparent;
-            border: none;
-            outline: none;
-            border: 2px solid rgba(255,255,255, .2);
-            border-radius: 40px;
+            .wrapper h1 {
+                font-size: 36px;
+                text-align: center;
+            }
 
-        }
+            .wrapper .input-box {
+                width: 100%;
+                height: 50px;
+                margin: 30px 0;
+            }
 
-        .input-box input::placeholder{
-            color: #FFF;
-        }
+            .input-box input {
+                width: 100%;
+                height: 50px;
+                background: transparent;
+                border: none;
+                outline: none;
+                border: 2px solid rgba(255, 255, 255, .2);
+                border-radius: 40px;
 
-        .input-box i {
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 20px;
-        }
+            }
 
-        .input-box {
-            margin-bottom: 20px;
-        }
+            .input-box input::placeholder {
+                color: #FFF;
+            }
 
-        .input-box input {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            border: none;
-            border-bottom: 1px solid #FFF;
-            background-color: transparent;
-            color: #FFF;
-            outline: none;
-        }
+            .input-box i {
+                position: absolute;
+                right: 20px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 20px;
+            }
 
-        .input-box i {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            left: 10px;
-        }
+            .input-box {
+                margin-bottom: 20px;
+            }
 
-        .wrapper .remember-forgot {
-            display: flex;
-            justify-content: space-between;
-            font-size: 14.5px;
-            margin: -15px 0 15px;
-        }
+            .input-box input {
+                width: 100%;
+                padding: 10px;
+                margin-top: 5px;
+                border: none;
+                border-bottom: 1px solid #FFF;
+                background-color: transparent;
+                color: #FFF;
+                outline: none;
+            }
 
-        .remember-forgot label input {
-            accent-color: #fff;
-            margin-right: 3px;
-        }
-        
-        .remember-forgot a {
-            color: #FFF;
-            text-decoration: none;
-        }
+            .input-box i {
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                left: 10px;
+            }
 
-        .remember-forgot a:hover {
-            text-decoration: underline;
-        }
+            .wrapper .remember-forgot {
+                display: flex;
+                justify-content: space-between;
+                font-size: 14.5px;
+                margin: -15px 0 15px;
+            }
 
-        .wrapper .btn {
-           width: 100%;
-           height: 45px;
-           background: #fff;
-           border: none;
-           outline: none;
-           border-radius: 40px;
-           box-shadow: 0 0 10px rgba(0, 0, 0, .1);
-           cursor: pointer;
-           font-size: 16px;
-           color: #333;
-           font-weight: 600;
-        }
+            .remember-forgot label input {
+                accent-color: #fff;
+                margin-right: 3px;
+            }
 
-        .wrapper .register-link {
-            font-size: 14.5px;
-            text-align: center;
-            margin-top: 20px 0 15px;
-        }
+            .remember-forgot a {
+                color: #FFF;
+                text-decoration: none;
+            }
 
-        .register-link p a {
-            color: fff;
-            text-decoration: none;
-            font-weight: 600;
-        }
+            .remember-forgot a:hover {
+                text-decoration: underline;
+            }
 
-        .register-link p a:hover {
-            color: #61dafb; /* Set your desired link color */
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-    <div class="wrapper-container">
-    <div class="wrapper">
-        <form action="register.php" method="post">
-            <h1>R E G I S T E R</h1>
-            <div class="input-box">
-                <input type="text" class="form-control" placeholder="Username" id="username" name="username" required>
-            </div>
-            <div class="input-box">
-                <input type="text" class="form-control" placeholder="First Name" id="firstname" name="firstname" pattern="[A-Za-z ]+" title="Please enter only alphabetical characters and spaces" required>
-            </div>
-            <div class="input-box">
-                <input type="text" class="form-control" placeholder="Last Name" id="lastname" name="lastname" pattern="[A-Za-z ]+" title="Please enter only alphabetical characters and spaces" required>
-            </div>
-            <div class="radio-button">
-                <div>
-                    <label for="male" class="radio-inline"><input type="radio" name="gender" id="male" value="male" required> Male </label>
-                    <label for="female" class="radio-inline"><input type="radio" name="gender" id="female" value="female" required> Female </label>                    
+            .wrapper .btn {
+                width: 100%;
+                height: 45px;
+                background: #fff;
+                border: none;
+                outline: none;
+                border-radius: 40px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+                cursor: pointer;
+                font-size: 16px;
+                color: #333;
+                font-weight: 600;
+            }
+
+            .wrapper .register-link {
+                font-size: 14.5px;
+                text-align: center;
+                margin-top: 20px 0 15px;
+            }
+
+            .register-link p a {
+                color: fff;
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+            .register-link p a:hover {
+                color: #61dafb;
+                /* Set your desired link color */
+                text-decoration: underline;
+            }
+        </style>
+        </head>
+
+        <body>
+            <div class="wrapper-container">
+                <div class="wrapper">
+                    <form action="verify_2fa.php" method="post">
+                        <h1>TWO FACTOR <br>AUTHENTICATION</h1>
+                        <div class="register-link">
+                            <p>Enter the 2FA Code sent to your email,<br>
+                                <?php echo htmlspecialchars($_SESSION['username']); ?>
+                            </p>
+                        </div>
+                        <div class="input-box">
+                            <input type="text" class="form-control" placeholder="" name="two_factor_code" required>
+                        </div>
+                        <button type="submit" class="btn">Submit</button>
                 </div>
+                </form>
             </div>
-            <div class="input-box">
-                <input type="text" class="form-control" placeholder="Email" id="email" name="email" required>
-                <i class='bx bxs-user'></i>
-            </div>
-            <div class="input-box">
-                <input type="password" class="form-control" placeholder="Password" id="password" name="password" required>
-                <i class="bx bxs-lock-alt"></i>
-            </div>
-            
-            <div class="remember-forgot">
-                <label><input type="checkbox" required>I agree to the terms & conditions</label>
-            </div>
-            <div>
-            
-            <button type="submit" class="btn">Register</button>
-            <div class="register-link">
-                <p>Already have an account? <a href="login.html">Login</a></p>
-            </div>
-        </form>
-    </div>
     </div>
 </body>
+
 </html>
 
-                        </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
 </div>
 <!-- PRICING TABLES SECTION -->
+
 
 <!-- OUR NEWS SECTION -->
 <section class="our_news_section">
@@ -347,7 +451,7 @@ body {
                         <div class="our_news_box_lower_portion">
                             <h5>LAUNCH OF FITLIFE PRO</h5>
                             <p>Initial launch of FITLIFE Pro Official Website.</p>
-                            
+
                         </div>
                     </div>
                 </div>
@@ -365,7 +469,7 @@ body {
                         <div class="our_news_box_lower_portion">
                             <h5>SERVICE TYPES ADDED</h5>
                             <p>Added service types that will be accessible after subscription.</p>
-                            
+
                         </div>
                     </div>
                 </div>
@@ -383,7 +487,7 @@ body {
                         <div class="our_news_box_lower_portion">
                             <h5>SUBSCRIPTION PRICES ADDED</h5>
                             <p>Tiered Subscription Plans added: Essential, Premium, Elite</p>
-                            
+
                         </div>
                     </div>
                 </div>
@@ -405,13 +509,16 @@ body {
                         </a>
                         <p>Social Media Platforms:</p>
                         <ul class="list-unstyled">
-                            <li class="icons"><a href="#"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a></li>
-                            <li class="icons"><a href="#"><i class="fa-brands fa-twitter" aria-hidden="true"></i></a></li>
-                            <li class="icons"><a href="#"><i class="fa-brands fa-instagram mr-0" aria-hidden="true"></i></a></li>
+                            <li class="icons"><a href="#"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+                            </li>
+                            <li class="icons"><a href="#"><i class="fa-brands fa-twitter" aria-hidden="true"></i></a>
+                            </li>
+                            <li class="icons"><a href="#"><i class="fa-brands fa-instagram mr-0"
+                                        aria-hidden="true"></i></a></li>
                         </ul>
                     </div>
                 </div>
-                
+
                 <div class="col-lg-2 col-md-4 col-sm-6 col-xs-12 d-md-block d-none">
                     <div class="links_col">
                         <h6>QUICK LINKS</h6>
@@ -448,7 +555,8 @@ body {
                                 <p>Email:</p>
                             </li>
                             <li class="mail">
-                                <a href="mailto:Info@fitlifepro.com" class="text-decoration-none">Info@fitlifepro.com</a>
+                                <a href="mailto:Info@fitlifepro.com"
+                                    class="text-decoration-none">Info@fitlifepro.com</a>
                             </li>
                             <li>
                                 <p>Phone:</p>
@@ -463,7 +571,7 @@ body {
         </div>
     </div>
     <div class="bottom-portion">
-        <div class="copyright col-xl-12"> 
+        <div class="copyright col-xl-12">
             <p>Copyright 2022 FitLife Pro. All Rights Reserved.</p>
         </div>
     </div>
@@ -476,43 +584,6 @@ body {
 </section>
 
 <!-- Latest compiled JavaScript -->
-<script>
-    function checkUsernameAvailability() {
-        var username = $("#username").val();
-
-        // Check if the username is not empty
-        if (username.trim() !== "") {
-            // Use AJAX to check username availability
-            $.ajax({
-                type: "POST",
-                url: "check_username.php",
-                data: {
-                    username: username
-                },
-                success: function (response) {
-                    // Update the span with the availability message
-                    $("#usernameAvailability").php(response);
-                }
-            });
-        } else {
-            // Display a message if the username is empty
-            $("#usernameAvailability").php("Please enter a username.");
-        }
-    }
-</script>
-
-<script>
-    // Check for the result query parameter in the URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const result = urlParams.get('result');
-
-    // Display alert based on the result
-    if (result === 'success') {
-        alert('Registration Successful!');
-    } else if (result === 'error') {
-        alert('Username or Email already exists. Please choose a different one.');
-    }
-</script>
 <script src="assets/js/jquery-3.6.0.min.js"></script>
 <script src="assets/js/popper.min.js"></script>
 <script src="assets/js/video-popup.js"></script>
@@ -525,4 +596,5 @@ body {
 <script src="assets/js/counter.js"></script>
 <script src="assets/js/animation.js"></script>
 </body>
+
 </html>

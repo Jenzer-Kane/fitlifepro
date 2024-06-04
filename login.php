@@ -3,13 +3,13 @@ session_start();
 
 // Check if the form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Check if the username and password are set in the POST data
-    if (isset($_POST['username']) && isset($_POST['password'])) {
-        $username = $_POST['username'];
+    // Check if the email and password are set in the POST data
+    if (isset($_POST['email']) && isset($_POST['password'])) {
+        $email = $_POST['email'];
         $password = $_POST['password'];
 
         // Check if it's an admin login attempt
-        if ($username === '0000' && $password === 'admin') {
+        if ($email === '0000' && $password === 'admin') {
             $_SESSION['admin'] = true;
             header("Location: admin_dashboard.php");
             exit();
@@ -20,11 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($conn->connect_error) {
             die('Connection Failed: ' . $conn->connect_error);
         } else {
-            // Retrieve user data from the database based on the entered username
-            $stmt = $conn->prepare("SELECT password, is_verified FROM registration WHERE username = ?");
-            $stmt->bind_param("s", $username);
+            // Retrieve user data from the database based on the entered email
+            $stmt = $conn->prepare("SELECT username, password, is_verified FROM registration WHERE email = ?");
+            $stmt->bind_param("s", $email);
             $stmt->execute();
-            $stmt->bind_result($hashedPassword, $isVerified);
+            $stmt->bind_result($username, $hashedPassword, $isVerified);
             $stmt->fetch();
             $stmt->close();
 
@@ -33,8 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (password_verify($password, $hashedPassword)) {
                     if ($isVerified == 1) {
                         // Password is correct and email is verified
+                        $_SESSION['email'] = $email; // Store email in the session for future use
                         $_SESSION['username'] = $username; // Store username in the session for future use
-                        header("Location: index.php"); // Redirect to the index page
+                        header("Location: verify_2fa.php"); // Redirect to the 2FA verification page
                         exit();
                     } else {
                         // Email not verified
@@ -70,8 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit();
                 }
             } else {
-                // Invalid username
-                echo "<span style='color:red; font-size:20px;'>Invalid username.</span><span style='font-size:20px;'> Please try again.";
+                // Invalid email
+                echo "<span style='color:red; font-size:20px;'>Invalid email.</span><span style='font-size:20px;'> Please try again.";
                 echo '<html>
                     <head>
                         <title>Redirecting...</title>
@@ -95,10 +96,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </html>';
                 exit();
             }
-
-            // Handle other error scenarios
-            echo "<span style='color:red;'>An unexpected error occurred.</span> Please try again.";
-            exit();
 
             $conn->close();
         }
