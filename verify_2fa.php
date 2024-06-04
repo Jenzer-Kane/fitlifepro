@@ -74,8 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Set a session variable to indicate the user is authenticated
             $_SESSION['authenticated'] = true;
 
-            // Redirect to pricing.php after successful verification
-            header("Location: pricing.php");
+            // Redirect to index.php after successful verification
+            header("Location: index.php");
             exit();
         } else {
             // Incorrect 2FA code
