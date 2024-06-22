@@ -118,14 +118,7 @@ $result = $mysqli->query($sql);
                         <div class="collapse navbar-collapse" id="navbarSupportedContent">
                             <ul class="navbar-nav ml-auto">
                                 <li class="nav-item">
-                                </li>
-                                <li class="nav-item">
-                                </li>
-                                <li class="nav-item">
-                                <li class="nav-item">
                                     <a class="nav-link" href="./admin_dashboard.php">Members</a>
-                                </li>
-                                <li class="nav-item">
                                 </li>
                                 <li class="nav-item">
                                 </li>
@@ -139,6 +132,10 @@ $result = $mysqli->query($sql);
                                 <li class="nav-item">
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link" href="./admin_forum.php">Forums</a>
+                                </li>
+                                <li class="nav-item">
+                                </li>
                                 <li class="nav-item">
                                 </li>
                                 <li class="nav-item">

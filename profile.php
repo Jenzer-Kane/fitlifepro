@@ -864,10 +864,13 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                                     <a class="nav-link" href="./services.php">Services</a>
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link" href="./pricing.php">Pricing</a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link" href="./collaborators.php">Collaborators</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./pricing.php">Pricing</a>
+                                    <a class="nav-link" href="./indexforum.php">Forums</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./contact.php">Contact</a>
@@ -2071,9 +2074,8 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                 });
             });
         });
-
-
     </script>
+
     <script src="assets/js/jquery-3.6.0.min.js"></script>
     <script src="assets/js/popper.min.js"></script>
     <script src="assets/js/video-popup.js"></script>

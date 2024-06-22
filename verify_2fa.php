@@ -28,8 +28,8 @@ if (!isset($_SESSION['2fa_code'])) {
 
     // Send 2FA code to the user's email
     $userEmail = $_SESSION['email'];
-    $subject = "FitLifePro - Two Factor Authentication Code";
-    $message = "Your two factor authentication code is: $twoFactorCode";
+    $subject = "FitLifePro - Login Authentication Code";
+    $message = "Your login authentication code is: $twoFactorCode";
 
     // Create a new PHPMailer instance
     $mail = new PHPMailer(true);
@@ -55,7 +55,7 @@ if (!isset($_SESSION['2fa_code'])) {
 
         $mail->send();
     } catch (Exception $e) {
-        echo "Failed to send 2FA code. Please try again later. Mailer Error: {$mail->ErrorInfo}";
+        echo "Failed to send Login authentication code. Please try again later. Mailer Error: {$mail->ErrorInfo}";
         exit();
     }
 }
@@ -395,9 +395,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="wrapper-container">
                 <div class="wrapper">
                     <form action="verify_2fa.php" method="post">
-                        <h1>TWO FACTOR <br>AUTHENTICATION</h1>
+                        <h1>LOGIN <br>AUTHENTICATION</h1>
                         <div class="register-link">
-                            <p>Enter the 2FA Code sent to your email,<br>
+                            <p>Enter the Login Code sent to your email,<br>
                                 <?php echo htmlspecialchars($_SESSION['username']); ?>
                             </p>
                         </div>

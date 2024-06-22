@@ -131,26 +131,34 @@ session_start();
                                     <a class="nav-link" href="./services.php">Services</a>
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link" href="./pricing.php">Pricing</a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link" href="./collaborators.php">Collaborators</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./pricing.php">Pricing</a>
+                                    <a class="nav-link" href="./indexforum.php">Forums</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./contact.php">Contact</a>
                                 </li>
-                                <li class="nav-item">
-                                    <?php
-                                    if (isset($_SESSION['username'])) {
-                                        // If user is logged in, show name and logout button
-                                        echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
-                                        echo '<li class="nav-item"><a class="nav-link login_btn" href="logout.php">Logout</a></li>';
-                                    } else {
-                                        // If user is not logged in, show login and register buttons
-                                        echo '<li class="nav-item"><a class="nav-link login_btn" href="./login.html">Login</a></li>';
-                                        echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
-                                    }
-                                    ?>
+                                <?php
+                                //  holds the current page name
+                                $currentPage = basename($_SERVER['PHP_SELF']);
+
+                                if (isset($_SESSION['username'])) {
+
+                                    // Check if the current page is the profile.php, set as active
+                                    $profileClass = ($currentPage == 'profile.php') ? 'active' : '';
+                                    echo '<li class="nav-item ' . $profileClass . '"><a class="nav-link" href="profile.php">' . $_SESSION['username'] . '</a></li>';
+
+                                    echo '<li class="nav-item"><a class="nav-link login_btn" href="logout.php">Logout</a></li>';
+                                } else {
+                                    // If user is not logged in, show login and register buttons
+                                    echo '<li class="nav-item"><a class="nav-link login_btn" href="./login.html">Login</a></li>';
+                                    echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
+                                }
+                                ?>
                                 </li>
                             </ul>
                         </div>

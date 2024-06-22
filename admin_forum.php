@@ -10,8 +10,26 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     exit();
 }
 
-// Retrieve data from the registration table
-$sql = "SELECT * FROM registration";
+// Handle form submission for creating a new forum
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $forumName = $_POST['forum_name'];
+    $forumDescription = $_POST['forum_description'];
+
+    // Prepare and execute the SQL statement
+    $stmt = $mysqli->prepare("INSERT INTO forums (name, description) VALUES (?, ?)");
+    $stmt->bind_param('ss', $forumName, $forumDescription);
+
+    if ($stmt->execute()) {
+        echo "<script>alert('Forum created successfully');</script>";
+    } else {
+        echo "<script>alert('Error creating forum');</script>";
+    }
+
+    $stmt->close();
+}
+
+// Retrieve all forums
+$sql = "SELECT * FROM forums";
 $result = $mysqli->query($sql);
 ?>
 
@@ -118,7 +136,7 @@ $result = $mysqli->query($sql);
                         </button>
                         <div class="collapse navbar-collapse" id="navbarSupportedContent">
                             <ul class="navbar-nav ml-auto">
-                                <li class="nav-item active">
+                                <li class="nav-item">
                                     <a class="nav-link" href="./admin_dashboard.php">Members</a>
                                 </li>
                                 <li class="nav-item">
@@ -132,7 +150,7 @@ $result = $mysqli->query($sql);
                                 </li>
                                 <li class="nav-item">
                                 </li>
-                                <li class="nav-item">
+                                <li class="nav-item active">
                                     <a class="nav-link" href="./admin_forum.php">Forums</a>
                                 </li>
                                 <li class="nav-item">
@@ -167,43 +185,49 @@ $result = $mysqli->query($sql);
                 </div>
             </div>
         </header>
-    </div> <!-- Closing banner-section-outer -->
+    </div>
 
-    <div class="container-fluid"> <!-- Changed from container to container-fluid -->
-        <h2>Members</h2>
-        <table class="table table-bordered table-striped" style="width: 100%;">
-            <!-- Added style="width: 100%;" to ensure table takes up whole width -->
+    <div class="container-fluid">
+        <h2>Admin Forum Management</h2>
+
+        <!-- Form for creating a new forum -->
+        <form action="create_forum.php" method="post">
+            <div class="form-group">
+                <label for="forum_name">Forum Name:</label>
+                <input type="text" class="form-control" id="forum_name" name="forum_name" required>
+            </div>
+            <div class="form-group">
+                <label for="forum_description">Forum Description:</label>
+                <textarea class="form-control" id="forum_description" name="forum_description" rows="3"
+                    required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Forum</button>
+        </form>
+
+        <!-- Display list of forums -->
+        <h3>Existing Forums</h3>
+        <table class="table table-bordered table-striped">
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                    <th>Gender</th>
-                    <th>Email</th>
-                    <th>Date Registered</th>
+                    <th>Forum Name</th>
+                    <th>Description</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <?php
-                if ($result && $result->num_rows > 0) {
-                    // Output data of each row
-                    while ($row = $result->fetch_assoc()) {
-                        // Handle undefined keys
-                        $id = isset($row["id"]) ? $row["id"] : "";
-                        $firstname = isset($row["firstname"]) ? $row["firstname"] : "";
-                        $lastname = isset($row["lastname"]) ? $row["lastname"] : "";
-                        $gender = isset($row["gender"]) ? $row["gender"] : "";
-                        $email = isset($row["email"]) ? $row["email"] : "";
-                        $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
-
-                        // Add style attribute to center align the values
-                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $firstname . "</td><td style='text-align: center;'>" . $lastname . "</td><td style='text-align: center;'>" . $gender . "</td><td style='text-align: center;'>" . $email . "</td><td style='text-align: center;'>" . $created_at . "</td></tr>";
-                    }
-                } else {
-                    // Display a message if no data is found
-                    echo "<tr><td colspan='4' style='text-align: center;'>No ID found.</td></tr>";
-                }
-                ?>
+                <?php while ($row = $result->fetch_assoc()): ?>
+                    <tr>
+                        <td><?= $row['id'] ?></td>
+                        <td><?= htmlspecialchars($row['name']) ?></td>
+                        <td><?= htmlspecialchars($row['description']) ?></td>
+                        <td>
+                            <a href="edit_forum.php?id=<?= $row['id'] ?>" class="btn btn-warning btn-sm">Edit</a>
+                            <a href="delete_forum.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"
+                                onclick="return confirm('Are you sure you want to delete this forum?');">Delete</a>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
             </tbody>
         </table>
     </div>
@@ -219,10 +243,10 @@ $result = $mysqli->query($sql);
     <script src="assets/js/video-section.js"></script>
     <script src="assets/js/counter.js"></script>
     <script src="assets/js/animation.js"></script>
+</body>
 
 </html>
 
 <?php
-// Close the database connection
 $mysqli->close();
 ?>
