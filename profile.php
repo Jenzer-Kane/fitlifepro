@@ -3,6 +3,21 @@ session_start();
 
 include 'database.php';
 
+$username = $_SESSION['username'];
+$stmt = $mysqli->prepare("SELECT profile_image FROM registration WHERE username = ?");
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$stmt->store_result();
+
+if ($stmt->num_rows > 0) {
+    $stmt->bind_result($profile_image_path);
+    $stmt->fetch();
+} else {
+    $profile_image_path = null;
+}
+
+$stmt->close();
+
 // Initialize variables
 $gender = null;
 $waist = null;
@@ -541,9 +556,6 @@ if ($savedUserInfo) {
     $bodyFatResults = null;
 }
 
-// Close the database connection
-
-
 // Function to fetch user results from the database
 function fetchUserResults($username)
 {
@@ -906,6 +918,24 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                 <div class="row">
                     <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                         <div class="banner-section-content">
+                            <!-- Display Profile Image or Example Image -->
+                            <div style="color: white; text-align: center;">
+                                <?php if ($profile_image_path): ?>
+                                    <img src="<?php echo htmlspecialchars($profile_image_path); ?>" alt="Profile Image"
+                                        style="max-width: 100px; margin-bottom: 10px;">
+                                <?php else: ?>
+                                    <img src="example_profile_image.jpg" alt="No Profile Image"
+                                        style="max-width: 300px; margin-bottom: 10px;">
+                                    <p>No profile image uploaded</p>
+                                <?php endif; ?>
+
+                                <!-- Profile Picture Upload Form -->
+                                <form action="upload_profile.php" method="post" enctype="multipart/form-data">
+                                    <input type="file" name="profile_image" accept="image/*" required>
+                                    <button type="submit" name="submit">Upload</button>
+                                </form>
+                            </div>
+
                             <h1 data-aos="fade-up"><?php echo $_SESSION['username']; ?></h1>
                             <div class="btn_wrapper">
                                 <span class="sub_home_span">Home </span>-<span class="sub_span"> Profile</span>

@@ -328,7 +328,7 @@ $result = $conn->query($sql);
         <h3 class="mt-5">Forums of Discussion</h3>
         </h2>
 
-        <table class="table table-bordered">
+        <table class="table table-bordered table-striped" style="width: 100%;">
             <thead>
                 <tr>
                     <th>

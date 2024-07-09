@@ -356,7 +356,7 @@ function format_date($date)
 
     <div class="container">
         <h3 class="mt-5"><?= htmlspecialchars($forum['description']) ?></h3>
-        <table class="table table-bordered">
+        <table class="table table-bordered table-striped" style="width: 100%;">
             <thead>
                 <tr>
                     <th>

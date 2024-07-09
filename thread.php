@@ -14,7 +14,13 @@ if ($conn->connect_error) {
     die('Connection Failed: ' . $conn->connect_error);
 }
 
-$stmt = $conn->prepare("SELECT t.title, t.content, t.username, t.created_at, f.name AS forum_name FROM threads t JOIN forums f ON t.forum_id = f.id WHERE t.id = ?");
+// Fetch thread information including forum name and thread creator's profile image
+$stmt = $conn->prepare("SELECT t.title, t.content, t.username, t.created_at, f.name AS forum_name, 
+                        COALESCE(r.profile_image, 'assets/images/no_pfp.jpg') AS thread_creator_image 
+                        FROM threads t 
+                        JOIN forums f ON t.forum_id = f.id 
+                        LEFT JOIN registration r ON t.username = r.username 
+                        WHERE t.id = ?");
 $stmt->bind_param("i", $thread_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -26,6 +32,7 @@ if (!$thread) {
     exit();
 }
 
+// Handling post request to add replies
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $content = $_POST['content'];
     $username = $_SESSION['username'];
@@ -44,7 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->close();
 }
 
-$replies_stmt = $conn->prepare("SELECT username, content, created_at FROM replies WHERE thread_id = ? ORDER BY created_at ASC");
+// Fetch replies along with profile images of the repliers
+$replies_stmt = $conn->prepare("SELECT r.username, r.content, r.created_at, u.profile_image 
+                                FROM replies r 
+                                LEFT JOIN registration u ON r.username = u.username 
+                                WHERE r.thread_id = ? 
+                                ORDER BY r.created_at ASC");
 $replies_stmt->bind_param("i", $thread_id);
 $replies_stmt->execute();
 $replies_result = $replies_stmt->get_result();
@@ -55,6 +67,7 @@ function format_date($date)
     return date('F j, Y, g:i a', strtotime($date));
 }
 ?>
+
 
 
 <!DOCTYPE html>
@@ -139,144 +152,61 @@ function format_date($date)
             /* Ensure the banner content is above the background image */
         }
 
-        .banner_video {
-            position: relative;
-            z-index: 1;
-            /* Ensure the video icon is above the background image */
-        }
-
-        .calculator-section {
-            text-align: center;
-            padding: 50px 0;
-        }
-
-        .calculator-form,
-        .results-form {
-            max-width: 500px;
-            margin: 0 auto;
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .calculator-form h2,
-        .results-form h2 {
-            margin-bottom: 20px;
-        }
-
-        .calculator-form label,
-        .results-form label {
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .calculator-form input,
-        .calculator-form select,
-        .results-form input,
-        .results-form select {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-        }
-
-        .calculator-form button,
-        .results-form button {
-            background-color: #007bff;
-            color: #fff;
-            padding: 10px 15px;
-            border: none;
-            cursor: pointer;
-        }
-
-        .calculator-results,
-        .result-container {
-            margin-top: 30px;
-            text-align: left;
-        }
-
-        .result-container h2 {
-            margin-top: 20px;
-            margin-bottom: 30px;
-        }
-
-        .horizontal-display {
-            display: flex;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            /* Add horizontal scrolling if needed */
-        }
-
-        .diet-planning {
-            margin: 0 auto;
-        }
-
-        .diet-horizontal-display {
-            display: flex;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            width: 1870px;
-            /* ^ affects the width of the horizontal scroll container of the table*/
-            max-width: 100%;
-            /* ^ affects the width of the viewport of the page*/
-            text-align: center;
-        }
-
         .large-counter-text {
             font-size: 1.2em;
-            /* Adjust the size as needed */
+            /* Adjust as needed */
             font-weight: bold;
         }
 
-        .border-mealplan {
-            border: 2px solid #d9d9d9;
-            margin-right: 20px;
-            /* Adjust the margin value as needed */
-        }
-
-        .note {
-            font-size: 1.0em;
-            text-align: center;
-            position: relative;
-        }
-
-        .quote_image img {
-            border-radius: 50%;
-            overflow: hidden;
-            /* Ensure the image stays within the circular boundary */
-            width: 100px;
-            /* Set the desired width */
-            height: 100px;
-            /* Set the desired height */
+        .profile-image {
+            width: 80px;
+            height: 80px;
             object-fit: cover;
-            /* Maintain the aspect ratio and cover the container */
+            margin-right: 10px;
+            border: 1px solid #ccc;
         }
 
-        .exercise-planning {
-            margin: 0 auto;
+        .thread-container {
+            padding: 10px;
+            margin-bottom: 20px;
+            margin-top: 20px;
         }
 
-        .exercise-horizontal-display {
+        .reply {
             display: flex;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            width: 1870px;
-            /* Adjust as needed */
-            max-width: 100%;
-            /* Adjust as needed */
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+        }
+
+        .reply-profile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-right: 15px;
+            border-right: 2px solid #d9d7d7;
+            padding-right: 15px;
+        }
+
+        .username {
+            font-size: 14px;
+            font-weight: bold;
             text-align: center;
         }
 
-        .border-mealplan {
-            border: 2px solid #d9d9d9;
-            margin-right: 20px;
-            /* Adjust as needed */
+        .date-replied {
+            font-size: 12px;
+            text-align: center;
         }
 
-        .large-counter-text {
-            font-size: 1.2em;
-            /* Adjust as needed */
-            font-weight: bold;
+        .reply-content {
+            flex-grow: 1;
+        }
+
+        .post-reply-section {
+            margin-top: 20px;
+            background-color: #f0f0f0;
         }
     </style>
 </head>
@@ -368,31 +298,44 @@ function format_date($date)
 
     <body>
         <div class="container">
-
-            <h5 class="mt-5">
-                <p>Thread Description:</p><?= nl2br(htmlspecialchars($thread['content'])) ?>
-            </h5>
-            <p>Posted by: <?= htmlspecialchars($thread['username']) ?> on <?= format_date($thread['created_at']) ?></p>
+            <div class="thread-container">
+                <h5 class="mt-5">
+                    <p>Thread Description:</p>
+                    <img src="<?= !empty($thread['thread_creator_image']) ? htmlspecialchars($thread['thread_creator_image']) : 'assets/images/no_pfp.jpg' ?>"
+                        alt="Thread Creator" class="profile-image">
+                    <?= nl2br(htmlspecialchars($thread['content'])) ?>
+                </h5>
+                <p>Posted by: <?= htmlspecialchars($thread['username']) ?> on <?= format_date($thread['created_at']) ?>
+                </p>
+            </div>
             <hr>
-            <h5 class="mt-5 mb-3">Replies</h5>
+
+            <h5 class="mt-5 mb-4">Replies</h5>
             <?php while ($reply = $replies_result->fetch_assoc()): ?>
                 <div class="reply">
-                    <p class="mt-4"><?= nl2br(htmlspecialchars($reply['content'])) ?></p>
-                    <p>Replied by: <?= htmlspecialchars($reply['username']) ?> on <?= format_date($reply['created_at']) ?>
-                    </p>
-                    <hr>
+                    <div class="reply-profile">
+                        <img src="<?= !empty($reply['profile_image']) ? htmlspecialchars($reply['profile_image']) : 'assets/images/no_pfp.jpg' ?>"
+                            alt="Reply Creator" class="profile-image">
+                        <p class="username"><?= htmlspecialchars($reply['username']) ?></p>
+                        <p class="date-replied">Replied on<br> <?= format_date($reply['created_at']) ?></p>
+                    </div>
+                    <div class="reply-content">
+                        <p class="mt-4"><?= nl2br(htmlspecialchars($reply['content'])) ?></p>
+                    </div>
                 </div>
             <?php endwhile; ?>
 
             <?php if (isset($_SESSION['username'])): ?>
                 <h5 class="mt-5">Post a Reply</h5>
-                <form method="post" action="">
-                    <div class="form-group">
-                        <label for="content">Reply Content</label>
-                        <textarea id="content" name="content" class="form-control" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Post Reply</button>
-                </form>
+                <div class="post-reply-section">
+                    <form method="post" action="">
+                        <div class="form-group">
+                            <label for="content">Reply Content</label>
+                            <textarea id="content" name="content" class="form-control" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Post Reply</button>
+                    </form>
+                </div>
             <?php else: ?>
                 <p><a href="login.php">Log in</a> to post a reply.</p>
             <?php endif; ?>
