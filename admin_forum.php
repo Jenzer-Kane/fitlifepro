@@ -10,24 +10,6 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     exit();
 }
 
-// Handle form submission for creating a new forum
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $forumName = $_POST['forum_name'];
-    $forumDescription = $_POST['forum_description'];
-
-    // Prepare and execute the SQL statement
-    $stmt = $mysqli->prepare("INSERT INTO forums (name, description) VALUES (?, ?)");
-    $stmt->bind_param('ss', $forumName, $forumDescription);
-
-    if ($stmt->execute()) {
-        echo "<script>alert('Forum created successfully');</script>";
-    } else {
-        echo "<script>alert('Error creating forum');</script>";
-    }
-
-    $stmt->close();
-}
-
 // Retrieve all forums
 $sql = "SELECT * FROM forums";
 $result = $mysqli->query($sql);
@@ -37,7 +19,7 @@ $result = $mysqli->query($sql);
 <html>
 
 <head>
-    <title>Members | FITLIFE PRO ADMIN</title>
+    <title>Forums | FITLIFE PRO ADMIN</title>
     <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
@@ -75,7 +57,6 @@ $result = $mysqli->query($sql);
             background-color: rgba(0, 0, 0, 0.6);
             position: relative;
             z-index: 2;
-
         }
 
         .navbar-nav {
@@ -93,7 +74,6 @@ $result = $mysqli->query($sql);
         .navbar-nav .nav-link:hover {
             color: #007bff;
         }
-
 
         .team_member_box_content2 img {
             border-radius: 50%;
@@ -139,24 +119,18 @@ $result = $mysqli->query($sql);
                                 <li class="nav-item">
                                     <a class="nav-link" href="./admin_dashboard.php">Members</a>
                                 </li>
-                                <li class="nav-item">
-                                </li>
-                                <li class="nav-item">
-                                </li>
+                                <li class="nav-item"></li>
+                                <li class="nav-item"></li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="./admin_subscription_approval.php">Transactions</a>
                                 </li>
-                                <li class="nav-item">
-                                </li>
-                                <li class="nav-item">
-                                </li>
+                                <li class="nav-item"></li>
+                                <li class="nav-item"></li>
                                 <li class="nav-item active">
                                     <a class="nav-link" href="./admin_forum.php">Forums</a>
                                 </li>
-                                <li class="nav-item">
-                                </li>
-                                <li class="nav-item">
-                                </li>
+                                <li class="nav-item"></li>
+                                <li class="nav-item"></li>
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
                                 </li>
@@ -165,7 +139,6 @@ $result = $mysqli->query($sql);
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
                                         // If admin is logged in, display "Admin" instead of username
                                         echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Admin</a></li>';
-
                                     } elseif (isset($_SESSION['username'])) {
                                         // If user is logged in, show name and logout button
                                         echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
@@ -188,9 +161,42 @@ $result = $mysqli->query($sql);
     </div>
 
     <div class="container-fluid">
-        <h2>Admin Forum Management</h2>
+        <h2>Forum Management</h2>
+
+        <?php
+        if (isset($_SESSION['message'])) {
+            echo '<div class="alert alert-info">' . $_SESSION['message'] . '</div>';
+            unset($_SESSION['message']);
+        }
+        ?>
+
+        <!-- Display list of forums -->
+        <h5>Existing Forums</h5>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Forum Name</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while ($row = $result->fetch_assoc()): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($row['name']) ?></td>
+                        <td><?= htmlspecialchars($row['description']) ?></td>
+                        <td>
+                            <a href="edit_forum.php?id=<?= $row['id'] ?>" class="btn btn-warning btn-sm">Edit</a>
+                            <a href="delete_forum.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"
+                                onclick="return confirm('Are you sure you want to delete this forum?');">Delete</a>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
 
         <!-- Form for creating a new forum -->
+        <h5 class="mt-5">New Forum</h5>
         <form action="create_forum.php" method="post">
             <div class="form-group">
                 <label for="forum_name">Forum Name:</label>
@@ -203,33 +209,6 @@ $result = $mysqli->query($sql);
             </div>
             <button type="submit" class="btn btn-primary">Create Forum</button>
         </form>
-
-        <!-- Display list of forums -->
-        <h3>Existing Forums</h3>
-        <table class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Forum Name</th>
-                    <th>Description</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while ($row = $result->fetch_assoc()): ?>
-                    <tr>
-                        <td><?= $row['id'] ?></td>
-                        <td><?= htmlspecialchars($row['name']) ?></td>
-                        <td><?= htmlspecialchars($row['description']) ?></td>
-                        <td>
-                            <a href="edit_forum.php?id=<?= $row['id'] ?>" class="btn btn-warning btn-sm">Edit</a>
-                            <a href="delete_forum.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"
-                                onclick="return confirm('Are you sure you want to delete this forum?');">Delete</a>
-                        </td>
-                    </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
     </div>
 
     <script src="assets/js/jquery-3.6.0.min.js"></script>

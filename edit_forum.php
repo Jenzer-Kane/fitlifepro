@@ -10,16 +10,28 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     exit();
 }
 
-// Retrieve data from the registration table
-$sql = "SELECT * FROM contact_form";
-$result = $mysqli->query($sql);
+if (isset($_GET['id'])) {
+    $forumId = $_GET['id'];
+
+    // Retrieve forum details
+    $stmt = $mysqli->prepare("SELECT * FROM forums WHERE id = ?");
+    $stmt->bind_param('i', $forumId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $forum = $result->fetch_assoc();
+    $stmt->close();
+} else {
+    $_SESSION['message'] = "Invalid request";
+    header("Location: admin_forum.php");
+    exit();
+}
 ?>
 
-<!-- HTML content for admin dashboard -->
+<!-- HTML content for editing a forum -->
 <html>
 
 <head>
-    <title>Members | FITLIFE PRO ADMIN</title>
+    <title>Edit Forum | FITLIFE PRO ADMIN</title>
     <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
@@ -57,7 +69,6 @@ $result = $mysqli->query($sql);
             background-color: rgba(0, 0, 0, 0.6);
             position: relative;
             z-index: 2;
-
         }
 
         .navbar-nav {
@@ -75,7 +86,6 @@ $result = $mysqli->query($sql);
         .navbar-nav .nav-link:hover {
             color: #007bff;
         }
-
 
         .team_member_box_content2 img {
             border-radius: 50%;
@@ -128,12 +138,12 @@ $result = $mysqli->query($sql);
                                 </li>
                                 <li class="nav-item"></li>
                                 <li class="nav-item"></li>
-                                <li class="nav-item">
+                                <li class="nav-item active">
                                     <a class="nav-link" href="./admin_forum.php">Forums</a>
                                 </li>
                                 <li class="nav-item"></li>
                                 <li class="nav-item"></li>
-                                <li class="nav-item active">
+                                <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
                                 </li>
                                 <li class="nav-item">
@@ -161,51 +171,46 @@ $result = $mysqli->query($sql);
             </div>
         </header>
     </div>
+    <div class="container">
+        <h2>Edit Forum</h2>
+        <?php
+        if (isset($_SESSION['message'])) {
+            echo '<div class="alert alert-info">' . $_SESSION['message'] . '</div>';
+            unset($_SESSION['message']);
+        }
+        ?>
+        <table class="table table-bordered">
+            <tr>
+                <th>Current Forum Name</th>
+                <th>Current Description</th>
 
-    <div class="container-fluid"> <!-- Changed from container to container-fluid -->
-        <h2>Inquiries</h2>
-        <table class="table table-bordered table-striped" style="width: 100%;">
-            <!-- Added style="width: 100%;" to ensure table takes up whole width -->
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Subject</th>
-                    <th>Message</th>
-                    <th>Date Received</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                if ($result && $result->num_rows > 0) {
-                    // Output data of each row
-                    while ($row = $result->fetch_assoc()) {
-                        // Handle undefined keys
-                        $id = isset($row["id"]) ? $row["id"] : "";
-                        $name = isset($row["name"]) ? $row["name"] : "";
-                        $email = isset($row["email"]) ? $row["email"] : "";
-                        $subject = isset($row["subject"]) ? $row["subject"] : "";
-                        $message = isset($row["message"]) ? $row["message"] : "";
-                        $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
-
-
-
-                        // Add style attribute to center align the values
-                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $name . "</td><td style='text-align: center;'>" . $email . "</td><td style='text-align: center;'>" . $subject . "</td><td style='text-align: center;'>" . $message . "</td><td style='text-align: center;'>" . $created_at . "</td></tr>";
-                    }
-                } else {
-                    // Display a message if no data is found
-                    echo "<tr><td colspan='4' style='text-align: center;'>No ID found.</td></tr>";
-                }
-                ?>
-            </tbody>
+            </tr>
+            <tr>
+                <td><?= htmlspecialchars($forum['name']) ?></td>
+                <td><?= htmlspecialchars($forum['description']) ?></td>
+            </tr>
         </table>
+        <form action="update_forum.php" method="post">
+            <input type="hidden" name="forum_id" value="<?= htmlspecialchars($forum['id']) ?>">
+            <div class="form-group mt-5">
+                <h5>
+                    <label for="forum_name">New Forum Name:</label>
+                </h5>
+                <input type="text" class="form-control" id="forum_name" name="forum_name"
+                    value="<?= htmlspecialchars($forum['name']) ?>" required>
+            </div>
+            <div class="form-group">
+                <h5>
+                    <label for="forum_description">New Forum Description:</label>
+                </h5>
+                <textarea class="form-control" id="forum_description" name="forum_description" rows="3"
+                    required><?= htmlspecialchars($forum['description']) ?></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Forum</button>
+        </form>
     </div>
+    <!-- Add your existing scripts here -->
+
+</body>
 
 </html>
-
-<?php
-// Close the database connection
-$mysqli->close();
-?>

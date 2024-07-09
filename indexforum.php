@@ -278,7 +278,7 @@ $result = $conn->query($sql);
                                     <a class="nav-link" href="./collaborators.php">Collaborators</a>
                                 </li>
                                 <li class="nav-item active">
-                                    <a class="nav-link" href="./indexforum.php">Forum</a>
+                                    <a class="nav-link" href="./indexforum.php">Forums</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./contact.php">Contact</a>
@@ -325,18 +325,29 @@ $result = $conn->query($sql);
     </div>
 
     <div class="container">
-        <h1>Forums</h1>
+        <h2><br></h2>
+        </h2>
+
         <table class="table table-bordered">
             <thead>
                 <tr>
-                    <th>Forum Name</th>
-                    <th>Description</th>
+                    <th>
+                        <h5 class="mt-2">Forum Name</h5>
+                    </th>
+
+                    <th>
+                        <h5>Description
+                        </h5>
+                    </th>
                 </tr>
             </thead>
             <tbody>
                 <?php while ($row = $result->fetch_assoc()): ?>
                     <tr>
-                        <td><a href="forum.php?id=<?= $row['id'] ?>"><?= htmlspecialchars($row['name']) ?></a></td>
+                        <td>
+                            <h5><a href="forum.php?id=<?= $row['id'] ?>"><?= htmlspecialchars($row['name']) ?></a>
+                        </td>
+
                         <td><?= htmlspecialchars($row['description']) ?></td>
                     </tr>
                 <?php endwhile; ?>

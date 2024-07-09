@@ -10,18 +10,17 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     exit();
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $forumName = $_POST['forum_name'];
-    $forumDescription = $_POST['forum_description'];
+if (isset($_GET['id'])) {
+    $forumId = $_GET['id'];
 
     // Prepare and execute the SQL statement
-    $stmt = $mysqli->prepare("INSERT INTO forums (name, description) VALUES (?, ?)");
-    $stmt->bind_param('ss', $forumName, $forumDescription);
+    $stmt = $mysqli->prepare("DELETE FROM forums WHERE id = ?");
+    $stmt->bind_param('i', $forumId);
 
     if ($stmt->execute()) {
-        $_SESSION['message'] = "Forum created successfully";
+        $_SESSION['message'] = "Forum deleted successfully";
     } else {
-        $_SESSION['message'] = "Error creating forum: " . $stmt->error;
+        $_SESSION['message'] = "Error deleting forum: " . $stmt->error;
     }
 
     $stmt->close();
