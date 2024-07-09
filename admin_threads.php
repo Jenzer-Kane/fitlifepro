@@ -1,25 +1,37 @@
 <?php
 session_start();
 
-// Include database connection
-include 'database.php';
-
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: admin_login.php");
     exit();
 }
 
-// Retrieve data from the registration table
-$sql = "SELECT * FROM contact_form";
-$result = $mysqli->query($sql);
+$conn = new mysqli('localhost', 'root', '', 'fitlifepro_register');
+
+if ($conn->connect_error) {
+    die('Connection Failed: ' . $conn->connect_error);
+}
+
+// Fetch all threads
+$sql = "SELECT t.id, t.title, t.content, t.username, t.created_at, f.name AS forum_name FROM threads t JOIN forums f ON t.forum_id = f.id";
+$result = $conn->query($sql);
+
+if (!$result) {
+    die('Query failed: ' . $conn->error);
+}
+function format_date($date)
+{
+    return date('F j, Y | g:i A', strtotime($date));
+}
 ?>
 
-<!-- HTML content for admin dashboard -->
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
-    <title>Members | FITLIFE PRO ADMIN</title>
+    <meta charset="UTF-8">
+    <title>Forums | FITLIFE PRO ADMIN</title>
     <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
@@ -57,7 +69,6 @@ $result = $mysqli->query($sql);
             background-color: rgba(0, 0, 0, 0.6);
             position: relative;
             z-index: 2;
-
         }
 
         .navbar-nav {
@@ -75,7 +86,6 @@ $result = $mysqli->query($sql);
         .navbar-nav .nav-link:hover {
             color: #007bff;
         }
-
 
         .team_member_box_content2 img {
             border-radius: 50%;
@@ -130,11 +140,11 @@ $result = $mysqli->query($sql);
                                     <a class="nav-link" href="./admin_forum.php">Forums</a>
                                 </li>
                                 <li class="nav-item"></li>
-                                <li class="nav-item">
+                                <li class="nav-item active">
                                     <a class="nav-link" href="./admin_threads.php">Threads</a>
                                 </li>
                                 <li class="nav-item"></li>
-                                <li class="nav-item active">
+                                <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
                                 </li>
                                 <li class="nav-item">
@@ -162,51 +172,60 @@ $result = $mysqli->query($sql);
             </div>
         </header>
     </div>
-
-    <div class="container-fluid"> <!-- Changed from container to container-fluid -->
-        <h2>Inquiries</h2>
-        <table class="table table-bordered table-striped" style="width: 100%;">
-            <!-- Added style="width: 100%;" to ensure table takes up whole width -->
+    <div class="container">
+        <h2>Thread Management</h2>
+        <?php
+        if (isset($_SESSION['message'])) {
+            echo '<div class="alert alert-info">' . $_SESSION['message'] . '</div>';
+            unset($_SESSION['message']);
+        }
+        ?>
+        <h5>Existing Threads</h5>
+        <table class="table table-bordered table-striped">
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Subject</th>
-                    <th>Message</th>
-                    <th>Date Received</th>
+                    <th>Title</th>
+                    <th>Description</th>
+                    <th>Forum</th>
+                    <th>Author</th>
+                    <th>Date Created</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <?php
-                if ($result && $result->num_rows > 0) {
-                    // Output data of each row
-                    while ($row = $result->fetch_assoc()) {
-                        // Handle undefined keys
-                        $id = isset($row["id"]) ? $row["id"] : "";
-                        $name = isset($row["name"]) ? $row["name"] : "";
-                        $email = isset($row["email"]) ? $row["email"] : "";
-                        $subject = isset($row["subject"]) ? $row["subject"] : "";
-                        $message = isset($row["message"]) ? $row["message"] : "";
-                        $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
-
-
-
-                        // Add style attribute to center align the values
-                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $name . "</td><td style='text-align: center;'>" . $email . "</td><td style='text-align: center;'>" . $subject . "</td><td style='text-align: center;'>" . $message . "</td><td style='text-align: center;'>" . $created_at . "</td></tr>";
-                    }
-                } else {
-                    // Display a message if no data is found
-                    echo "<tr><td colspan='4' style='text-align: center;'>No ID found.</td></tr>";
-                }
-                ?>
+                <?php while ($row = $result->fetch_assoc()): ?>
+                    <tr>
+                        <td><?= $row['id'] ?></td>
+                        <td style="white-space: nowrap;"><?= htmlspecialchars($row['title']) ?></td>
+                        <td style="white-space: nowrap;"><?= htmlspecialchars($row['content']) ?></td>
+                        <td><?= htmlspecialchars($row['forum_name']) ?></td>
+                        <td><?= htmlspecialchars($row['username']) ?></td>
+                        <td style="white-space: nowrap;"><?= format_date($row['created_at']) ?></td>
+                        <td>
+                            <a href="delete_thread.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"
+                                onclick="return confirm('Are you sure you want to delete this thread?');">Delete</a>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
             </tbody>
         </table>
     </div>
+    <script src="assets/js/jquery-3.6.0.min.js"></script>
+    <script src="assets/js/popper.min.js"></script>
+    <script src="assets/js/video-popup.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/custom.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="assets/js/owl.carousel.js"></script>
+    <script src="assets/js/carousel.js"></script>
+    <script src="assets/js/video-section.js"></script>
+    <script src="assets/js/counter.js"></script>
+    <script src="assets/js/animation.js"></script>
+</body>
 
 </html>
 
 <?php
-// Close the database connection
-$mysqli->close();
+$conn->close();
 ?>

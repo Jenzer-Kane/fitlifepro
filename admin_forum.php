@@ -13,7 +13,13 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
 // Retrieve all forums
 $sql = "SELECT * FROM forums";
 $result = $mysqli->query($sql);
+
+function format_date($date)
+{
+    return date('F j, Y | g:i A', strtotime($date));
+}
 ?>
+
 
 <!-- HTML content for admin dashboard -->
 <html>
@@ -120,16 +126,17 @@ $result = $mysqli->query($sql);
                                     <a class="nav-link" href="./admin_dashboard.php">Members</a>
                                 </li>
                                 <li class="nav-item"></li>
-                                <li class="nav-item"></li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="./admin_subscription_approval.php">Transactions</a>
                                 </li>
-                                <li class="nav-item"></li>
                                 <li class="nav-item"></li>
                                 <li class="nav-item active">
                                     <a class="nav-link" href="./admin_forum.php">Forums</a>
                                 </li>
                                 <li class="nav-item"></li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="./admin_threads.php">Threads</a>
+                                </li>
                                 <li class="nav-item"></li>
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
@@ -177,6 +184,7 @@ $result = $mysqli->query($sql);
                 <tr>
                     <th>Forum Name</th>
                     <th>Description</th>
+                    <th>Date Created</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -185,6 +193,7 @@ $result = $mysqli->query($sql);
                     <tr>
                         <td><?= htmlspecialchars($row['name']) ?></td>
                         <td><?= htmlspecialchars($row['description']) ?></td>
+                        <td><?= format_date($row['created_at']) ?></td>
                         <td>
                             <a href="edit_forum.php?id=<?= $row['id'] ?>" class="btn btn-warning btn-sm">Edit</a>
                             <a href="delete_forum.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"

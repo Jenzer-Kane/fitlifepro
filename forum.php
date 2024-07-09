@@ -39,6 +39,10 @@ $stmt->bind_param("i", $forum_id);
 $stmt->execute();
 $threads = $stmt->get_result();
 $stmt->close();
+function format_date($date)
+{
+    return date('F j, Y | g:i A', strtotime($date));
+}
 ?>
 
 <!DOCTYPE html>
@@ -351,8 +355,7 @@ $stmt->close();
     </div>
 
     <div class="container">
-        <h1><?= htmlspecialchars($forum['name']) ?></h1>
-        <p><?= htmlspecialchars($forum['description']) ?></p>
+        <h3 class="mt-5"><?= htmlspecialchars($forum['description']) ?></h3>
         <table class="table table-bordered">
             <thead>
                 <tr>
@@ -360,7 +363,13 @@ $stmt->close();
                         <h5 class="mt-2">Thread Title</h5>
                     </th>
                     <th>
+                        <h5>Description</h5>
+                    </th>
+                    <th>
                         <h5>Author</h5>
+                    </th>
+                    <th>
+                        <h5>Date Created</h5>
                     </th>
                 </tr>
             </thead>
@@ -368,11 +377,12 @@ $stmt->close();
                 <?php if ($threads->num_rows > 0): ?>
                     <?php while ($thread = $threads->fetch_assoc()): ?>
                         <tr>
-                            <td>
+                            <td style="white-space: nowrap;">
                                 <h5><a href="thread.php?id=<?= $thread['id'] ?>"><?= htmlspecialchars($thread['title']) ?></a>
                             </td>
-
+                            <td style="white-space: nowrap;"><?= htmlspecialchars($thread['content']) ?></td>
                             <td><?= htmlspecialchars($thread['username']) ?></td>
+                            <td style="white-space: nowrap;"><?= format_date($thread['created_at']) ?></td>
                         </tr>
                     <?php endwhile; ?>
                 <?php else: ?>

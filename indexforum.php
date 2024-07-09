@@ -325,7 +325,7 @@ $result = $conn->query($sql);
     </div>
 
     <div class="container">
-        <h2><br></h2>
+        <h3 class="mt-5">Forums of Discussion</h3>
         </h2>
 
         <table class="table table-bordered">
