@@ -308,7 +308,7 @@ function format_date($date)
                 <p>Posted by: <?= htmlspecialchars($thread['username']) ?> on <?= format_date($thread['created_at']) ?>
                 </p>
             </div>
-            <hr>
+            <hr style="border-color: #f5936c;">
 
             <h5 class="mt-5 mb-4">Replies</h5>
             <?php while ($reply = $replies_result->fetch_assoc()): ?>

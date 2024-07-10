@@ -13,15 +13,34 @@ if ($conn->connect_error) {
     die('Connection Failed: ' . $conn->connect_error);
 }
 
-// Fetch all threads
-$sql = "SELECT t.id, t.title, t.content, t.username, t.created_at, f.name AS forum_name 
-        FROM threads t 
-        JOIN forums f ON t.forum_id = f.id";
-$result = $conn->query($sql);
+$thread_id = isset($_GET['thread_id']) ? $_GET['thread_id'] : null;
+$thread_title = "Unknown";
+$forum_name = "Unknown";
 
-if (!$result) {
-    die('Query failed: ' . $conn->error);
+if ($thread_id) {
+    // Fetch the thread title
+    $thread_stmt = $conn->prepare("SELECT t.title, f.name AS forum_name FROM threads t JOIN forums f ON t.forum_id = f.id WHERE t.id = ?");
+    $thread_stmt->bind_param("i", $thread_id);
+    $thread_stmt->execute();
+    $thread_result = $thread_stmt->get_result();
+    if ($thread_result->num_rows > 0) {
+        $thread_row = $thread_result->fetch_assoc();
+        $thread_title = $thread_row['title'];
+        $forum_name = $thread_row['forum_name'];
+    }
+    $thread_stmt->close();
+
+    // Fetch the replies for the thread
+    $stmt = $conn->prepare("SELECT r.id, r.content, r.username, r.created_at FROM replies r WHERE r.thread_id = ?");
+    $stmt->bind_param("i", $thread_id);
+} else {
+    // Fetch all replies if no thread_id is specified (optional, for fallback)
+    $stmt = $conn->prepare("SELECT r.id, r.content, r.username, r.created_at FROM replies r");
 }
+
+$stmt->execute();
+$result = $stmt->get_result();
+
 function format_date($date)
 {
     return date('F j, Y | g:i A', strtotime($date));
@@ -33,7 +52,7 @@ function format_date($date)
 
 <head>
     <meta charset="UTF-8">
-    <title>Forums | FITLIFE PRO ADMIN</title>
+    <title>Replies | FITLIFE PRO ADMIN</title>
     <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
@@ -164,7 +183,7 @@ function format_date($date)
                                     }
                                     ?>
                                 </li>
-                                <li class="nav-item">
+                                <li class="                                    <li class=" nav-item">
                                     <a class="nav-link login_btn" href="logout.php">Logout</a>
                                 </li>
                             </ul>
@@ -174,22 +193,21 @@ function format_date($date)
             </div>
         </header>
     </div>
+
     <div class="container">
-        <h2>Thread and Replies Management</h2>
+        <h2>Replies for Thread: <?= htmlspecialchars($thread_title) ?></h2>
+        <h5>Forum: <?= htmlspecialchars($forum_name) ?></h5>
         <?php
         if (isset($_SESSION['message'])) {
             echo '<div class="alert alert-info">' . $_SESSION['message'] . '</div>';
             unset($_SESSION['message']);
         }
         ?>
-        <h5>Existing Threads. Click for replies.</h5>
         <table class="table table-bordered table-striped">
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Title</th>
-                    <th>Description</th>
-                    <th>Forum</th>
+                    <th>Content</th>
                     <th>Author</th>
                     <th>Date Created</th>
                     <th>Actions</th>
@@ -199,18 +217,12 @@ function format_date($date)
                 <?php while ($row = $result->fetch_assoc()): ?>
                     <tr>
                         <td><?= $row['id'] ?></td>
-                        <td style="white-space: nowrap;">
-                            <a href="admin_replies.php?thread_id=<?= $row['id'] ?>">
-                                <?= htmlspecialchars($row['title']) ?>
-                            </a>
-                        </td>
-                        <td style="white-space: nowrap;"><?= htmlspecialchars($row['content']) ?></td>
-                        <td><?= htmlspecialchars($row['forum_name']) ?></td>
+                        <td><?= htmlspecialchars($row['content']) ?></td>
                         <td><?= htmlspecialchars($row['username']) ?></td>
-                        <td style="white-space: nowrap;"><?= format_date($row['created_at']) ?></td>
+                        <td><?= format_date($row['created_at']) ?></td>
                         <td>
-                            <a href="delete_thread.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"
-                                onclick="return confirm('Are you sure you want to delete this thread?');">Delete</a>
+                            <a href="delete_reply.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"
+                                onclick="return confirm('Are you sure you want to delete this reply?');">Delete</a>
                         </td>
                     </tr>
                 <?php endwhile; ?>
