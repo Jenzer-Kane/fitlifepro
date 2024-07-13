@@ -37,15 +37,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_exercise'])) {
 }
 
 // Handle deletion of an exercise
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_exercise'])) {
-    $id = $conn->real_escape_string($_POST['id']);
+if (isset($_GET['delete_exercise'])) {
+    $id = $conn->real_escape_string($_GET['delete_exercise']);
     $sql = "DELETE FROM exercises WHERE id='$id'";
     if ($conn->query($sql) === TRUE) {
         $_SESSION['message'] = "Exercise deleted successfully!";
+        // Redirect to avoid resubmission on refresh
+        header("Location: admin_content.php");
+        exit();
     } else {
-        $_SESSION['message'] = "Error: " . $conn->error;
+        $_SESSION['message'] = "Error deleting exercise: " . $conn->error;
     }
 }
+
+
 
 // Fetch exercises from the database
 $exercises = [];
@@ -275,21 +280,21 @@ $conn->close();
                 </thead>
                 <tbody>
                     <?php foreach ($exercises as $exercise): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($exercise['name']) ?></td>
-                                <td><?= htmlspecialchars($exercise['description']) ?></td>
-                                <td><?= htmlspecialchars($exercise['intensity']) ?></td>
-                                <td><?= htmlspecialchars($exercise['exercise_type']) ?></td>
-                                <td><?= htmlspecialchars($exercise['category']) ?></td>
-                                <td><?= htmlspecialchars($exercise['duration']) ?></td>
-                                <td>
-                                    <button class="btn btn-info"
-                                        onclick="editExercise(<?= htmlspecialchars(json_encode($exercise)) ?>)">Edit</button>
-                                    <a href="admin_content.php?delete_exercise=<?= $exercise['id'] ?>"
-                                        class="btn btn-danger btn-sm"
-                                        onclick="return confirm('Are you sure you want to delete this exercise?');">Delete</a>
-                                </td>
-                            </tr>
+                        <tr>
+                            <td><?= htmlspecialchars($exercise['name']) ?></td>
+                            <td><?= htmlspecialchars($exercise['description']) ?></td>
+                            <td><?= htmlspecialchars($exercise['intensity']) ?></td>
+                            <td><?= htmlspecialchars($exercise['exercise_type']) ?></td>
+                            <td><?= htmlspecialchars($exercise['category']) ?></td>
+                            <td><?= htmlspecialchars($exercise['duration']) ?></td>
+                            <td>
+                                <button class="btn btn-info"
+                                    onclick="editExercise(<?= htmlspecialchars(json_encode($exercise)) ?>)">Edit</button>
+                                <a href="admin_content.php?delete_exercise=<?= $exercise['id'] ?>"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Are you sure you want to delete this exercise?');">Delete</a>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
