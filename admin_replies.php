@@ -152,19 +152,18 @@ function format_date($date)
                                 <li class="nav-item">
                                     <a class="nav-link" href="./admin_dashboard.php">Members</a>
                                 </li>
-                                <li class="nav-item"></li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="./admin_subscription_approval.php">Transactions</a>
                                 </li>
-                                <li class="nav-item"></li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="./admin_forum.php">Forums</a>
                                 </li>
-                                <li class="nav-item"></li>
                                 <li class="nav-item active">
                                     <a class="nav-link" href="./admin_threads.php">Threads</a>
                                 </li>
-                                <li class="nav-item"></li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="./admin_content.php">Content</a>
+                                </li>
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
                                 </li>
@@ -183,7 +182,7 @@ function format_date($date)
                                     }
                                     ?>
                                 </li>
-                                <li class="                                    <li class=" nav-item">
+                                <li class="nav-item">
                                     <a class="nav-link login_btn" href="logout.php">Logout</a>
                                 </li>
                             </ul>
