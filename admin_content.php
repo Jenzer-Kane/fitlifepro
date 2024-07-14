@@ -1,6 +1,8 @@
 <?php
 session_start();
 
+include 'database.php';
+
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: admin_login.php");
@@ -51,7 +53,6 @@ if (isset($_GET['delete_exercise'])) {
 }
 
 
-
 // Fetch exercises from the database
 $exercises = [];
 $sql = "SELECT * FROM exercises";
@@ -59,6 +60,90 @@ $result = $conn->query($sql);
 if ($result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $exercises[] = $row;
+    }
+}
+
+// Handle form submission for adding or editing meat
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_meat_info'])) {
+    $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
+    $food_exchange_group = $conn->real_escape_string($_POST['food_exchange_group']);
+    $filipino_name = $conn->real_escape_string($_POST['filipino_name']);
+    $english_name = $conn->real_escape_string($_POST['english_name']);
+    $carbohydrate_g = $conn->real_escape_string($_POST['carbohydrate_g']);
+    $calories = $conn->real_escape_string($_POST['calories']);
+    $protein_g = $conn->real_escape_string($_POST['protein_g']);
+    $fat_g = $conn->real_escape_string($_POST['fat_g']);
+    $energy_kcal = $conn->real_escape_string($_POST['energy_kcal']);
+    $household_measure = $conn->real_escape_string($_POST['household_measure']);
+
+    if ($id) {
+        $sql = "UPDATE meat_info SET food_exchange_group='$food_exchange_group', filipino_name='$filipino_name', english_name='$english_name', carbohydrate_g='$carbohydrate_g', calories='$calories', protein_g='$protein_g', fat_g='$fat_g', energy_kcal='$energy_kcal', household_measure='$household_measure' WHERE id='$id'";
+    } else {
+        $sql = "INSERT INTO meat_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, calories, protein_g, fat_g, energy_kcal, household_measure) VALUES ('$food_exchange_group', '$filipino_name', '$english_name', '$carbohydrate_g', '$calories', '$protein_g', '$fat_g', '$energy_kcal', '$household_measure')";
+    }
+
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = $id ? "Meat updated successfully!" : "Meat added successfully!";
+    } else {
+        $_SESSION['message'] = "Error: " . $conn->error;
+    }
+}
+
+
+
+// Handle deletion of meat
+if (isset($_GET['delete_meat_info'])) {
+    $id = $conn->real_escape_string($_GET['delete_meat_info']);
+    $sql = "DELETE FROM meat_info WHERE id='$id'";
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = "Meat deleted successfully!";
+        // Redirect to avoid resubmission on refresh
+        header("Location: admin_content.php");
+        exit();
+    } else {
+        $_SESSION['message'] = "Error deleting meat: " . $conn->error;
+    }
+}
+
+
+// Fetch meat info from the database
+$meat_info = [];
+$sql = "SELECT * FROM meat_info";
+$result = $conn->query($sql);
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $meat_info[] = $row;
+    }
+}
+
+
+// Fetch fruit info from the database
+$fruits_info = [];
+$sql = "SELECT * FROM fruits_info";
+$result = $conn->query($sql);
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $fruits_info[] = $row;
+    }
+}
+
+// Fetch milk info from the database
+$milk_info = [];
+$sql = "SELECT * FROM milk_info";
+$result = $conn->query($sql);
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $milk_info[] = $row;
+    }
+}
+
+// Fetch milk info from the database
+$rice_bread_info = [];
+$sql = "SELECT * FROM rice_bread_info";
+$result = $conn->query($sql);
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $rice_bread_info[] = $row;
     }
 }
 
@@ -144,6 +229,32 @@ $conn->close();
             overflow-y: auto;
             width: 100%;
         }
+
+        .btn-custom {
+            background-color: #ffffff;
+            /* White background */
+            border-color: #cccccc;
+            /* Gray border */
+            color: #333333;
+            /* Gray text color */
+            transition: background-color 0.3s, color 0.3s;
+            /* Smooth transition for color changes */
+        }
+
+        .btn-custom.active {
+            background-color: #555555;
+            /* Dark gray background for active button */
+            border-color: #555555;
+            color: #ffffff;
+            /* White text color */
+        }
+
+        .btn-custom:hover {
+            background-color: #f2f2f2;
+            /* Light gray background on hover */
+            border-color: #cccccc;
+            color: #333333;
+        }
     </style>
 </head>
 
@@ -214,6 +325,14 @@ $conn->close();
         </header>
     </div> <!-- Closing banner-section-outer -->
 
+
+    <div class="nav">
+        <button class="btn btn-custom mr-2" onclick="toggleSection('exercises')">Exercises</button>
+        <button class="btn btn-custom mr-2" onclick="toggleSection('meat_info')">Meat</button>
+        <button class="btn btn-custom mr-2" onclick="toggleSection('fruits_info')">Fruits</button>
+        <button class="btn btn-custom mr-2" onclick="toggleSection('milk_info')">Milk</button>
+        <button class="btn btn-custom" onclick="toggleSection('rice_bread_info')">Rice and Bread</button>
+    </div>
     <div class="container">
         <h2>Add or Edit Exercise</h2>
         <?php
@@ -299,6 +418,94 @@ $conn->close();
                 </tbody>
             </table>
         </div>
+
+        <!-- Form for adding or editing Meat Info -->
+        <h2>Add or Edit Meat Information</h2>
+        <form action="admin_content.php" method="POST" class="food-form meat_info">
+            <input type="hidden" name="id" id="meat_info_id">
+            <div class="form-group">
+                <label for="food_exchange_group">Food Exchange Group</label>
+                <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="filipino_name">Filipino Name</label>
+                <input type="text" name="filipino_name" id="filipino_name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="english_name">English Name</label>
+                <input type="text" name="english_name" id="english_name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="carbohydrate_g">Carbohydrate (g)</label>
+                <input type="text" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="calories">Calories</label>
+                <input type="text" name="calories" id="calories" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="protein_g">Protein (g)</label>
+                <input type="text" name="protein_g" id="protein_g" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="fat_g">Fat (g)</label>
+                <input type="text" name="fat_g" id="fat_g" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="energy_kcal">Energy (kcal)</label>
+                <input type="text" name="energy_kcal" id="energy_kcal" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="household_measure">Household Measure</label>
+                <input type="text" name="household_measure" id="household_measure" class="form-control" required>
+            </div>
+            <button type="submit" name="save_meat_info" class="btn btn-primary">Save Meat Info</button>
+        </form>
+    </div>
+
+    <!-- Meat Info section -->
+    <div id="meat_info" class="tab-content">
+        <h2 class="mt-4">Meat Information</h2>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Food Exchange Group</th>
+                        <th>Filipino Name</th>
+                        <th>English Name</th>
+                        <th>Carbohydrate (g)</th>
+                        <th>Protein (g)</th>
+                        <th>Fat (g)</th>
+                        <th>Energy (kcal)</th>
+                        <th>Household Measure</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($meat_info as $info): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($info['food_exchange_group']) ?></td>
+                            <td><?= htmlspecialchars($info['filipino_name']) ?></td>
+                            <td><?= htmlspecialchars($info['english_name']) ?></td>
+                            <td><?= htmlspecialchars($info['carbohydrate_g']) ?></td>
+                            <td><?= htmlspecialchars($info['protein_g']) ?></td>
+                            <td><?= htmlspecialchars($info['fat_g']) ?></td>
+                            <td><?= htmlspecialchars($info['energy_kcal']) ?></td>
+                            <td><?= htmlspecialchars($info['household_measure']) ?></td>
+                            <td>
+                                <button class="btn btn-info"
+                                    onclick="editInfo(<?= htmlspecialchars(json_encode($info)) ?>, 'meat_info')">Edit</button>
+                                <form action="admin_content.php" method="POST" style="display:inline;">
+                                    <input type="hidden" name="id" value="<?= $info['id'] ?>">
+                                    <button type="submit" name="delete_meat_info" class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Are you sure you want to delete this entry?');">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
@@ -310,6 +517,16 @@ $conn->close();
             document.getElementById('exercise_type').value = exercise.exercise_type;
             document.getElementById('category').value = exercise.category;
             document.getElementById('duration').value = exercise.duration;
+        }
+
+        function editMeat(meat_info) {
+            document.getElementById('food_exchange_group').value = meat_info.food_exchange_group;
+            document.getElementById('name').value = meat_info.name;
+            document.getElementById('description').value = meat_info.description;
+            document.getElementById('intensity').value = meat_info.intensity;
+            document.getElementById('exercise_type').value = meat_info.exercise_type;
+            document.getElementById('category').value = meat_info.category;
+            document.getElementById('duration').value = meat_info.duration;
         }
     </script>
     <script src="assets/js/jquery-3.6.0.min.js"></script>
