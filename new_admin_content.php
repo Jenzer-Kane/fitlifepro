@@ -3,319 +3,256 @@ session_start();
 
 include 'database.php';
 
-$exercises = fetchExercises($mysqli);
-$milk_info = fetchMilkInfo($mysqli);
-$meat_info = fetchMeatInfo($mysqli);
-$fruits_info = fetchFruitsInfo($mysqli);
-$rice_bread_info = fetchRiceBreadInfo($mysqli);
-
-// Function to fetch exercises
-function fetchExercises($mysqli)
-{
-    $query = "SELECT * FROM exercises";
-    $result = $mysqli->query($query);
-    return $result->fetch_all(MYSQLI_ASSOC);
-}
-// Function to fetch meat info
-function fetchMeatInfo($mysqli)
-{
-    $query = "SELECT * FROM meat_info";
-    $result = $mysqli->query($query);
-    return $result->fetch_all(MYSQLI_ASSOC);
+// Check if admin is logged in
+if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
+    header("Location: admin_login.php");
+    exit();
 }
 
-// Function to fetch meat info
-function fetchFruitsInfo($mysqli)
-{
-    $query = "SELECT * FROM fruits_info";
-    $result = $mysqli->query($query);
-    return $result->fetch_all(MYSQLI_ASSOC);
+$conn = new mysqli('localhost', 'root', '', 'fitlifepro_register');
+
+if ($conn->connect_error) {
+    die('Connection Failed: ' . $conn->connect_error);
 }
 
-// Function to fetch milk info
-function fetchMilkInfo($mysqli)
+function fetchTableData($conn, $tableName)
 {
-    $query = "SELECT * FROM milk_info";
-    $result = $mysqli->query($query);
-    return $result->fetch_all(MYSQLI_ASSOC);
-}
-
-// Function to fetch rice and bread info
-function fetchRiceBreadInfo($mysqli)
-{
-    $query = "SELECT * FROM rice_bread_info";
-    $result = $mysqli->query($query);
-    return $result->fetch_all(MYSQLI_ASSOC);
-}
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['save_exercise'])) {
-        // Save exercise
-        handleExercise($mysqli);
-    } elseif (isset($_POST['delete_exercise'])) {
-        // Delete exercise
-        deleteExercise($mysqli);
-    } elseif (isset($_POST['save_meat_info'])) {
-        // Save meat info
-        handleMeatInfo($mysqli);
-    } elseif (isset($_POST['delete_meat_info'])) {
-        // Delete meat info
-        deleteMeatInfo($mysqli);
-    } elseif (isset($_POST['save_fruits_info'])) {
-        // Save fruits info
-        handleFruitsInfo($mysqli);
-    } elseif (isset($_POST['delete_fruits_info'])) {
-        // Delete fruits info
-        handleFruitsInfo($mysqli);
-    } elseif (isset($_POST['save_milk_info'])) {
-        // Save fruits info
-        handleMilkInfo($mysqli);
-    } elseif (isset($_POST['delete_milk_info'])) {
-        // Delete milk info
-        deleteMilkInfo($mysqli);
-    } elseif (isset($_POST['save_rice_bread_info'])) {
-        // Save rice and bread info
-        handleRiceBreadInfo($mysqli);
-    } elseif (isset($_POST['delete_rice_bread_info'])) {
-        // Delete rice and bread info
-        deleteRiceBreadInfo($mysqli);
-    }
-}
-
-
-
-// Function to handle exercise save
-// Function to handle exercise save
-function handleExercise($conn)
-{
-    if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST["handleExercise"])) {
-        $id = isset($_POST['id']) ? $_POST['id'] : null;
-        $name = $_POST['name'];
-        $description = $_POST['description'];
-        $category = $_POST['category'];
-        $exercise_type = $_POST['exercise_type'];
-        $duration = $conn->real_escape_string($_POST['duration']);
-        $intensity = $_POST['intensity'];
-
-        if ($id) {
-            // Update existing record
-            $stmt = $conn->prepare("UPDATE exercises SET name=?, description=?, exercise_type=?, category=?, duration=?, intensity=? WHERE id=?");
-            $stmt->bind_param('ssssdsi', $name, $description, $exercise_type, $category, $duration, $intensity, $id);
-        } else {
-            // Insert new record
-            $stmt = $conn->prepare("INSERT INTO exercises (name, description, exercise_type, category, duration, intensity) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param('sssssd', $name, $description, $exercise_type, $category, $duration, $intensity);
+    $data = [];
+    $sql = "SELECT * FROM $tableName";
+    $result = $conn->query($sql);
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $data[] = $row;
         }
+    }
+    return $data;
+}
 
-        if ($stmt->execute()) {
-            $_SESSION['message'] = $id ? "Exercise info updated successfully!" : "Exercise info added successfully!";
-        } else {
-            $_SESSION['message'] = "Error: " . $conn->error;
-        }
+$exercises = fetchTableData($mysqli, 'exercises');
+$meat_info = fetchTableData($mysqli, 'meat_info');
+$fruits_info = fetchTableData($mysqli, 'fruits_info');
+$milk_info = fetchTableData($mysqli, 'milk_info');
+$rice_bread_info = fetchTableData($mysqli, 'rice_bread_info');
 
-        $stmt->close();
+
+// Handle form submission for adding or editing an exercise
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_exercise'])) {
+    $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
+    $name = $conn->real_escape_string($_POST['name']);
+    $description = $conn->real_escape_string($_POST['description']);
+    $intensity = $conn->real_escape_string($_POST['intensity']);
+    $exercise_type = $conn->real_escape_string($_POST['exercise_type']);
+    $category = $conn->real_escape_string($_POST['category']);
+    $duration = $conn->real_escape_string($_POST['duration']);
+
+    if ($id) {
+        $sql = "UPDATE exercises SET name='$name', description='$description', intensity='$intensity', exercise_type='$exercise_type', category='$category', duration='$duration' WHERE id='$id'";
+    } else {
+        $sql = "INSERT INTO exercises (name, description, intensity, exercise_type, category, duration) VALUES ('$name', '$description', '$intensity', '$exercise_type', '$category', '$duration')";
+    }
+
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = $id ? "Exercise updated successfully!" : "Exercise added successfully!";
+    } else {
+        $_SESSION['message'] = "Error: " . $conn->error;
+    }
+
+    header("Location: new_admin_content.php");
+    exit(); // Ensure no further output after redirection
+}
+
+// Handle deletion of an exercise
+if (isset($_GET['delete_exercise'])) {
+    $id = $conn->real_escape_string($_GET['delete_exercise']);
+    $sql = "DELETE FROM exercises WHERE id='$id'";
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = "Exercise deleted successfully!";
+        // Redirect to avoid resubmission on refresh
+        header("Location: new_admin_content.php");
+        exit();
+    } else {
+        $_SESSION['message'] = "Error deleting exercise: " . $conn->error;
     }
 }
 
-// Call function to handle exercise save
-handleExercise($mysqli);
-
-// Fetch data for exercises
-$sql = "SELECT * FROM exercises";
-$result = $mysqli->query($sql);
-$exercises = [];
-if ($result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $exercises[] = $row;
-    }
-}
-
-// Function to handle exercise delete
-function deleteExercise($mysqli)
-{
-    $id = $_POST['id'];
-    $query = "DELETE FROM exercises WHERE id=?";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('i', $id);
-
-    executeStatement($stmt);
-}
-
-// Function to handle Meat info save
-function handleMeatInfo($mysqli)
-{
-    $id = $_POST['id'];
-    $food_exchange_group = $_POST['food_exchange_group'];
-    $filipino_name = $_POST['filipino_name'];
-    $english_name = $_POST['english_name'];
-    $carbohydrate_g = $_POST['carbohydrate_g'];
-    $calories = $_POST['calories'];
-    $protein_g = $_POST['protein_g'];
-    $fat_g = $_POST['fat_g'];
-    $energy_kcal = $_POST['energy_kcal'];
-    $household_measure = $_POST['household_measure'];
+// Handle form submission for adding or editing meat
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_meat_info'])) {
+    $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
+    $food_exchange_group = $conn->real_escape_string($_POST['food_exchange_group']);
+    $filipino_name = $conn->real_escape_string($_POST['filipino_name']);
+    $english_name = $conn->real_escape_string($_POST['english_name']);
+    $carbohydrate_g = $conn->real_escape_string($_POST['carbohydrate_g']);
+    $protein_g = $conn->real_escape_string($_POST['protein_g']);
+    $fat_g = $conn->real_escape_string($_POST['fat_g']);
+    $energy_kcal = $conn->real_escape_string($_POST['energy_kcal']);
+    $household_measure = $conn->real_escape_string($_POST['household_measure']);
 
     if ($id) {
         // Update existing record
-        $query = "UPDATE meat_info SET food_exchange_group=?, filipino_name=?, english_name=?, carbohydrate_g=?, calories=?, protein_g=?, fat_g=?, energy_kcal=?, household_measure=? WHERE id=?";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('sssddddssi', $food_exchange_group, $filipino_name, $english_name, $carbohydrate_g, $calories, $protein_g, $fat_g, $energy_kcal, $household_measure, $id);
+        $sql = "UPDATE meat_info SET food_exchange_group='$food_exchange_group', filipino_name='$filipino_name', english_name='$english_name', carbohydrate_g='$carbohydrate_g', protein_g='$protein_g', fat_g='$fat_g', energy_kcal='$energy_kcal', household_measure='$household_measure' WHERE id='$id'";
     } else {
         // Insert new record
-        $query = "INSERT INTO meat_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, calories, protein_g, fat_g, energy_kcal, household_measure) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('sssddddss', $food_exchange_group, $filipino_name, $english_name, $carbohydrate_g, $calories, $protein_g, $fat_g, $energy_kcal, $household_measure);
+        $sql = "INSERT INTO meat_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, protein_g, fat_g, energy_kcal, household_measure) VALUES ('$food_exchange_group', '$filipino_name', '$english_name', '$carbohydrate_g', '$protein_g', '$fat_g', '$energy_kcal', '$household_measure')";
     }
 
-    executeStatement($stmt);
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = $id ? "Meat updated successfully!" : "Meat added successfully!";
+    } else {
+        $_SESSION['message'] = "Error: " . $conn->error;
+    }
+
+    header("Location: new_admin_content.php");
+    exit();
 }
 
-// Function to handle milk info delete
-function deleteMeatInfo($mysqli)
-{
-    $id = $_POST['id'];
-    $query = "DELETE FROM meat_info WHERE id=?";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('i', $id);
-
-    executeStatement($stmt);
+// Handle deletion of meat
+if (isset($_POST['delete_meat_info'])) {
+    $id = $conn->real_escape_string($_POST['id']);
+    $sql = "DELETE FROM meat_info WHERE id='$id'";
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = "Meat deleted successfully!";
+        header("Location: new_admin_content.php");
+        exit();
+    } else {
+        $_SESSION['message'] = "Error deleting meat: " . $conn->error;
+    }
 }
 
-// Function to handle fruits info save
-function handleFruitsInfo($mysqli)
-{
-    $id = $_POST['id'];
-    $food_exchange_group = $_POST['food_exchange_group'];
-    $filipino_name = $_POST['filipino_name'];
-    $english_name = $_POST['english_name'];
-    $carbohydrate_g = $_POST['carbohydrate_g'];
-    $calories = $_POST['calories'];
-    $protein_g = $_POST['protein_g'];
-    $fat_g = $_POST['fat_g'];
-    $energy_kcal = $_POST['energy_kcal'];
-    $household_measure = $_POST['household_measure'];
+// Handle form submission for adding or editing fruits_info
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_fruits_info'])) {
+    $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
+    $food_exchange_group = $conn->real_escape_string($_POST['food_exchange_group']);
+    $filipino_name = $conn->real_escape_string($_POST['filipino_name']);
+    $english_name = $conn->real_escape_string($_POST['english_name']);
+    $carbohydrate_g = $conn->real_escape_string($_POST['carbohydrate_g']);
+    $calories = $conn->real_escape_string($_POST['calories']);
+    $protein_g = $conn->real_escape_string($_POST['protein_g']);
+    $fat_g = $conn->real_escape_string($_POST['fat_g']);
+    $energy_kcal = $conn->real_escape_string($_POST['energy_kcal']);
+    $household_measure = $conn->real_escape_string($_POST['household_measure']);
 
     if ($id) {
         // Update existing record
-        $query = "UPDATE fruits_info SET food_exchange_group=?, filipino_name=?, english_name=?, carbohydrate_g=?, calories=?, protein_g=?, fat_g=?, energy_kcal=?, household_measure=? WHERE id=?";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('sssddddssi', $food_exchange_group, $filipino_name, $english_name, $carbohydrate_g, $calories, $protein_g, $fat_g, $energy_kcal, $household_measure, $id);
+        $sql = "UPDATE fruits_info SET food_exchange_group='$food_exchange_group', filipino_name='$filipino_name', english_name='$english_name', carbohydrate_g='$carbohydrate_g', calories='$calories', protein_g='$protein_g', fat_g='$fat_g', energy_kcal='$energy_kcal', household_measure='$household_measure' WHERE id='$id'";
     } else {
         // Insert new record
-        $query = "INSERT INTO fruits_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, calories, protein_g, fat_g, energy_kcal, household_measure) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('sssddddss', $food_exchange_group, $filipino_name, $english_name, $carbohydrate_g, $calories, $protein_g, $fat_g, $energy_kcal, $household_measure);
+        $sql = "INSERT INTO fruits_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, calories, protein_g, fat_g, energy_kcal, household_measure) VALUES ('$food_exchange_group', '$filipino_name', '$english_name', '$carbohydrate_g', '$calories', '$protein_g', '$fat_g', '$energy_kcal', '$household_measure')";
     }
 
-    executeStatement($stmt);
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = $id ? "Fruits information updated successfully!" : "Fruits information added successfully!";
+    } else {
+        $_SESSION['message'] = "Error: " . $conn->error;
+    }
+
+    header("Location: new_admin_content.php");
+    exit();
 }
 
-// Function to handle fruits info delete
-function deleteFruitInfo($mysqli)
-{
-    $id = $_POST['id'];
-    $query = "DELETE FROM fruit_info WHERE id=?";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('i', $id);
-
-    executeStatement($stmt);
+// Handle deletion of fruits_info
+if (isset($_POST['delete_fruits_info'])) {
+    $id = $conn->real_escape_string($_POST['id']);
+    $sql = "DELETE FROM fruits_info WHERE id='$id'";
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = "Fruits information deleted successfully!";
+        header("Location: new_admin_content.php");
+        exit();
+    } else {
+        $_SESSION['message'] = "Error deleting fruits information: " . $conn->error;
+    }
 }
 
-
-// Function to handle milk info save
-function handleMilkInfo($mysqli)
-{
-    $id = $_POST['id'];
-    $food_exchange_group = $_POST['food_exchange_group'];
-    $filipino_name = $_POST['filipino_name'];
-    $english_name = $_POST['english_name'];
-    $carbohydrate_g = $_POST['carbohydrate_g'];
-    $calories = $_POST['calories'];
-    $protein_g = $_POST['protein_g'];
-    $fat_g = $_POST['fat_g'];
-    $energy_kcal = $_POST['energy_kcal'];
-    $household_measure = $_POST['household_measure'];
+// Handle form submission for adding or editing milk_info
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_milk_info'])) {
+    $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
+    $food_exchange_group = $conn->real_escape_string($_POST['food_exchange_group']);
+    $filipino_name = $conn->real_escape_string($_POST['filipino_name']);
+    $english_name = $conn->real_escape_string($_POST['english_name']);
+    $carbohydrate_g = $conn->real_escape_string($_POST['carbohydrate_g']);
+    $protein_g = $conn->real_escape_string($_POST['protein_g']);
+    $fat_g = $conn->real_escape_string($_POST['fat_g']);
+    $energy_kcal = $conn->real_escape_string($_POST['energy_kcal']);
+    $household_measure = $conn->real_escape_string($_POST['household_measure']);
 
     if ($id) {
         // Update existing record
-        $query = "UPDATE milk_info SET food_exchange_group=?, filipino_name=?, english_name=?, carbohydrate_g=?, calories=?, protein_g=?, fat_g=?, energy_kcal=?, household_measure=? WHERE id=?";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('sssddddssi', $food_exchange_group, $filipino_name, $english_name, $carbohydrate_g, $calories, $protein_g, $fat_g, $energy_kcal, $household_measure, $id);
+        $sql = "UPDATE milk_info SET food_exchange_group='$food_exchange_group', filipino_name='$filipino_name', english_name='$english_name', carbohydrate_g='$carbohydrate_g', protein_g='$protein_g', fat_g='$fat_g', energy_kcal='$energy_kcal', household_measure='$household_measure' WHERE id='$id'";
     } else {
         // Insert new record
-        $query = "INSERT INTO milk_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, calories, protein_g, fat_g, energy_kcal, household_measure) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('sssddddss', $food_exchange_group, $filipino_name, $english_name, $carbohydrate_g, $calories, $protein_g, $fat_g, $energy_kcal, $household_measure);
+        $sql = "INSERT INTO milk_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, protein_g, fat_g, energy_kcal, household_measure) VALUES ('$food_exchange_group', '$filipino_name', '$english_name', '$carbohydrate_g', '$protein_g', '$fat_g', '$energy_kcal', '$household_measure')";
     }
 
-    executeStatement($stmt);
+    // Execute SQL query
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = $id ? "Milk information updated successfully!" : "Milk information added successfully!";
+    } else {
+        $_SESSION['message'] = "Error: " . $conn->error;
+    }
+
+    // Redirect back to new_admin_content.php with the active section/tab anchor
+    header("Location: new_admin_content.php#milk_info");
+    exit();
 }
 
-// Function to handle milk info delete
-function deleteMilkInfo($mysqli)
-{
-    $id = $_POST['id'];
-    $query = "DELETE FROM milk_info WHERE id=?";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('i', $id);
-
-    executeStatement($stmt);
+// Handle deletion of milk_info
+if (isset($_POST['delete_milk_info'])) {
+    $id = $conn->real_escape_string($_POST['id']);
+    $sql = "DELETE FROM milk_info WHERE id='$id'";
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = "Milk information deleted successfully!";
+        header("Location: new_admin_content.php");
+        exit();
+    } else {
+        $_SESSION['message'] = "Error deleting milk information: " . $conn->error;
+    }
 }
 
-// Function to handle rice and bread info save
-function handleRiceBreadInfo($mysqli)
-{
-    $id = $_POST['id'];
-    $food_exchange_group = $_POST['food_exchange_group'];
-    $filipino_name = $_POST['filipino_name'];
-    $english_name = $_POST['english_name'];
-    $carbohydrate_g = $_POST['carbohydrate_g'];
-    $calories = $_POST['calories'];
-    $protein_g = $_POST['protein_g'];
-    $fat_g = $_POST['fat_g'];
-    $energy_kcal = $_POST['energy_kcal'];
-    $household_measure = $_POST['household_measure'];
+// Handle form submission for adding or editing rice_bread_info
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_rice_bread_info'])) {
+    $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
+    $food_exchange_group = $conn->real_escape_string($_POST['food_exchange_group']);
+    $filipino_name = $conn->real_escape_string($_POST['filipino_name']);
+    $english_name = $conn->real_escape_string($_POST['english_name']);
+    $carbohydrate_g = $conn->real_escape_string($_POST['carbohydrate_g']);
+    $protein_g = $conn->real_escape_string($_POST['protein_g']);
+    $fat_g = $conn->real_escape_string($_POST['fat_g']);
+    $energy_kcal = $conn->real_escape_string($_POST['energy_kcal']);
+    $household_measure = $conn->real_escape_string($_POST['household_measure']);
 
     if ($id) {
         // Update existing record
-        $query = "UPDATE rice_bread_info SET food_exchange_group=?, filipino_name=?, english_name=?, carbohydrate_g=?, calories=?, protein_g=?, fat_g=?, energy_kcal=?, household_measure=? WHERE id=?";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('sssddddssi', $food_exchange_group, $filipino_name, $english_name, $carbohydrate_g, $calories, $protein_g, $fat_g, $energy_kcal, $household_measure, $id);
+        $sql = "UPDATE rice_bread_info SET food_exchange_group='$food_exchange_group', filipino_name='$filipino_name', english_name='$english_name', carbohydrate_g='$carbohydrate_g', protein_g='$protein_g', fat_g='$fat_g', energy_kcal='$energy_kcal', household_measure='$household_measure' WHERE id='$id'";
     } else {
         // Insert new record
-        $query = "INSERT INTO rice_bread_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, calories, protein_g, fat_g, energy_kcal, household_measure) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('sssddddss', $food_exchange_group, $filipino_name, $english_name, $carbohydrate_g, $calories, $protein_g, $fat_g, $energy_kcal, $household_measure);
+        $sql = "INSERT INTO rice_bread_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, protein_g, fat_g, energy_kcal, household_measure) VALUES ('$food_exchange_group', '$filipino_name', '$english_name', '$carbohydrate_g', '$protein_g', '$fat_g', '$energy_kcal', '$household_measure')";
     }
 
-    executeStatement($stmt);
-}
-
-// Function to handle rice and bread info delete
-function deleteRiceBreadInfo($mysqli)
-{
-    $id = $_POST['id'];
-    $query = "DELETE FROM rice_bread_info WHERE id=?";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('i', $id);
-
-    executeStatement($stmt);
-}
-
-// Helper function to execute prepared statements
-function executeStatement($stmt)
-{
-    if ($stmt->execute()) {
-        echo "Operation successful!";
+    // Execute SQL query
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = $id ? "Milk information updated successfully!" : "Milk information added successfully!";
     } else {
-        echo "Error: " . $stmt->error;
+        $_SESSION['message'] = "Error: " . $conn->error;
     }
-    $stmt->close();
+
+    // Redirect back to new_admin_content.php with the active section/tab anchor
+    header("Location: new_admin_content.php#milk_info");
+    exit();
 }
-$mysqli->close();
+
+// Handle deletion of milk_info
+if (isset($_POST['rice_bread_info'])) {
+    $id = $conn->real_escape_string($_POST['id']);
+    $sql = "DELETE FROM milk_info WHERE id='$id'";
+    if ($conn->query($sql) === TRUE) {
+        $_SESSION['message'] = "Rice and Bread information deleted successfully!";
+        header("Location: new_admin_content.php");
+        exit();
+    } else {
+        $_SESSION['message'] = "Error deleting rice and bread information: " . $conn->error;
+    }
+}
+$conn->close();
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -505,69 +442,28 @@ $mysqli->close();
     </div> <!-- Closing banner-section-outer -->
 
     <div class="container">
-        <?php if (isset($_SESSION['message'])): ?>
-            <div class="alert alert-success">
-                <?= $_SESSION['message'];
-                unset($_SESSION['message']); ?>
-            </div>
-        <?php endif; ?>
-
         <h2>Content Management</h2>
-        <!-- Navigation for sections -->
-        <div class="nav">
-            <button class="btn btn-custom mr-2" onclick="toggleSection('exercises')">Exercises</button>
-            <button class="btn btn-custom mr-2" onclick="toggleSection('meat_info')">Meat</button>
-            <button class="btn btn-custom mr-2" onclick="toggleSection('fruits_info')">Fruits</button>
-            <button class="btn btn-custom mr-2" onclick="toggleSection('milk_info')">Milk</button>
-            <button class="btn btn-custom" onclick="toggleSection('rice_bread_info')">Rice and Bread</button>
+        <div class="nav mb-3">
+            <button class="btn btn-custom mr-2" onclick="handleTabClick('exercises')">Exercises</button>
+            <button class="btn btn-custom mr-2" onclick="handleTabClick('meat_info')">Meat</button>
+            <button class="btn btn-custom mr-2" onclick="handleTabClick('fruits_info')">Fruits</button>
+            <button class="btn btn-custom mr-2" onclick="handleTabClick('milk_info')">Milk</button>
+            <button class="btn btn-custom" onclick="handleTabClick('rice_bread_info')">Rice and Bread</button>
         </div>
 
 
-
-        <!-- Existing Exercises section -->
-        <div id="exercises" class="tab-content active">
-            <h2 class="mt-4">Existing Exercises</h2>
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Description</th>
-                            <th>Intensity</th>
-                            <th>Exercise Type</th>
-                            <th>Category</th>
-                            <th>Duration</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($exercises as $exercise): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($exercise['name']) ?></td>
-                                <td><?= htmlspecialchars($exercise['description']) ?></td>
-                                <td><?= htmlspecialchars($exercise['intensity']) ?></td>
-                                <td><?= htmlspecialchars($exercise['exercise_type']) ?></td>
-                                <td><?= htmlspecialchars($exercise['category']) ?></td>
-                                <td><?= htmlspecialchars($exercise['duration']) ?></td>
-                                <td>
-                                    <button class="btn btn-info"
-                                        onclick="editExercise(<?= htmlspecialchars(json_encode($exercise)) ?>)">Edit</button>
-                                    <a href="new_admin_content.php?delete=<?= $exercise['id'] ?>"
-                                        class="btn btn-danger btn-sm"
-                                        onclick="return confirm('Are you sure you want to delete this exercise?');">Delete</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Add or Edit Exercise form -->
+        <div id="exercises" class="tab-content">
             <h2>Add or Edit Exercise</h2>
-            <form action="new_admin_content.php" method="POST">
+            <?php
+            if (isset($_SESSION['message'])) {
+                echo '<div class="alert alert-info">' . $_SESSION['message'] . '</div>';
+                unset($_SESSION['message']);
+            }
+            ?>
+            <form action="" method="POST">
                 <input type="hidden" name="id" id="id">
                 <div class="form-group">
-                    <label for="name">Name</label>
+                    <label for="name">Exercise Name</label>
                     <input type="text" name="name" id="name" class="form-control" required>
                 </div>
                 <div class="form-group">
@@ -601,14 +497,92 @@ $mysqli->close();
                 </div>
                 <div class="form-group">
                     <label for="duration">Duration</label>
-                    <textarea name="duration" id="duration" class="form-control" required></textarea>
+                    <input type="text" name="duration" id="duration" class="form-control" required>
                 </div>
-                <button type="submit" name="handleExercise" class="btn btn-primary">Save Exercise</button>
+                <button type="submit" name="save_exercise" class="btn btn-primary">Save Exercise</button>
             </form>
-        </div>
 
+            <h2 class="mt-4">Existing Exercises</h2>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Intensity</th>
+                            <th>Exercise Type</th>
+                            <th>Category</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($exercises as $exercise): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($exercise['name']) ?></td>
+                                <td><?= htmlspecialchars($exercise['description']) ?></td>
+                                <td><?= htmlspecialchars($exercise['intensity']) ?></td>
+                                <td><?= htmlspecialchars($exercise['exercise_type']) ?></td>
+                                <td><?= htmlspecialchars($exercise['category']) ?></td>
+                                <td><?= htmlspecialchars($exercise['duration']) ?></td>
+                                <td>
+                                    <button class="btn btn-info"
+                                        onclick="editExercise(<?= htmlspecialchars(json_encode($exercise)) ?>)">Edit</button>
+                                    <a href="new_admin_content.php?delete_exercise=<?= $exercise['id'] ?>"
+                                        class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Are you sure you want to delete this exercise?');">Delete</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         <!-- Meat Info section -->
         <div id="meat_info" class="tab-content">
+
+
+            <!-- Form for adding or editing Meat Info -->
+            <h2>Add or Edit Meat Information</h2>
+            <form action="new_admin_content.php" method="POST" class="food-form meat_info">
+                <input type="hidden" name="active_section" id="active_section">
+                <input type="hidden" name="id" id="meat_info_id">
+                <div class="form-group">
+                    <label for="food_exchange_group">Food Exchange Group</label>
+                    <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control"
+                        required>
+                </div>
+                <div class="form-group">
+                    <label for="filipino_name">Filipino Name</label>
+                    <input type="text" name="filipino_name" id="filipino_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="english_name">English Name</label>
+                    <input type="text" name="english_name" id="english_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="carbohydrate_g">Carbohydrate (g)</label>
+                    <input type="text" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="protein_g">Protein (g)</label>
+                    <input type="text" name="protein_g" id="protein_g" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="fat_g">Fat (g)</label>
+                    <input type="text" name="fat_g" id="fat_g" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="energy_kcal">Energy (kcal)</label>
+                    <input type="text" name="energy_kcal" id="energy_kcal" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="household_measure">Household Measure</label>
+                    <input type="text" name="household_measure" id="household_measure" class="form-control" required>
+                </div>
+                <button type="submit" name="save_meat_info" class="btn btn-primary">Save Meat Info</button>
+            </form>
+
             <h2 class="mt-4">Meat Information</h2>
             <div class="table-responsive">
                 <table class="table table-bordered">
@@ -650,11 +624,17 @@ $mysqli->close();
                     </tbody>
                 </table>
             </div>
+        </div>
 
-            <!-- Form for adding or editing Meat Info -->
-            <h2>Add or Edit Meat Information</h2>
-            <form action="new_admin_content.php" method="POST" class="food-form meat_info">
-                <input type="hidden" name="id" id="meat_info_id">
+        <!-- Fruits Info section -->
+        <div id="fruits_info" class="tab-content">
+
+
+            <!-- Form for adding or editing Fruits Info -->
+            <h2>Add or Edit Fruits Information</h2>
+            <form action="new_admin_content.php" method="POST" class="food-form fruits_info">
+                <input type="hidden" name="active_section" id="active_section">
+                <input type="hidden" name="id" id="fruits_info_id">
                 <div class="form-group">
                     <label for="food_exchange_group">Food Exchange Group</label>
                     <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control"
@@ -692,12 +672,8 @@ $mysqli->close();
                     <label for="household_measure">Household Measure</label>
                     <input type="text" name="household_measure" id="household_measure" class="form-control" required>
                 </div>
-                <button type="submit" name="save_meat_info" class="btn btn-primary">Save Meat Info</button>
+                <button type="submit" name="save_fruits_info" class="btn btn-primary">Save Fruits Info</button>
             </form>
-        </div>
-
-        <!-- Fruits Info section -->
-        <div id="fruits_info" class="tab-content">
             <h2 class="mt-4">Fruits Information</h2>
             <div class="table-responsive">
                 <table class="table table-bordered">
@@ -741,11 +717,16 @@ $mysqli->close();
                     </tbody>
                 </table>
             </div>
+        </div>
 
-            <!-- Form for adding or editing Fruits Info -->
-            <h2>Add or Edit Fruits Information</h2>
-            <form action="new_admin_content.php" method="POST" class="food-form fruits_info">
-                <input type="hidden" name="id" id="fruits_info_id">
+        <!-- Milk Info section -->
+        <div id="milk_info" class="tab-content">
+
+            <!-- Form for adding or editing Milk Info -->
+            <h2>Add or Edit Milk Information</h2>
+            <form action="new_admin_content.php" method="POST" class="food-form milk_info">
+                <input type="hidden" name="active_section" value="milk_info">
+                <input type="hidden" name="id" value="<?php echo isset($info['id']) ? $info['id'] : ''; ?>">
                 <div class="form-group">
                     <label for="food_exchange_group">Food Exchange Group</label>
                     <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control"
@@ -764,10 +745,6 @@ $mysqli->close();
                     <input type="text" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="calories">Calories</label>
-                    <input type="text" name="calories" id="calories" class="form-control" required>
-                </div>
-                <div class="form-group">
                     <label for="protein_g">Protein (g)</label>
                     <input type="text" name="protein_g" id="protein_g" class="form-control" required>
                 </div>
@@ -783,12 +760,8 @@ $mysqli->close();
                     <label for="household_measure">Household Measure</label>
                     <input type="text" name="household_measure" id="household_measure" class="form-control" required>
                 </div>
-                <button type="submit" name="save_fruits_info" class="btn btn-primary">Save Fruits Info</button>
+                <button type="submit" name="save_milk_info" class="btn btn-primary">Save Milk Info</button>
             </form>
-        </div>
-
-        <!-- Milk Info section -->
-        <div id="milk_info" class="tab-content">
             <h2 class="mt-4">Milk Information</h2>
             <div class="table-responsive">
                 <table class="table table-bordered">
@@ -828,13 +801,20 @@ $mysqli->close();
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
+
                 </table>
             </div>
 
-            <!-- Form for adding or editing Milk Info -->
-            <h2>Add or Edit Milk Information</h2>
-            <form action="new_admin_content.php" method="POST" class="food-form milk_info">
-                <input type="hidden" name="id" id="fruits_info_id">
+        </div>
+
+        <!-- Rice and Bread Info section -->
+        <div id="rice_bread_info" class="tab-content">
+
+            <!-- Form for adding or editing Rice and Bread Info -->
+            <h2>Add or Edit Rice and Bread Information</h2>
+            <form action="new_admin_content.php" method="POST" class="food-form rice_bread_info">
+                <input type="hidden" name="active_section" id="active_section">
+                <input type="hidden" name="id" id="rice_bread_info_id">
                 <div class="form-group">
                     <label for="food_exchange_group">Food Exchange Group</label>
                     <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control"
@@ -853,10 +833,6 @@ $mysqli->close();
                     <input type="text" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="calories">Calories</label>
-                    <input type="text" name="calories" id="calories" class="form-control" required>
-                </div>
-                <div class="form-group">
                     <label for="protein_g">Protein (g)</label>
                     <input type="text" name="protein_g" id="protein_g" class="form-control" required>
                 </div>
@@ -872,12 +848,9 @@ $mysqli->close();
                     <label for="household_measure">Household Measure</label>
                     <input type="text" name="household_measure" id="household_measure" class="form-control" required>
                 </div>
-                <button type="submit" name="save_milk_info" class="btn btn-primary">Save Milk Info</button>
+                <button type="submit" name="save_rice_bread_info" class="btn btn-primary">Save Rice and Bread
+                    Info</button>
             </form>
-        </div>
-
-        <!-- Rice and Bread Info section -->
-        <div id="rice_bread_info" class="tab-content">
             <h2 class="mt-4">Rice and Bread Information</h2>
             <div class="table-responsive">
                 <table class="table table-bordered">
@@ -920,54 +893,24 @@ $mysqli->close();
                 </table>
             </div>
 
-            <!-- Form for adding or editing Rice and Bread Info -->
-            <h2>Add or Edit Rice and Bread Information</h2>
-            <form action="new_admin_content.php" method="POST" class="food-form rice_bread_info">
-                <input type="hidden" name="id" id="rice_bread_info_id">
-                <div class="form-group">
-                    <label for="food_exchange_group">Food Exchange Group</label>
-                    <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control"
-                        required>
-                </div>
-                <div class="form-group">
-                    <label for="filipino_name">Filipino Name</label>
-                    <input type="text" name="filipino_name" id="filipino_name" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="english_name">English Name</label>
-                    <input type="text" name="english_name" id="english_name" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="carbohydrate_g">Carbohydrate (g)</label>
-                    <input type="text" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="calories">Calories</label>
-                    <input type="text" name="calories" id="calories" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="protein_g">Protein (g)</label>
-                    <input type="text" name="protein_g" id="protein_g" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="fat_g">Fat (g)</label>
-                    <input type="text" name="fat_g" id="fat_g" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="energy_kcal">Energy (kcal)</label>
-                    <input type="text" name="energy_kcal" id="energy_kcal" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="household_measure">Household Measure</label>
-                    <input type="text" name="household_measure" id="household_measure" class="form-control" required>
-                </div>
-                <button type="submit" name="save_rice_bread_info" class="btn btn-primary">Save Rice and Bread
-                    Info</button>
-            </form>
         </div>
     </div>
     </main>
     <script>
+
+        // Function to handle tab clicks and update URL
+        function handleTabClick(sectionId) {
+            // Update the URL to include the section id as a hash
+            history.replaceState(null, null, window.location.pathname + '#' + sectionId);
+
+            // Toggle the section/tab as per your existing logic
+            toggleSection(sectionId);
+
+            // Display session message in the corresponding tab
+            displaySessionMessage(sectionId);
+        }
+
+        // Function to toggle sections
         function toggleSection(sectionId) {
             // Hide all tab contents and deactivate all buttons
             document.querySelectorAll('.tab-content').forEach(function (tabContent) {
@@ -980,8 +923,47 @@ $mysqli->close();
             // Show the selected tab content and activate the corresponding button
             document.getElementById(sectionId).classList.add('active');
             document.querySelector('[onclick="toggleSection(\'' + sectionId + '\')"]').classList.add('active');
+
+            // Set the active section in the hidden input field
+            setActiveSection(sectionId);
         }
 
+        // Function to set the active section in the hidden input field
+        function setActiveSection(sectionId) {
+            document.getElementById('active_section').value = sectionId;
+        }
+
+        // Function to display session message in the corresponding tab
+        function displaySessionMessage(sectionId) {
+            var message = "<?php echo isset($_SESSION['message']) ? $_SESSION['message'] : '' ?>";
+            var messageElement = document.querySelector(`#${sectionId} .message-container`);
+
+            if (message && messageElement) {
+                messageElement.innerHTML = '<div class="alert alert-success">' + message + '</div>';
+                // Clear session message after displaying
+                <?php unset($_SESSION['message']); ?>;
+            }
+        }
+
+        // Activate the section from URL hash when the page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            activateSectionFromUrl();
+
+            // Display session message in the active tab
+            var activeSection = document.getElementById('active_section').value;
+            displaySessionMessage(activeSection);
+        });
+
+        // Function to retrieve and activate the last active section from URL hash
+        function activateSectionFromUrl() {
+            var sectionId = window.location.hash.substring(1);
+            if (sectionId) {
+                toggleSection(sectionId);
+            } else {
+                // Default to activate a specific tab if no hash found
+                toggleSection('exercises'); // Change this default based on your preference
+            }
+        }
 
         function editExercise(exercise) {
             document.getElementById('id').value = exercise.id;
@@ -994,13 +976,21 @@ $mysqli->close();
         }
 
         function editInfo(info, formType) {
+            // Find the form based on the formType class
             const form = document.querySelector(`.${formType}`);
+
+            // Populate form fields with info object properties
             form.querySelector('input[name="id"]').value = info.id;
             form.querySelector('input[name="food_exchange_group"]').value = info.food_exchange_group;
             form.querySelector('input[name="filipino_name"]').value = info.filipino_name;
             form.querySelector('input[name="english_name"]').value = info.english_name;
             form.querySelector('input[name="carbohydrate_g"]').value = info.carbohydrate_g;
-            form.querySelector('input[name="calories"]').value = info.calories;
+
+            // Check if 'calories' property exists in info object before assigning
+            if ('calories' in info) {
+                form.querySelector('input[name="calories"]').value = info.calories;
+            }
+
             form.querySelector('input[name="protein_g"]').value = info.protein_g;
             form.querySelector('input[name="fat_g"]').value = info.fat_g;
             form.querySelector('input[name="energy_kcal"]').value = info.energy_kcal;
