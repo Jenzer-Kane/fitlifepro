@@ -28,231 +28,90 @@ function fetchTableData($conn, $tableName)
     return $data;
 }
 
-$exercises = fetchTableData($mysqli, 'exercises');
-$meat_info = fetchTableData($mysqli, 'meat_info');
-$fruits_info = fetchTableData($mysqli, 'fruits_info');
-$milk_info = fetchTableData($mysqli, 'milk_info');
-$rice_bread_info = fetchTableData($mysqli, 'rice_bread_info');
+$exercises = fetchTableData($conn, 'exercises');
+$meat_info = fetchTableData($conn, 'meat_info');
+$fruits_info = fetchTableData($conn, 'fruits_info');
+$milk_info = fetchTableData($conn, 'milk_info');
+$rice_bread_info = fetchTableData($conn, 'rice_bread_info');
 
-
-// Handle form submission for adding or editing an exercise
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_exercise'])) {
+// Function to handle form submissions
+function handleFormSubmission($conn, $tableName, $fields, $redirectTab)
+{
     $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
-    $name = $conn->real_escape_string($_POST['name']);
-    $description = $conn->real_escape_string($_POST['description']);
-    $intensity = $conn->real_escape_string($_POST['intensity']);
-    $exercise_type = $conn->real_escape_string($_POST['exercise_type']);
-    $category = $conn->real_escape_string($_POST['category']);
-    $duration = $conn->real_escape_string($_POST['duration']);
-
-    if ($id) {
-        $sql = "UPDATE exercises SET name='$name', description='$description', intensity='$intensity', exercise_type='$exercise_type', category='$category', duration='$duration' WHERE id='$id'";
-    } else {
-        $sql = "INSERT INTO exercises (name, description, intensity, exercise_type, category, duration) VALUES ('$name', '$description', '$intensity', '$exercise_type', '$category', '$duration')";
+    $fieldUpdates = [];
+    foreach ($fields as $field) {
+        $fieldUpdates[$field] = $conn->real_escape_string($_POST[$field]);
     }
 
+    if ($id) {
+        $setClause = implode(", ", array_map(function ($field) use ($fieldUpdates) {
+            return "$field = '{$fieldUpdates[$field]}'";
+        }, array_keys($fieldUpdates)));
+        $sql = "UPDATE $tableName SET $setClause WHERE id='$id'";
+    } else {
+        $columns = implode(", ", array_keys($fieldUpdates));
+        $values = implode(", ", array_map(function ($value) {
+            return "'$value'";
+        }, array_values($fieldUpdates)));
+        $sql = "INSERT INTO $tableName ($columns) VALUES ($values)";
+    }
+
+    $formattedTableName = str_replace('_', ' ', $tableName);
     if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = $id ? "Exercise updated successfully!" : "Exercise added successfully!";
+        $_SESSION['message'] = $id ? ucfirst($formattedTableName) . " updated successfully!" : ucfirst($formattedTableName) . " added successfully!";
     } else {
         $_SESSION['message'] = "Error: " . $conn->error;
     }
 
-    header("Location: new_admin_content.php");
-    exit(); // Ensure no further output after redirection
-}
-
-// Handle deletion of an exercise
-if (isset($_GET['delete_exercise'])) {
-    $id = $conn->real_escape_string($_GET['delete_exercise']);
-    $sql = "DELETE FROM exercises WHERE id='$id'";
-    if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = "Exercise deleted successfully!";
-        // Redirect to avoid resubmission on refresh
-        header("Location: new_admin_content.php");
-        exit();
-    } else {
-        $_SESSION['message'] = "Error deleting exercise: " . $conn->error;
-    }
-}
-
-// Handle form submission for adding or editing meat
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_meat_info'])) {
-    $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
-    $food_exchange_group = $conn->real_escape_string($_POST['food_exchange_group']);
-    $filipino_name = $conn->real_escape_string($_POST['filipino_name']);
-    $english_name = $conn->real_escape_string($_POST['english_name']);
-    $carbohydrate_g = $conn->real_escape_string($_POST['carbohydrate_g']);
-    $protein_g = $conn->real_escape_string($_POST['protein_g']);
-    $fat_g = $conn->real_escape_string($_POST['fat_g']);
-    $energy_kcal = $conn->real_escape_string($_POST['energy_kcal']);
-    $household_measure = $conn->real_escape_string($_POST['household_measure']);
-
-    if ($id) {
-        // Update existing record
-        $sql = "UPDATE meat_info SET food_exchange_group='$food_exchange_group', filipino_name='$filipino_name', english_name='$english_name', carbohydrate_g='$carbohydrate_g', protein_g='$protein_g', fat_g='$fat_g', energy_kcal='$energy_kcal', household_measure='$household_measure' WHERE id='$id'";
-    } else {
-        // Insert new record
-        $sql = "INSERT INTO meat_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, protein_g, fat_g, energy_kcal, household_measure) VALUES ('$food_exchange_group', '$filipino_name', '$english_name', '$carbohydrate_g', '$protein_g', '$fat_g', '$energy_kcal', '$household_measure')";
-    }
-
-    if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = $id ? "Meat updated successfully!" : "Meat added successfully!";
-    } else {
-        $_SESSION['message'] = "Error: " . $conn->error;
-    }
-
-    header("Location: new_admin_content.php");
+    header("Location: new_admin_content.php#$redirectTab");
     exit();
 }
 
-// Handle deletion of meat
-if (isset($_POST['delete_meat_info'])) {
+// Function to handle deletions
+function handleDeletion($conn, $tableName, $redirectTab)
+{
     $id = $conn->real_escape_string($_POST['id']);
-    $sql = "DELETE FROM meat_info WHERE id='$id'";
+    $sql = "DELETE FROM $tableName WHERE id='$id'";
+    $formattedTableName = str_replace('_', ' ', $tableName);
     if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = "Meat deleted successfully!";
-        header("Location: new_admin_content.php");
-        exit();
+        $_SESSION['message'] = ucfirst($formattedTableName) . " deleted successfully!";
     } else {
-        $_SESSION['message'] = "Error deleting meat: " . $conn->error;
-    }
-}
-
-// Handle form submission for adding or editing fruits_info
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_fruits_info'])) {
-    $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
-    $food_exchange_group = $conn->real_escape_string($_POST['food_exchange_group']);
-    $filipino_name = $conn->real_escape_string($_POST['filipino_name']);
-    $english_name = $conn->real_escape_string($_POST['english_name']);
-    $carbohydrate_g = $conn->real_escape_string($_POST['carbohydrate_g']);
-    $calories = $conn->real_escape_string($_POST['calories']);
-    $protein_g = $conn->real_escape_string($_POST['protein_g']);
-    $fat_g = $conn->real_escape_string($_POST['fat_g']);
-    $energy_kcal = $conn->real_escape_string($_POST['energy_kcal']);
-    $household_measure = $conn->real_escape_string($_POST['household_measure']);
-
-    if ($id) {
-        // Update existing record
-        $sql = "UPDATE fruits_info SET food_exchange_group='$food_exchange_group', filipino_name='$filipino_name', english_name='$english_name', carbohydrate_g='$carbohydrate_g', calories='$calories', protein_g='$protein_g', fat_g='$fat_g', energy_kcal='$energy_kcal', household_measure='$household_measure' WHERE id='$id'";
-    } else {
-        // Insert new record
-        $sql = "INSERT INTO fruits_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, calories, protein_g, fat_g, energy_kcal, household_measure) VALUES ('$food_exchange_group', '$filipino_name', '$english_name', '$carbohydrate_g', '$calories', '$protein_g', '$fat_g', '$energy_kcal', '$household_measure')";
+        $_SESSION['message'] = "Error deleting " . $formattedTableName . ": " . $conn->error;
     }
 
-    if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = $id ? "Fruits information updated successfully!" : "Fruits information added successfully!";
-    } else {
-        $_SESSION['message'] = "Error: " . $conn->error;
-    }
-
-    header("Location: new_admin_content.php");
+    header("Location: new_admin_content.php#$redirectTab");
     exit();
 }
 
-// Handle deletion of fruits_info
-if (isset($_POST['delete_fruits_info'])) {
-    $id = $conn->real_escape_string($_POST['id']);
-    $sql = "DELETE FROM fruits_info WHERE id='$id'";
-    if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = "Fruits information deleted successfully!";
-        header("Location: new_admin_content.php");
-        exit();
-    } else {
-        $_SESSION['message'] = "Error deleting fruits information: " . $conn->error;
+// Handle form submissions and deletions
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (isset($_POST['save_exercise'])) {
+        handleFormSubmission($conn, 'exercises', ['name', 'description', 'intensity', 'exercise_type', 'category', 'duration'], 'exercises');
+    } elseif (isset($_POST['save_meat_info'])) {
+        handleFormSubmission($conn, 'meat_info', ['food_exchange_group', 'filipino_name', 'english_name', 'carbohydrate_g', 'protein_g', 'fat_g', 'energy_kcal', 'household_measure'], 'meat_info');
+    } elseif (isset($_POST['save_fruits_info'])) {
+        handleFormSubmission($conn, 'fruits_info', ['food_exchange_group', 'filipino_name', 'english_name', 'carbohydrate_g', 'calories', 'protein_g', 'fat_g', 'energy_kcal', 'household_measure'], 'fruits_info');
+    } elseif (isset($_POST['save_milk_info'])) {
+        handleFormSubmission($conn, 'milk_info', ['food_exchange_group', 'filipino_name', 'english_name', 'carbohydrate_g', 'protein_g', 'fat_g', 'energy_kcal', 'household_measure'], 'milk_info');
+    } elseif (isset($_POST['save_rice_bread_info'])) {
+        handleFormSubmission($conn, 'rice_bread_info', ['food_exchange_group', 'filipino_name', 'english_name', 'carbohydrate_g', 'protein_g', 'fat_g', 'energy_kcal', 'household_measure'], 'rice_bread_info');
+    } elseif (isset($_POST['delete_exercise'])) {
+        handleDeletion($conn, 'exercises', 'exercises');
+    } elseif (isset($_POST['delete_meat_info'])) {
+        handleDeletion($conn, 'meat_info', 'meat_info');
+    } elseif (isset($_POST['delete_fruits_info'])) {
+        handleDeletion($conn, 'fruits_info', 'fruits_info');
+    } elseif (isset($_POST['delete_milk_info'])) {
+        handleDeletion($conn, 'milk_info', 'milk_info');
+    } elseif (isset($_POST['delete_rice_bread_info'])) {
+        handleDeletion($conn, 'rice_bread_info', 'rice_bread_info');
     }
 }
 
-// Handle form submission for adding or editing milk_info
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_milk_info'])) {
-    $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
-    $food_exchange_group = $conn->real_escape_string($_POST['food_exchange_group']);
-    $filipino_name = $conn->real_escape_string($_POST['filipino_name']);
-    $english_name = $conn->real_escape_string($_POST['english_name']);
-    $carbohydrate_g = $conn->real_escape_string($_POST['carbohydrate_g']);
-    $protein_g = $conn->real_escape_string($_POST['protein_g']);
-    $fat_g = $conn->real_escape_string($_POST['fat_g']);
-    $energy_kcal = $conn->real_escape_string($_POST['energy_kcal']);
-    $household_measure = $conn->real_escape_string($_POST['household_measure']);
-
-    if ($id) {
-        // Update existing record
-        $sql = "UPDATE milk_info SET food_exchange_group='$food_exchange_group', filipino_name='$filipino_name', english_name='$english_name', carbohydrate_g='$carbohydrate_g', protein_g='$protein_g', fat_g='$fat_g', energy_kcal='$energy_kcal', household_measure='$household_measure' WHERE id='$id'";
-    } else {
-        // Insert new record
-        $sql = "INSERT INTO milk_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, protein_g, fat_g, energy_kcal, household_measure) VALUES ('$food_exchange_group', '$filipino_name', '$english_name', '$carbohydrate_g', '$protein_g', '$fat_g', '$energy_kcal', '$household_measure')";
-    }
-
-    // Execute SQL query
-    if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = $id ? "Milk information updated successfully!" : "Milk information added successfully!";
-    } else {
-        $_SESSION['message'] = "Error: " . $conn->error;
-    }
-
-    // Redirect back to new_admin_content.php with the active section/tab anchor
-    header("Location: new_admin_content.php#milk_info");
-    exit();
-}
-
-// Handle deletion of milk_info
-if (isset($_POST['delete_milk_info'])) {
-    $id = $conn->real_escape_string($_POST['id']);
-    $sql = "DELETE FROM milk_info WHERE id='$id'";
-    if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = "Milk information deleted successfully!";
-        header("Location: new_admin_content.php");
-        exit();
-    } else {
-        $_SESSION['message'] = "Error deleting milk information: " . $conn->error;
-    }
-}
-
-// Handle form submission for adding or editing rice_bread_info
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_rice_bread_info'])) {
-    $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
-    $food_exchange_group = $conn->real_escape_string($_POST['food_exchange_group']);
-    $filipino_name = $conn->real_escape_string($_POST['filipino_name']);
-    $english_name = $conn->real_escape_string($_POST['english_name']);
-    $carbohydrate_g = $conn->real_escape_string($_POST['carbohydrate_g']);
-    $protein_g = $conn->real_escape_string($_POST['protein_g']);
-    $fat_g = $conn->real_escape_string($_POST['fat_g']);
-    $energy_kcal = $conn->real_escape_string($_POST['energy_kcal']);
-    $household_measure = $conn->real_escape_string($_POST['household_measure']);
-
-    if ($id) {
-        // Update existing record
-        $sql = "UPDATE rice_bread_info SET food_exchange_group='$food_exchange_group', filipino_name='$filipino_name', english_name='$english_name', carbohydrate_g='$carbohydrate_g', protein_g='$protein_g', fat_g='$fat_g', energy_kcal='$energy_kcal', household_measure='$household_measure' WHERE id='$id'";
-    } else {
-        // Insert new record
-        $sql = "INSERT INTO rice_bread_info (food_exchange_group, filipino_name, english_name, carbohydrate_g, protein_g, fat_g, energy_kcal, household_measure) VALUES ('$food_exchange_group', '$filipino_name', '$english_name', '$carbohydrate_g', '$protein_g', '$fat_g', '$energy_kcal', '$household_measure')";
-    }
-
-    // Execute SQL query
-    if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = $id ? "Milk information updated successfully!" : "Milk information added successfully!";
-    } else {
-        $_SESSION['message'] = "Error: " . $conn->error;
-    }
-
-    // Redirect back to new_admin_content.php with the active section/tab anchor
-    header("Location: new_admin_content.php#milk_info");
-    exit();
-}
-
-// Handle deletion of milk_info
-if (isset($_POST['rice_bread_info'])) {
-    $id = $conn->real_escape_string($_POST['id']);
-    $sql = "DELETE FROM milk_info WHERE id='$id'";
-    if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = "Rice and Bread information deleted successfully!";
-        header("Location: new_admin_content.php");
-        exit();
-    } else {
-        $_SESSION['message'] = "Error deleting rice and bread information: " . $conn->error;
-    }
-}
 $conn->close();
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -450,16 +309,15 @@ $conn->close();
             <button class="btn btn-custom mr-2" onclick="handleTabClick('milk_info')">Milk</button>
             <button class="btn btn-custom" onclick="handleTabClick('rice_bread_info')">Rice and Bread</button>
         </div>
-
-
+        <?php
+        if (isset($_SESSION['message'])) {
+            echo '<div class="alert alert-info">' . $_SESSION['message'] . '</div>';
+            unset($_SESSION['message']);
+        }
+        ?>
         <div id="exercises" class="tab-content">
             <h2>Add or Edit Exercise</h2>
-            <?php
-            if (isset($_SESSION['message'])) {
-                echo '<div class="alert alert-info">' . $_SESSION['message'] . '</div>';
-                unset($_SESSION['message']);
-            }
-            ?>
+
             <form action="" method="POST">
                 <input type="hidden" name="id" id="id">
                 <div class="form-group">
