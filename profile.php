@@ -4,13 +4,13 @@ session_start();
 include 'database.php';
 
 $username = $_SESSION['username'];
-$stmt = $mysqli->prepare("SELECT profile_image FROM registration WHERE username = ?");
+$stmt = $mysqli->prepare("SELECT profile_image, gender FROM registration WHERE username = ?");
 $stmt->bind_param("s", $username);
 $stmt->execute();
 $stmt->store_result();
 
 if ($stmt->num_rows > 0) {
-    $stmt->bind_result($profile_image_path);
+    $stmt->bind_result($profile_image_path, $gender);
     $stmt->fetch();
 } else {
     $profile_image_path = null;
@@ -19,7 +19,7 @@ if ($stmt->num_rows > 0) {
 $stmt->close();
 
 // Initialize variables
-$gender = null;
+// $gender = null;
 $waist = null;
 $neck = null;
 $bmiHeight = null;
@@ -48,17 +48,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $age = $_POST["age"];
     $waist = $_POST["waist"];
     $neck = $_POST["neck"];
-    $gender = $_POST["gender"];
-    $hip = $_POST["hip"];
-    $thigh = $_POST["thigh"];
+    $hip = isset($_POST["hip"]) ? $_POST["hip"] : '';
+    $thigh = isset($_POST["thigh"]) ? $_POST["thigh"] : '';
     $activityLevel = $_POST["activityLevel"];
     $bmiWeight = $_POST["bmiWeight"]; // Updated variable name
     $bmiHeight = $_POST["bmiHeight"]; // Updated variable name
     $username = $_SESSION['username']; // Assuming the username is stored in the session
 
     // Insert user input into database
-    $sql = "INSERT INTO users_info (username, age, waist, neck, gender, hip, thigh, activityLevel, bmiWeight, bmiHeight) 
-            VALUES ('$username', '$age', '$waist', '$neck', '$gender', '$hip', '$thigh', '$activityLevel', '$bmiWeight', '$bmiHeight')";
+    $sql = "INSERT INTO users_info (username, age, waist, neck, hip, thigh, activityLevel, bmiWeight, bmiHeight) 
+            VALUES ('$username', '$age', '$waist', '$neck', '$hip', '$thigh', '$activityLevel', '$bmiWeight', '$bmiHeight')";
 
     if ($mysqli->query($sql) === TRUE) {
         echo "Body Status updated successfully.";
@@ -186,7 +185,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Retrieve user input for body fat calculation
     $age = intval($_POST['age']);
-    $gender = $_POST['gender'];
     $waist = floatval($_POST['waist']);
     $neck = floatval($_POST['neck']);
     $hip = isset($_POST['hip']) ? floatval($_POST['hip']) : 0;
@@ -251,7 +249,6 @@ $upperNormalRange = 24.9 * (($bmiHeight / 100) ** 2);
 // Store the body fat results for displaying in the HTML later
 $bodyFatResults = [
     'age' => $age,
-    'gender' => $gender,
     'waist' => $waist,
     'neck' => $neck,
     'hip' => $hip,
@@ -425,7 +422,6 @@ function retrieveSavedUserInfo()
     }
 
     // Prepare the query to retrieve saved user information based on the username
-// Prepare the query to retrieve saved user information based on the username
     $sql = "SELECT age, waist, neck, gender, hip, thigh, activityLevel, bmiWeight, bmiHeight FROM users_info WHERE username = ? ORDER BY created_at DESC LIMIT 1";
 
 
@@ -460,13 +456,12 @@ function retrieveSavedUserInfo()
     $stmt->close();
 
     // Check if any data is retrieved
-    if ($age !== null && $waist !== null && $neck !== null && $gender !== null && $activityLevel !== null) {
+    if ($age !== null && $waist !== null && $neck !== null && $activityLevel !== null) {
         // Return the retrieved user information
         return [
             'age' => $age,
             'waist' => $waist,
             'neck' => $neck,
-            'gender' => $gender,
             'hip' => $hip,
             'thigh' => $thigh,
             'activityLevel' => $activityLevel,
@@ -487,7 +482,6 @@ function getDefaultUserInfo()
         'age' => 0,
         'waist' => 0,
         'neck' => 0,
-        'gender' => '',
         'hip' => 0,
         'thigh' => 0,
         'activityLevel' => '',
@@ -508,7 +502,6 @@ if ($savedUserInfo) {
     $age = $savedUserInfo['age'];
     $waist = $savedUserInfo['waist'];
     $neck = $savedUserInfo['neck'];
-    $gender = $savedUserInfo['gender'];
     $hip = $savedUserInfo['hip'];
     $thigh = $savedUserInfo['thigh'];
     $bmiWeight = $savedUserInfo['bmiWeight'];
@@ -526,7 +519,6 @@ if ($savedUserInfo) {
         // Store the body fat results for displaying in the HTML later
         $bodyFatResults = [
             'age' => $age,
-            'gender' => $gender,
             'waist' => $waist,
             'neck' => $neck,
             'hip' => $hip,
@@ -841,13 +833,6 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
             /* Adjust as needed */
             font-weight: bold;
         }
-
-        .error-message {
-            color: red;
-            font-size: 0.9em;
-            display: block;
-            margin-top: 5px;
-        }
     </style>
 </head>
 
@@ -973,50 +958,48 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                         <form method="post" action="" id="calculatorForm">
                             <!-- BMI Section -->
                             <label for="bmiWeight">Weight (kg):</label>
-                            <input type="number" name="bmiWeight" id="bmiWeight" min="1"
+                            <input type="number" name="bmiWeight" id="bmiWeight" min="5"
                                 value="<?php echo isset($bmiWeight) ? $bmiWeight : ''; ?>" required>
-                            <span id="bmiWeightError" class="error-message"></span>
 
                             <label for="bmiHeight">Height (cm):</label>
-                            <input type="number" name="bmiHeight" id="bmiHeight" min="1"
+                            <input type="number" name="bmiHeight" id="bmiHeight" min="5"
                                 value="<?php echo isset($bmiHeight) ? $bmiHeight : ''; ?>" required>
-                            <span id="bmiHeightError" class="error-message"></span>
 
                             <!-- Body Fat Calculator Section -->
                             <label for="age">Age:</label>
-                            <input type="number" id="age" name="age" min="1"
+                            <input type="number" id="age" name="age" min="5"
                                 value="<?php echo isset($age) ? $age : ''; ?>" required>
-                            <span id="ageError" class="error-message"></span>
-
-                            <label for="gender">Gender:</label>
-                            <select id="gender" name="gender" required>
-                                <option value="male" <?php echo isset($gender) && $gender === 'male' ? 'selected' : ''; ?>>Male</option>
-                                <option value="female" <?php echo isset($gender) && $gender === 'female' ? 'selected' : ''; ?>>Female</option>
-                            </select>
-                            <span id="genderError" class="error-message"></span>
 
                             <label for="waist">Waist (cm):</label>
-                            <input type="number" id="waist" name="waist" min="1"
+                            <input type="number" id="waist" name="waist" min="5"
                                 value="<?php echo isset($waist) ? $waist : ''; ?>" required>
-                            <span id="waistError" class="error-message"></span>
 
                             <label for="neck">Neck (cm):</label>
-                            <input type="number" id="neck" name="neck" min="1"
+                            <input type="number" id="neck" name="neck" min="5"
                                 value="<?php echo isset($neck) ? $neck : ''; ?>" required>
-                            <span id="neckError" class="error-message"></span>
 
-                            <!-- Only for females -->
-                            <div id="hipSection" style="display: none;">
-                                <label for="hip">Hip Circumference (cm):</label>
-                                <input type="number" id="hip" name="hip" min="1"
-                                    value="<?php echo isset($hip) ? $hip : ''; ?>" required>
-                                <span id="hipError" class="error-message"></span>
+                            <!-- Conditional Display Based on Gender -->
+                            <?php if (isset($gender) && $gender === 'female'): ?>
+                                <div id="hipSection">
+                                    <label for="hip">Hip Circumference (cm):</label>
+                                    <input type="number" id="hip" name="hip" min="5"
+                                        value="<?php echo isset($hip) ? $hip : ''; ?>" required>
 
-                                <label for="thigh">Thigh Circumference (cm):</label>
-                                <input type="number" id="thigh" name="thigh" min="1"
-                                    value="<?php echo isset($thigh) ? $thigh : ''; ?>" required>
-                                <span id="thighError" class="error-message"></span>
-                            </div>
+                                    <label for="thigh">Thigh Circumference (cm):</label>
+                                    <input type="number" id="thigh" name="thigh" min="5"
+                                        value="<?php echo isset($thigh) ? $thigh : ''; ?>" required>
+                                </div>
+                            <?php else: ?>
+                                <div id="hipSection" style="display: none;">
+                                    <label for="hip">Hip Circumference (cm):</label>
+                                    <input type="number" id="hip" name="hip" value="<?php echo isset($hip) ? $hip : ''; ?>"
+                                        disabled>
+
+                                    <label for="thigh">Thigh Circumference (cm):</label>
+                                    <input type="number" id="thigh" name="thigh"
+                                        value="<?php echo isset($thigh) ? $thigh : ''; ?>" disabled>
+                                </div>
+                            <?php endif; ?>
 
                             <label for="activityLevel">Lifestyle:</label>
                             <select name="activityLevel" required>
@@ -1024,7 +1007,6 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                                     little physical exercise.</option>
                                 <option value="active" <?php echo isset($activityLevel) && $activityLevel === 'active' ? 'selected' : ''; ?>>Active - Every day tasks require physical activity.</option>
                             </select>
-                            <span id="activityLevelError" class="error-message"></span>
 
                             <!-- Show Calculate button if no data from DB is showing -->
                             <?php if (!isset($bodyFatResults) && !isset($intakeResults)): ?>
@@ -1033,12 +1015,14 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                                 <!-- Show Recalculate button if data from DB is showing -->
                                 <button type="submit">Re-calculate</button>
                             <?php endif; ?>
+
                         </form>
                     </div>
                 </div>
             </div>
         </div>
     </section>
+
 
     <!-- BMI Results Section -->
     <div class="our_schedule_content">
@@ -1177,9 +1161,15 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                                     </p>
                                     <p><strong>Neck Circumference:</strong> <?php echo $neck; ?> cm</p>
                                     <p><strong>Height:</strong> <?php echo $bmiHeight; ?> cm</p>
-                                    <p><strong>Hip Circumference:</strong> <?php echo $hip; ?> cm</p>
-                                    <p><strong>Thigh Circumference:</strong> <?php echo $thigh; ?> cm
-                                    </p>
+                                    <?php if (isset($hip) && $hip !== '' && $hip != 0): ?>
+                                        <p><strong>Hip Circumference:</strong> <?php echo $hip; ?> cm</p>
+                                    <?php endif; ?>
+
+                                    <?php if (isset($thigh) && $thigh !== '' && $thigh != 0): ?>
+                                        <p><strong>Thigh Circumference:</strong> <?php echo $thigh; ?> cm</p>
+                                    <?php endif; ?>
+
+
                                     <p><strong>Body Fat Percentage:</strong>
                                         <?php echo number_format($bodyFatPercentage, 2); ?>%</p>
                                     <p><strong>Fat Body Mass:</strong>
@@ -1799,58 +1789,24 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
         </div>
     <?php endif; ?>
 
+
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Validate form on submit
-            document.getElementById('calculatorForm').addEventListener('submit', function (event) {
-                var isValid = true;
-                var errorMessages = {
-                    'bmiWeight': 'Weight must be at least 1.',
-                    'bmiHeight': 'Height must be at least 1.',
-                    'age': 'Age must be at least 1.',
-                    'waist': 'Waist circumference must be at least 1.',
-                    'neck': 'Neck circumference must be at least 1.',
-                    'hip': 'Hip circumference must be at least 1.',
-                    'thigh': 'Thigh circumference must be at least 1.'
-                };
-
-                // Clear previous error messages
-                document.querySelectorAll('.error-message').forEach(function (span) {
-                    span.textContent = '';
-                });
-
-                // Check if any input has a value less than 1
-                document.querySelectorAll('input[type="number"]').forEach(function (input) {
-                    var value = parseFloat(input.value);
-                    var errorSpan = document.getElementById(input.id + 'Error');
-
-                    if (value < 1) {
-                        isValid = false;
-                        errorSpan.textContent = errorMessages[input.id];
-                    }
-                });
-
-                // If not valid, prevent form submission
-                if (!isValid) {
-                    event.preventDefault(); // Stop form submission
-                    alert('Please fix the errors in the form.');
-                }
-            });
-
-            // Show hip and thigh when gender is female
-            document.getElementById('gender').addEventListener('change', function () {
+        document.addEventListener('DOMContentLoaded', () => {
+            // Function to update visibility of sections based on gender selection
+            function updateVisibility() {
+                var gender = document.getElementById('gender').value;
                 var hipSection = document.getElementById('hipSection');
-                if (this.value === 'female') {
+                var thighSection = document.getElementById('thighSection');
+
+                if (gender === 'female') {
                     hipSection.style.display = 'block';
+                    thighSection.style.display = 'block';
                 } else {
                     hipSection.style.display = 'none';
+                    thighSection.style.display = 'none';
                 }
-            });
-
-            // Trigger change event to set initial visibility
-            document.getElementById('gender').dispatchEvent(new Event('change'));
+            }
         });
-
 
         // Function to attach event listeners to meal items
         function attachEventListeners() {
@@ -1901,7 +1857,6 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
             // Attach event listeners when the page loads
             attachEventListeners();
         });
-
 
         function shuffleMealPlan(day) {
             const table = document.getElementById('mealPlanTable-' + day);
@@ -1960,7 +1915,6 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
             // Reattach event listeners after shuffling
             attachEventListeners();
         }
-
 
         document.addEventListener('DOMContentLoaded', () => {
             attachExerciseEventListeners();
@@ -2059,7 +2013,6 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                     minimumToComplete.innerHTML = `${minimumExercises}`;
                 }
             }
-
 
             document.addEventListener('DOMContentLoaded', () => {
                 // Example function to populate the hidden inputs with results
