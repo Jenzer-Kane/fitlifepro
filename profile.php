@@ -841,6 +841,13 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
             /* Adjust as needed */
             font-weight: bold;
         }
+
+        .error-message {
+            color: red;
+            font-size: 0.9em;
+            display: block;
+            margin-top: 5px;
+        }
     </style>
 </head>
 
@@ -966,54 +973,59 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                         <form method="post" action="" id="calculatorForm">
                             <!-- BMI Section -->
                             <label for="bmiWeight">Weight (kg):</label>
-                            <input type="text" name="bmiWeight" id="bmiWeight"
+                            <input type="number" name="bmiWeight" id="bmiWeight" min="1"
                                 value="<?php echo isset($bmiWeight) ? $bmiWeight : ''; ?>" required>
+                            <span id="bmiWeightError" class="error-message"></span>
 
                             <label for="bmiHeight">Height (cm):</label>
-                            <input type="text" name="bmiHeight" id="bmiHeight"
+                            <input type="number" name="bmiHeight" id="bmiHeight" min="1"
                                 value="<?php echo isset($bmiHeight) ? $bmiHeight : ''; ?>" required>
+                            <span id="bmiHeightError" class="error-message"></span>
 
                             <!-- Body Fat Calculator Section -->
                             <label for="age">Age:</label>
-                            <input type="number" id="age" name="age" value="<?php echo isset($age) ? $age : ''; ?>"
-                                required>
+                            <input type="number" id="age" name="age" min="1"
+                                value="<?php echo isset($age) ? $age : ''; ?>" required>
+                            <span id="ageError" class="error-message"></span>
 
                             <label for="gender">Gender:</label>
                             <select id="gender" name="gender" required>
                                 <option value="male" <?php echo isset($gender) && $gender === 'male' ? 'selected' : ''; ?>>Male</option>
                                 <option value="female" <?php echo isset($gender) && $gender === 'female' ? 'selected' : ''; ?>>Female</option>
                             </select>
+                            <span id="genderError" class="error-message"></span>
 
                             <label for="waist">Waist (cm):</label>
-                            <input type="number" id="waist" name="waist"
+                            <input type="number" id="waist" name="waist" min="1"
                                 value="<?php echo isset($waist) ? $waist : ''; ?>" required>
+                            <span id="waistError" class="error-message"></span>
 
                             <label for="neck">Neck (cm):</label>
-                            <input type="number" id="neck" name="neck" value="<?php echo isset($neck) ? $neck : ''; ?>"
-                                required>
+                            <input type="number" id="neck" name="neck" min="1"
+                                value="<?php echo isset($neck) ? $neck : ''; ?>" required>
+                            <span id="neckError" class="error-message"></span>
 
                             <!-- Only for females -->
                             <div id="hipSection" style="display: none;">
                                 <label for="hip">Hip Circumference (cm):</label>
-                                <input type="number" id="hip" name="hip" value="<?php echo isset($hip) ? $hip : ''; ?>"
-                                    required>
-
+                                <input type="number" id="hip" name="hip" min="1"
+                                    value="<?php echo isset($hip) ? $hip : ''; ?>" required>
+                                <span id="hipError" class="error-message"></span>
 
                                 <label for="thigh">Thigh Circumference (cm):</label>
-                                <input type="number" id="thigh" name="thigh"
+                                <input type="number" id="thigh" name="thigh" min="1"
                                     value="<?php echo isset($thigh) ? $thigh : ''; ?>" required>
+                                <span id="thighError" class="error-message"></span>
                             </div>
-
 
                             <label for="activityLevel">Lifestyle:</label>
                             <select name="activityLevel" required>
-                                <option value="sedentary" <?php echo isset($activityLevel) && $activityLevel === 'sedentary' ? 'selected' : ''; ?>>Sedentary - Much resting and
-                                    very
+                                <option value="sedentary" <?php echo isset($activityLevel) && $activityLevel === 'sedentary' ? 'selected' : ''; ?>>Sedentary - Much resting and very
                                     little physical exercise.</option>
-                                <option value="active" <?php echo isset($activityLevel) && $activityLevel === 'active' ? 'selected' : ''; ?>>Active - Every day tasks require physical activity.
-                                </option>
-                                </option>
+                                <option value="active" <?php echo isset($activityLevel) && $activityLevel === 'active' ? 'selected' : ''; ?>>Active - Every day tasks require physical activity.</option>
                             </select>
+                            <span id="activityLevelError" class="error-message"></span>
+
                             <!-- Show Calculate button if no data from DB is showing -->
                             <?php if (!isset($bodyFatResults) && !isset($intakeResults)): ?>
                                 <button type="submit">Calculate</button>
@@ -1021,7 +1033,6 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
                                 <!-- Show Recalculate button if data from DB is showing -->
                                 <button type="submit">Re-calculate</button>
                             <?php endif; ?>
-
                         </form>
                     </div>
                 </div>
@@ -1789,69 +1800,57 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
     <?php endif; ?>
 
     <script>
-        // Body Fat Calculator Validation Function
-        function validateBodyFatForm() {
-            var age = document.getElementById('age').value;
-            var waist = document.getElementById('waist').value;
-            var neck = document.getElementById('neck').value;
+        document.addEventListener('DOMContentLoaded', function () {
+            // Validate form on submit
+            document.getElementById('calculatorForm').addEventListener('submit', function (event) {
+                var isValid = true;
+                var errorMessages = {
+                    'bmiWeight': 'Weight must be at least 1.',
+                    'bmiHeight': 'Height must be at least 1.',
+                    'age': 'Age must be at least 1.',
+                    'waist': 'Waist circumference must be at least 1.',
+                    'neck': 'Neck circumference must be at least 1.',
+                    'hip': 'Hip circumference must be at least 1.',
+                    'thigh': 'Thigh circumference must be at least 1.'
+                };
 
-            // Check if age, waist, and neck are valid numbers
-            if (isNaN(age) || isNaN(waist) || isNaN(neck) || age <= 0 || waist <= 0 || neck <= 0) {
-                alert('Please enter valid numeric values for age, waist, and neck circumference.');
-                return false; // Prevent form submission
-            }
+                // Clear previous error messages
+                document.querySelectorAll('.error-message').forEach(function (span) {
+                    span.textContent = '';
+                });
 
-            return true; // Allow form submission
-        }
+                // Check if any input has a value less than 1
+                document.querySelectorAll('input[type="number"]').forEach(function (input) {
+                    var value = parseFloat(input.value);
+                    var errorSpan = document.getElementById(input.id + 'Error');
 
-        // Weight and Height form function to allow only numbers in the input field
-        function allowOnlyNumbers(event) {
-            // Allow: backspace, delete, tab, escape, enter and .
-            if ([46, 8, 9, 27, 13, 110].indexOf(event.keyCode) !== -1 ||
-                // Allow: Ctrl+A
-                (event.keyCode === 65 && event.ctrlKey === true) ||
-                // Allow: Ctrl+C
-                (event.keyCode === 67 && event.ctrlKey === true) ||
-                // Allow: Ctrl+X
-                (event.keyCode === 88 && event.ctrlKey === true) ||
-                // Allow: home, end, left, right
-                (event.keyCode >= 35 && event.keyCode <= 39)) {
-                // let it happen, don't do anything
-                return;
-            }
-            // Ensure that it is a number and stop the keypress
-            if ((event.shiftKey || (event.keyCode < 48 || event.keyCode > 57)) && (event.keyCode < 96 || event.keyCode > 105)) {
-                event.preventDefault();
-            }
-        }
+                    if (value < 1) {
+                        isValid = false;
+                        errorSpan.textContent = errorMessages[input.id];
+                    }
+                });
 
-        // Attach the allowOnlyNumbers function to the keydown event of the input fields
-        document.getElementById("bmiWeight").addEventListener("keydown", allowOnlyNumbers);
-        document.getElementById("bmiHeight").addEventListener("keydown", allowOnlyNumbers);
+                // If not valid, prevent form submission
+                if (!isValid) {
+                    event.preventDefault(); // Stop form submission
+                    alert('Please fix the errors in the form.');
+                }
+            });
 
-        // BMI Validation Function
-        function validateForm() {
-            var bmiWeight = document.getElementById('bmiWeight').value;
-            var bmiHeight = document.getElementById('bmiHeight').value;
+            // Show hip and thigh when gender is female
+            document.getElementById('gender').addEventListener('change', function () {
+                var hipSection = document.getElementById('hipSection');
+                if (this.value === 'female') {
+                    hipSection.style.display = 'block';
+                } else {
+                    hipSection.style.display = 'none';
+                }
+            });
 
-            // Check if bmiWeight and bmiHeight are valid numbers
-            if (isNaN(bmiWeight) || isNaN(bmiHeight) || bmiWeight <= 0 || bmiHeight <= 0) {
-                alert('Please enter valid numeric values for weight and height.');
-                return false; // Prevent form submission
-            }
-
-            return true; // Allow form submission
-        }
-
-        // show hip and thigh when gender is female
-        document.getElementById('gender').addEventListener('change', function () {
-            var hipSection = document.getElementById('hipSection');
-            if (this.value === 'female') {
-                hipSection.style.display = 'block';
-            } else {
-                hipSection.style.display = 'none';
-            }
+            // Trigger change event to set initial visibility
+            document.getElementById('gender').dispatchEvent(new Event('change'));
         });
+
 
         // Function to attach event listeners to meal items
         function attachEventListeners() {

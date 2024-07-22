@@ -228,10 +228,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <a class="nav-link" href="">Services</a>
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link" href="">Pricing</a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link" href="">Collaborators</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="">Pricing</a>
+                                    <a class="nav-link" href="">Forums</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="">Contact</a>
