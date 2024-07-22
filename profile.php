@@ -611,6 +611,17 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
     $formattedDate = "No timestamp available";
     $generatedText = "";
 }
+
+$query = "SELECT * FROM quotes ORDER BY RAND() LIMIT 1";
+$result = $mysqli->query($query);
+
+// Check if the query was successful
+if ($result && $result->num_rows > 0) {
+    $quote = $result->fetch_assoc();
+} else {
+    $quote = null;
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -1636,14 +1647,17 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
             <div class="row" data-aos="fade-right">
                 <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                     <div class="quote_content">
-                        <h2>“SUCCESS USUALLY COMES TO THOSE WHO ARE TOO BUSY TO BE LOOKING FOR IT.”</h2>
+                        <h2>“<?php echo htmlspecialchars($quote['quote']); ?>”</h2>
                         <div class="quote_content_wrapper">
                             <div class="quote_wrapper">
-                                <h6>ARNOLD SCHWARZENEGGER</h6>
-                                <span>Mr. Olympia 7 Time World Champion</span>
-                                <figure class="quote_image mb-0">
-                                    <img src="./assets/images/ARNOLD.png" alt="" class="img-fluid">
-                                </figure>
+                                <h6><?php echo htmlspecialchars($quote['author']); ?></h6>
+                                <span><?php echo htmlspecialchars($quote['title']); ?></span>
+                                <?php if (!empty($quote['image_path'])): ?>
+                                    <figure class="quote_image mb-0">
+                                        <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
+                                            class="img-fluid">
+                                    </figure>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -1657,7 +1671,6 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
             </figure>
         </div>
     </section>
-
 
     <!-- Exercise Planning Section -->
     <section class="our_schedule_section exercise-planning">
