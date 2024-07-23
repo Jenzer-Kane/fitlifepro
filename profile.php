@@ -1537,137 +1537,94 @@ if ($result && $result->num_rows > 0) {
             </div>
             <div class="diet-horizontal-display">
                 <?php
-                // Initialize counters for round-robin distribution
                 $mealIndex = 0;
                 $totalMeals = count($meal_plan);
-
-                // Initialize $dailyTotals array
                 $dailyTotals = array();
 
-                // Loop through each day to create a separate table
                 foreach ($days as $day): ?>
-
-                    <div class="border-mealplan">
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                    <div class="our_schedule_content">
-                                        <h2 class="mt-5"><?php echo $day; ?></h2>
+                    <form id="mealPlanForm-<?php echo strtolower($day); ?>" action="save_meal_plan.php" method="POST">
+                        <div class="border-mealplan">
+                            <div class="container">
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                        <div class="our_schedule_content">
+                                            <h2 class="mt-5"><?php echo $day; ?></h2>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <?php
-
-                        if (isset($intakeResults)) {
-                            echo '<p>Regenerate the recommended meal plan with the Regenerate button.</strong></p>';
-                            echo '<p>Click the food you have consumed to track your progress, this disables the Regenerate button.</p>';
-                            echo '<p><strong>Note:</strong> You can also eat the foods in any order, as long as you meet the recommended daily macronutrients.</strong></p>';
-                        } ?>
-                        <!-- Add a container div for each day's table and shuffle button -->
-                        <div class="diet-horizontal-display">
-                            <table class="border border-black" id="mealPlanTable-<?php echo strtolower($day); ?>">
-                                <thead>
-                                    <tr>
-                                        <th>Time Slot</th>
-                                        <?php
-                                        // Generate column headers for food items
-                                        for ($i = 0; $i < count($timeSlots); $i++) {
-                                            echo '<th>Food Item</th>';
-                                        }
-                                        ?>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($timeSlots as $timeSlot): ?>
-                                        <?php
-                                        // Select a food item for the current time slot and day
-                                        $foodItem = $meal_plan[$mealIndex % $totalMeals];
-
-                                        // Update total calories and protein for the day
-                                        if (!isset($dailyTotals[$day])) {
-                                            $dailyTotals[$day] = array('calories' => 0, 'protein' => 0);
-                                        }
-                                        $dailyTotals[$day]['calories'] += $foodItem['energy_kcal'];
-                                        $dailyTotals[$day]['protein'] += $foodItem['protein_g'];
-                                        ?>
+                            <?php if (isset($intakeResults)): ?>
+                                <p>Regenerate the recommended meal plan with the Regenerate button.</p>
+                                <p>Click the food you have consumed to track your progress, this disables the Regenerate button.</p>
+                                <p><strong>Note:</strong> You can also eat the foods in any order, as long as you meet the
+                                    recommended daily macronutrients.</strong></p>
+                            <?php endif; ?>
+                            <div class="diet-horizontal-display">
+                                <table class="border border-black" id="mealPlanTable-<?php echo strtolower($day); ?>">
+                                    <thead>
                                         <tr>
-                                            <td>
-                                                <?php echo $timeSlot; ?>
-                                            </td>
-                                            <?php
-                                            // Fill the remaining cells with food items
-                                            for ($i = 0; $i < count($timeSlots); $i++) {
-                                                $foodItem = $meal_plan[$mealIndex % $totalMeals];
-                                                echo '<td class="mealItem" data-day="' . strtolower($day) . '" data-time-slot="' . $timeSlot . '" data-calories="' . $foodItem['energy_kcal'] . '" data-protein="' . $foodItem['protein_g'] . '">';
-                                                echo '<br>' . $foodItem['english_name'] . '<br>';
-                                                echo '<br>' . $foodItem['filipino_name'] . '<br>' . '<br>';
-                                                echo '<strong>Protein (g):</strong> ' . $foodItem['protein_g'] . '<br>';
-                                                echo '<strong>Calories (kcal):</strong> ' . $foodItem['energy_kcal'] . '<br>';
-                                                echo '<strong>Measure:</strong> ' . $foodItem['household_measure'] . '<br>' . '<br>';
-                                                echo '</td>';
-                                                $mealIndex++;
-                                            }
-                                            ?>
+                                            <th>Time Slot</th>
+                                            <?php for ($i = 0; $i < count($timeSlots); $i++) {
+                                                echo '<th>Food Item</th>';
+                                            } ?>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <!-- Add the total calories and protein for each day -->
-                        <div id="total-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text"
-                            data-calories="0" data-protein="0">
-                            <?php
-                            echo 'Calories: <span id="calories-' . strtolower($day) . '">0</span> / ' . $intakeResults['caloricIntake'] . '<br>';
-                            echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $intakeResults['proteinIntake'] . '<br>';
-                            ?>
-                            <!-- Add the shuffle button for each day -->
-                            <div class="calculator-form form-section border-0">
-                                <button class="shuffle-button"
-                                    onclick="shuffleMealPlan('<?php echo strtolower($day); ?>')">Regenerate</button>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($timeSlots as $timeSlot): ?>
+                                            <?php
+                                            $foodItem = $meal_plan[$mealIndex % $totalMeals];
+
+                                            if (!isset($dailyTotals[$day])) {
+                                                $dailyTotals[$day] = array('calories' => 0, 'protein' => 0);
+                                            }
+                                            $dailyTotals[$day]['calories'] += $foodItem['energy_kcal'];
+                                            $dailyTotals[$day]['protein'] += $foodItem['protein_g'];
+                                            ?>
+                                            <tr>
+                                                <td><?php echo $timeSlot; ?></td>
+                                                <?php for ($i = 0; $i < count($timeSlots); $i++): ?>
+                                                    <?php $foodItem = $meal_plan[$mealIndex % $totalMeals]; ?>
+                                                    <td class="mealItem" data-day="<?php echo strtolower($day); ?>"
+                                                        data-time-slot="<?php echo $timeSlot; ?>"
+                                                        data-calories="<?php echo $foodItem['energy_kcal']; ?>"
+                                                        data-protein="<?php echo $foodItem['protein_g']; ?>">
+                                                        <br><?php echo $foodItem['english_name']; ?><br>
+                                                        <br><?php echo $foodItem['filipino_name']; ?><br><br>
+                                                        <strong>Protein (g):</strong> <?php echo $foodItem['protein_g']; ?><br>
+                                                        <strong>Calories (kcal):</strong> <?php echo $foodItem['energy_kcal']; ?><br>
+                                                        <strong>Measure:</strong> <?php echo $foodItem['household_measure']; ?><br><br>
+                                                    </td>
+                                                    <?php $mealIndex++; ?>
+                                                <?php endfor; ?>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="note">
+                            <div id="total-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text"
+                                data-calories="0" data-protein="0">
                                 <?php
-                                if (isset($intakeResults)) {
-                                    echo '<b>Meal plan food suggestions are based on the Philippine Department of Science and Technology, Food and Nutrition Research Institute, Food Exchange List</b>';
-                                }
+                                echo 'Calories: <span id="calories-' . strtolower($day) . '">0</span> / ' . $intakeResults['caloricIntake'] . '<br>';
+                                echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $intakeResults['proteinIntake'] . '<br>';
                                 ?>
+                                <div class="calculator-form form-section border-0">
+                                    <button type="button" class="shuffle-button"
+                                        onclick="shuffleMealPlan('<?php echo strtolower($day); ?>')">Regenerate</button>
+                                </div>
+                                <div class="note">
+                                    <?php if (isset($intakeResults)): ?>
+                                        <b>Meal plan food suggestions are based on the Philippine Department of Science and
+                                            Technology, Food and Nutrition Research Institute, Food Exchange List</b>
+                                    <?php endif; ?>
+                                </div>
                             </div>
+                            <input type="hidden" name="day" value="<?php echo $day; ?>">
+                            <input type="hidden" name="meal_plan" id="mealPlanData-<?php echo strtolower($day); ?>">
+                            <button type="submit">Save Diet Plan for <?php echo $day; ?></button>
                         </div>
-                    </div>
+                    </form>
                 <?php endforeach; ?>
             <?php endif; ?>
-    </section>
-
-
-    <!-- QUOTE SECTION -->
-    <section class="quote_section">
-        <div class="container">
-            <div class="row" data-aos="fade-right">
-                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                    <div class="quote_content">
-                        <h2>“<?php echo htmlspecialchars($quote['quote']); ?>”</h2>
-                        <div class="quote_content_wrapper">
-                            <div class="quote_wrapper">
-                                <h6><?php echo htmlspecialchars($quote['author']); ?></h6>
-                                <span><?php echo htmlspecialchars($quote['title']); ?></span>
-                                <?php if (!empty($quote['image_path'])): ?>
-                                    <figure class="quote_image mb-0">
-                                        <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
-                                            class="img-fluid">
-                                    </figure>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <figure class="quote_left_icon left_icon mb-0">
-                <img src="./assets/images/quote_left_icon.png" alt="" class="img-fluid">
-            </figure>
-            <figure class="quote_right_icon right_icon mb-0">
-                <img src="./assets/images/quote_right_icon.png" alt="" class="img-fluid">
-            </figure>
         </div>
     </section>
 
@@ -1692,112 +1649,105 @@ if ($result && $result->num_rows > 0) {
                     $dailyExerciseTotals = array();
 
                     foreach ($days as $day): ?>
-                        <div class="border-mealplan mt-5">
-                            <div class="container">
-                                <div class="row">
-                                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                        <div class="our_schedule_content">
-                                            <h2 class="mt-5"><?php echo $day; ?></h2>
+                        <form id="exercisePlanForm-<?php echo strtolower($day); ?>" action="save_exercise_plan.php" method="POST">
+                            <div class="border-mealplan mt-5">
+                                <div class="container">
+                                    <div class="row">
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                            <div class="our_schedule_content">
+                                                <h2 class="mt-5"><?php echo $day; ?></h2>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <?php if (isset($intakeResults)): ?>
-                                <p>Track your progress by marking the exercises you've completed.
-                                    </>
-                                </p>
-                                <p><strong>Tip: Aim to do atleast 5 exercises from all 3 categories in a day (Cardio,
-                                        Strength,
-                                        Core).</strong>
-                                </p>
-                            <?php endif; ?>
-                            <!-- Add a container div for each day's table and shuffle button -->
-                            <div class="diet-horizontal-display">
-                                <table class="border border-black" id="exercisePlanTable-<?php echo strtolower($day); ?>">
-                                    <thead>
-                                        <tr>
-                                            <th>Time Slot</th>
-                                            <th>Exercise</th>
-                                            <th>Exercise</th>
-                                            <th>Exercise</th>
-                                            <th>Exercise</th>
-                                            <th>Exercise</th>
-                                            <th>Exercise</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($exercisetimeSlots as $timeSlot): ?>
-                                            <?php
-                                            // Select an exercise for the current time slot and day
-                                            $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises];
-
-                                            // Update total reps and duration for the day
-                                            if (!isset($dailyExerciseTotals[$day])) {
-                                                $dailyExerciseTotals[$day] = array('duration' => 0);
-                                            }
-
-                                            ?>
+                                <?php if (isset($intakeResults)): ?>
+                                    <p>Track your progress by marking the exercises you've completed.</p>
+                                    <p><strong>Tip: Aim to do at least 5 exercises from all 3 categories in a day (Cardio, Strength,
+                                            Core).</strong></p>
+                                <?php endif; ?>
+                                <div class="diet-horizontal-display">
+                                    <table class="border border-black" id="exercisePlanTable-<?php echo strtolower($day); ?>">
+                                        <thead>
                                             <tr>
-                                                <td><?php echo $timeSlot; ?></td>
-                                                <td class="exerciseItem">
-                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
-                                                    <strong><?php echo $exerciseItem['intensity'];
-                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
-                                                </td>
-                                                <td class="exerciseItem">
-                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
-                                                    <strong><?php echo $exerciseItem['intensity'];
-                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
-                                                </td>
-                                                <td class="exerciseItem">
-                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
-                                                    <strong><?php echo $exerciseItem['intensity'];
-                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
-                                                </td>
-                                                <td class="exerciseItem">
-                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
-                                                    <strong><?php echo $exerciseItem['intensity'];
-                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
-                                                </td>
-                                                <td class="exerciseItem">
-                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
-                                                    <strong><?php echo $exerciseItem['intensity'];
-                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
-                                                </td>
-                                                <td class="exerciseItem">
-                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
-                                                    <strong><?php echo $exerciseItem['intensity'];
-                                                    echo ' Intensity' ?></strong><br><?php echo $exerciseItem['category']; ?><br><br>
-                                                </td>
+                                                <th>Time Slot</th>
+                                                <th>Exercise</th>
+                                                <th>Exercise</th>
+                                                <th>Exercise</th>
+                                                <th>Exercise</th>
+                                                <th>Exercise</th>
+                                                <th>Exercise</th>
                                             </tr>
-                                            <?php $exerciseIndex++; ?>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div id="total-exercises-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text">
-                                <?php
-                                echo 'Minimum Exercises to Complete: <span class="minimum-to-complete">5</span><br>';
-                                echo 'Total Exercises Completed: <span id="exerciseCounter-' . strtolower($day) . '">0</span><br>';
-                                ?>
-                                <!-- Add the shuffle button for each day -->
-                                <div class="calculator-form form-section border-0">
-                                    <button class="shuffle-exercises-button" data-day="<?php echo strtolower($day); ?>">Regenerate
-                                        Exercises</button>
-                                    <div class="exercise-type-buttons mt-2"></div>
-                                    <div class="note">
-                                        <?php
-                                        if (isset($intakeResults)) {
-                                            echo '<b>Aim to gradually increase your total exercises by at least 1, every 1-2 weeks.</b>';
-                                        }
-                                        ?>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($exercisetimeSlots as $timeSlot): ?>
+                                                <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
+                                                <tr>
+                                                    <td><?php echo $timeSlot; ?></td>
+                                                    <?php for ($i = 0; $i < 6; $i++): ?>
+                                                        <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
+                                                        <td class="exerciseItem">
+                                                            <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
+                                                            <strong><?php echo $exerciseItem['intensity']; ?>
+                                                                Intensity</strong><br><?php echo $exerciseItem['category']; ?><br><br>
+                                                        </td>
+                                                        <?php $exerciseIndex++; ?>
+                                                    <?php endfor; ?>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div id="total-exercises-<?php echo strtolower($day); ?>"
+                                    class="border border-grey large-counter-text">
+                                    <?php echo 'Minimum Exercises to Complete: <span class="minimum-to-complete">5</span><br>'; ?>
+                                    <?php echo 'Total Exercises Completed: <span id="exerciseCounter-' . strtolower($day) . '">0</span><br>'; ?>
+                                    <div class="calculator-form form-section border-0">
+                                        <button type="button" class="shuffle-exercises-button"
+                                            data-day="<?php echo strtolower($day); ?>">Regenerate Exercises</button>
                                     </div>
+                                </div>
+                                <input type="hidden" name="day" value="<?php echo $day; ?>">
+                                <input type="hidden" name="exercise_plan" id="exercisePlanData-<?php echo strtolower($day); ?>">
+                                <button type="submit">Save Exercise Plan for <?php echo $day; ?></button>
+                            </div>
+                        </form>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            </div>
+        </section>
+
+        <!-- QUOTE SECTION -->
+        <section class="quote_section">
+            <div class="container">
+                <div class="row" data-aos="fade-right">
+                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                        <div class="quote_content">
+                            <h2>“<?php echo htmlspecialchars($quote['quote']); ?>”</h2>
+                            <div class="quote_content_wrapper">
+                                <div class="quote_wrapper">
+                                    <h6><?php echo htmlspecialchars($quote['author']); ?></h6>
+                                    <span><?php echo htmlspecialchars($quote['title']); ?></span>
+                                    <?php if (!empty($quote['image_path'])): ?>
+                                        <figure class="quote_image mb-0">
+                                            <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
+                                                class="img-fluid">
+                                        </figure>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                    </div>
+                </div>
+                <figure class="quote_left_icon left_icon mb-0">
+                    <img src="./assets/images/quote_left_icon.png" alt="" class="img-fluid">
+                </figure>
+                <figure class="quote_right_icon right_icon mb-0">
+                    <img src="./assets/images/quote_right_icon.png" alt="" class="img-fluid">
+                </figure>
+            </div>
         </section>
+
         </div>
     <?php endif; ?>
 
@@ -2068,6 +2018,56 @@ if ($result && $result->num_rows > 0) {
                 });
             });
         });
+
+        function captureMealPlanData(day) {
+            var table = document.getElementById('mealPlanTable-' + day);
+            var rows = table.getElementsByTagName('tr');
+            var mealPlanData = [];
+
+            for (var i = 1; i < rows.length; i++) { // Skip header row
+                var cells = rows[i].getElementsByTagName('td');
+                for (var j = 1; j < cells.length; j++) { // Skip time slot column
+                    var foodItem = cells[j].innerText.trim();
+                    mealPlanData.push({
+                        timeSlot: cells[0].innerText.trim(),
+                        foodItem: foodItem
+                    });
+                }
+            }
+
+            document.getElementById('mealPlanData-' + day).value = JSON.stringify(mealPlanData);
+        }
+
+        function captureExercisePlanData(day) {
+            var table = document.getElementById('exercisePlanTable-' + day);
+            var rows = table.getElementsByTagName('tr');
+            var exercisePlanData = [];
+
+            for (var i = 1; i < rows.length; i++) { // Skip header row
+                var cells = rows[i].getElementsByTagName('td');
+                for (var j = 1; j < cells.length; j++) { // Skip time slot column
+                    var exerciseItem = cells[j].innerText.trim();
+                    exercisePlanData.push({
+                        timeSlot: cells[0].innerText.trim(),
+                        exerciseItem: exerciseItem
+                    });
+                }
+            }
+
+            document.getElementById('exercisePlanData-' + day).value = JSON.stringify(exercisePlanData);
+        }
+
+        document.querySelectorAll('form').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                var day = form.querySelector('input[name="day"]').value.toLowerCase();
+                if (form.id.startsWith('mealPlanForm')) {
+                    captureMealPlanData(day);
+                } else if (form.id.startsWith('exercisePlanForm')) {
+                    captureExercisePlanData(day);
+                }
+            });
+        });
+
     </script>
 
     <script src="assets/js/jquery-3.6.0.min.js"></script>
