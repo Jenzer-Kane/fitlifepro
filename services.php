@@ -1,6 +1,23 @@
 <!DOCTYPE html>
-<?php session_start(); ?>
-<html lang="zxx">
+<?php
+session_start();
+
+// Database connection file
+require 'database.php';
+
+$query = "SELECT * FROM quotes ORDER BY RAND() LIMIT 1";
+$result = $mysqli->query($query);
+
+// Check if the query was successful
+if ($result && $result->num_rows > 0) {
+    $quote = $result->fetch_assoc();
+} else {
+    $quote = null;
+}
+
+// Close the database connection
+$mysqli->close();
+?>
 
 <head>
     <title>Services | FITLIFE PRO</title>
@@ -81,6 +98,97 @@
             position: relative;
             z-index: 1;
             /* Ensure the video icon is above the background image */
+        }
+
+        .popup {
+            display: none;
+            /* Initially hidden */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 30px;
+            background: white;
+            border: 2px solid #e13a3b;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            /* Smooth fade-in effect */
+            border-radius: 15px;
+            /* Add rounded corners */
+        }
+
+        .popup-overlay {
+            display: none;
+            /* Initially hidden */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .popup-close {
+            cursor: pointer;
+            float: right;
+            font-size: 20px;
+            color: #e13a3b;
+        }
+
+        .popup-content {
+            font-size: 16px;
+            text-align: center;
+            /* Center the content horizontally */
+        }
+
+        .popup-button-container {
+            text-align: center;
+            /* Center the button horizontally */
+            margin-top: 20px;
+            /* Space above the button */
+        }
+
+        .popup-button {
+            background-color: #007bff;
+            /* Blue color for the button */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            /* Rounded corners for the button */
+            cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            /* Smooth transitions for background and text color */
+            text-decoration: none;
+            /* Remove underline from link */
+            display: inline-block;
+            /* Ensure link behaves like a button */
+        }
+
+        .popup-button:hover {
+            background-color: #0056b3;
+            /* Darker shade of blue on hover */
+            color: white;
+            /* Ensure text is white on hover */
+            text-decoration: none;
+            /* Ensure underline is removed on hover */
+        }
+
+        .quote_image img {
+            border-radius: 50%;
+            overflow: hidden;
+            /* Ensure the image stays within the circular boundary */
+            width: 100px;
+            /* Set the desired width */
+            height: 100px;
+            /* Set the desired height */
+            object-fit: cover;
+            /* Maintain the aspect ratio and cover the container */
+
         }
     </style>
 </head>
@@ -164,6 +272,148 @@
             </div>
         </section>
     </div>
+
+    <!-- Popup HTML -->
+    <div id="popup-overlay" class="popup-overlay"></div>
+    <div id="popup" class="popup">
+        <span class="popup-close" onclick="closePopup()">&times;</span>
+        <div class="popup-content">
+            <h2>Register Now for Free!</h2>
+            <h3>Register now and try our free BMI calculator!</h3>
+            <div class="popup-button-container">
+                <a href="./register.html" class="popup-button">Register</a>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- PRICING TABLES SECTION -->
+    <section class="pricing_tables_section">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                    <div class="pricing_tables_content">
+                        <h5>SUBSCRIPTION TIERS</h5>
+                        <h2>CHOOSE YOUR SUBSCRIPTION TIER</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="row" data-aos="fade-up">
+
+                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                    <div class="pricing_tables_box_content">
+                        <div class="pricing_tables_box_upper_portion">
+                            <figure class="mb-0">
+                                <img src="./assets/images/pricing_tables_1.png" alt="" class="img-fluid">
+                            </figure>
+                            <div class="pricing_tables_box_image_content">
+                                <span class="price">P45</span>
+                                <span class="month">Monthly</span>
+                            </div>
+                        </div>
+                        <div class="pricing_tables_box_lower_portion">
+                            <h5>ESSENTIAL TIER</h5>
+                            <ul class="list-unstyled">
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Basic content
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Bodyweight exercises
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Progress Tracking
+                                </li>
+                            </ul>
+                            <!-- Update your HTML with the logSubscription function calls -->
+                            <div class="btn_wrapper">
+                                <a class="join_now_btn text-decoration-none"
+                                    href="./checkout.php?plan=essential&price=45&description=Basic%20content%2C%20Bodyweight%20exercises%2C%20Progress%20Tracking"
+                                    onclick="logSubscription('Essential')">Subscribe</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                    <div class="pricing_tables_box_content">
+                        <div class="pricing_tables_box_upper_portion">
+                            <figure class="mb-0">
+                                <img src="./assets/images/pricing_tables_2.png" alt="" class="img-fluid">
+                            </figure>
+                            <div class="pricing_tables_box_image_content">
+                                <span class="price">P50</span>
+                                <span class="month">Monthly</span>
+                            </div>
+                        </div>
+                        <div class="pricing_tables_box_lower_portion">
+                            <h5>PREMIUM TIER</h5>
+                            <ul class="list-unstyled">
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Intermediate content
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Bodyweight exercises
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Progress Tracking
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Nutritional Guidance
+                                </li>
+                            </ul>
+                            <div class="btn_wrapper">
+                                <a class="join_now_btn text-decoration-none"
+                                    href="./checkout.php?plan=premium&price=50&description=Intermediate%20content%2C%20Bodyweight%20exercises%2C%20Progress%20Tracking%2C%20Nutritional%20Guidance"
+                                    onclick="logSubscription('Premium')">Subscribe</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                    <div class="pricing_tables_box_content">
+                        <div class="pricing_tables_box_upper_portion">
+                            <figure class="mb-0">
+                                <img src="./assets/images/pricing_tables_3.png" alt="" class="img-fluid">
+                            </figure>
+                            <div class="pricing_tables_box_image_content">
+                                <span class="price">P60</span>
+                                <span class="month">Monthly</span>
+                            </div>
+                        </div>
+                        <div class="pricing_tables_box_lower_portion">
+                            <h5>ELITE TIER</h5>
+                            <ul class="list-unstyled">
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Advanced content
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Bodyweight exercises
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Progress Tracking
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Nutritional Guidance
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Curated weight-lifting routines
+                                </li>
+
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>24/7 Live Support
+                                </li>
+
+                            </ul>
+                            <div class="btn_wrapper">
+                                <a class="join_now_btn text-decoration-none"
+                                    href="./checkout.php?plan=elite&price=60&description=Advanced%20content%2C%20Bodyweight%20exercises%2C%20Progress%20Tracking%2C%20Nutritional%20Guidance%2C%20Curated%20weight-lifting%20routines%2C%2024%2F7%20Live%20Support"
+                                    onclick="logSubscription('Elite')">Subscribe</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- OUR SCHEDULE SECTION -->
     <section class="our_schedule_section">
@@ -480,21 +730,40 @@
         </div>
     </section>
 
-    <section class="facilities_section" style="margin-top: 1px;">
+
+
+    <!-- QUOTE SECTION -->
+    <section class="quote_section">
         <div class="container">
-            <div class="row justify-content-center" data-aos="fade-up">
-                <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                    <div class="facilities_image position-relative">
-                        <div class="btn_wrapper text-center">
-                            <a class="text-decoration-none join_now_btn" href="./pricing.php">Join us now
-                                <i class="fa-solid fa-play"></i>
-                            </a>
+            <div class="row" data-aos="fade-right">
+                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                    <div class="quote_content">
+                        <h2>“<?php echo htmlspecialchars($quote['quote']); ?>”</h2>
+                        <div class="quote_content_wrapper">
+                            <div class="quote_wrapper">
+                                <h6><?php echo htmlspecialchars($quote['author']); ?></h6>
+                                <span><?php echo htmlspecialchars($quote['title']); ?></span>
+                                <?php if (!empty($quote['image_path'])): ?>
+                                    <figure class="quote_image mb-0">
+                                        <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
+                                            class="img-fluid">
+                                    </figure>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+            <figure class="quote_left_icon left_icon mb-0">
+                <img src="./assets/images/quote_left_icon.png" alt="" class="img-fluid">
+            </figure>
+            <figure class="quote_right_icon right_icon mb-0">
+                <img src="./assets/images/quote_right_icon.png" alt="" class="img-fluid">
+            </figure>
         </div>
     </section>
+
+
 
     <!-- OUR NEWS SECTION -->
     <section class="our_news_section">
@@ -910,6 +1179,62 @@
             </div>
         </div>
     </div>
+
+    <script>
+        let hasScrolled = false;
+        let popupTimer;
+
+        function showPopup() {
+            document.getElementById('popup').style.display = 'block';
+            document.getElementById('popup-overlay').style.display = 'block';
+            // Trigger AOS animation
+            AOS.refresh(); // Refresh AOS to ensure it recognizes the newly displayed element
+            setTimeout(() => {
+                document.getElementById('popup').style.opacity = 1; // Fade-in effect
+            }, 100); // Slight delay to ensure display change takes effect
+        }
+
+        function closePopup() {
+            document.getElementById('popup').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('popup').style.display = 'none';
+                document.getElementById('popup-overlay').style.display = 'none';
+            }, 500); // Match duration with opacity transition
+        }
+
+        function onScroll() {
+            if (hasScrolled) return; // Prevent multiple triggers
+            hasScrolled = true;
+
+            // Set a timer to show the popup after a delay
+            popupTimer = setTimeout(() => {
+                var isLoggedIn = <?php echo json_encode(!isset($_SESSION['username'])); ?>;
+                if (isLoggedIn) {
+                    showPopup();
+                }
+            }, 3000); // Adjust delay here (3000ms = 3 seconds)
+        }
+
+        window.addEventListener('scroll', onScroll);
+
+        // Optional: Hide popup if user scrolls back up
+        window.addEventListener('scroll', () => {
+            if (window.scrollY < 100) { // Adjust threshold here
+                hasScrolled = false;
+                clearTimeout(popupTimer);
+                document.getElementById('popup').style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById('popup').style.display = 'none';
+                    document.getElementById('popup-overlay').style.display = 'none';
+                }, 500);
+            }
+        });
+
+        // Initialize AOS
+        document.addEventListener('DOMContentLoaded', function () {
+            AOS.init();
+        });
+    </script>
     <!-- Latest compiled JavaScript -->
     <script src="assets/js/jquery-3.6.0.min.js"></script>
     <script src="assets/js/popper.min.js"></script>
@@ -922,6 +1247,7 @@
     <script src="assets/js/video-section.js"></script>
     <script src="assets/js/counter.js"></script>
     <script src="assets/js/animation.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.1/aos.js"></script>
 </body>
 
 </html>

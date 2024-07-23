@@ -74,8 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Set a session variable to indicate the user is authenticated
             $_SESSION['authenticated'] = true;
 
-            // Redirect to index.php after successful verification
-            header("Location: index.php");
+            // Redirect to profile.php after successful verification
+            header("Location: profile.php");
             exit();
         } else {
             // Incorrect 2FA code
@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="zxx">
 
 <head>
-    <title>Verification | FITLIFE PRO</title>
+    <title>Authentication | FITLIFE PRO</title>
     <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">

@@ -33,14 +33,40 @@ $meat_info = fetchTableData($conn, 'meat_info');
 $fruits_info = fetchTableData($conn, 'fruits_info');
 $milk_info = fetchTableData($conn, 'milk_info');
 $rice_bread_info = fetchTableData($conn, 'rice_bread_info');
+$quotes = fetchTableData($conn, 'quotes');
 
 // Function to handle form submissions
 function handleFormSubmission($conn, $tableName, $fields, $redirectTab)
 {
     $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
     $fieldUpdates = [];
+
     foreach ($fields as $field) {
-        $fieldUpdates[$field] = $conn->real_escape_string($_POST[$field]);
+        if ($field === 'image_path' && isset($_FILES['image_path']) && $_FILES['image_path']['error'] === UPLOAD_ERR_OK) {
+            // Handle image upload
+            $uploadDir = './assets/images/'; // Directory where images will be saved
+            $uploadFile = $uploadDir . basename($_FILES['image_path']['name']);
+            $fileType = strtolower(pathinfo($uploadFile, PATHINFO_EXTENSION));
+            $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
+
+            // Validate file type
+            if (in_array($fileType, $allowedTypes)) {
+                // Attempt to move uploaded file
+                if (move_uploaded_file($_FILES['image_path']['tmp_name'], $uploadFile)) {
+                    $fieldUpdates['image_path'] = basename($uploadFile); // Store the filename
+                } else {
+                    $_SESSION['message'] = 'Error uploading image: Unable to move uploaded file.';
+                    header("Location: admin_content.php#$redirectTab");
+                    exit();
+                }
+            } else {
+                $_SESSION['message'] = 'Invalid image file type. Allowed types: jpg, jpeg, png, gif.';
+                header("Location: admin_content.php#$redirectTab");
+                exit();
+            }
+        } else {
+            $fieldUpdates[$field] = $conn->real_escape_string($_POST[$field]);
+        }
     }
 
     if ($id) {
@@ -66,6 +92,7 @@ function handleFormSubmission($conn, $tableName, $fields, $redirectTab)
     header("Location: admin_content.php#$redirectTab");
     exit();
 }
+
 
 // Function to handle deletions
 function handleDeletion($conn, $tableName, $redirectTab)
@@ -95,6 +122,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         handleFormSubmission($conn, 'milk_info', ['food_exchange_group', 'filipino_name', 'english_name', 'carbohydrate_g', 'protein_g', 'fat_g', 'energy_kcal', 'household_measure'], 'milk_info');
     } elseif (isset($_POST['save_rice_bread_info'])) {
         handleFormSubmission($conn, 'rice_bread_info', ['food_exchange_group', 'filipino_name', 'english_name', 'carbohydrate_g', 'protein_g', 'fat_g', 'energy_kcal', 'household_measure'], 'rice_bread_info');
+    } elseif (isset($_POST['save_quote'])) {
+        handleFormSubmission($conn, 'quotes', ['author', 'title', 'image_path', 'quote'], 'quotes');
     } elseif (isset($_POST['delete_exercise'])) {
         handleDeletion($conn, 'exercises', 'exercises');
     } elseif (isset($_POST['delete_meat_info'])) {
@@ -105,13 +134,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         handleDeletion($conn, 'milk_info', 'milk_info');
     } elseif (isset($_POST['delete_rice_bread_info'])) {
         handleDeletion($conn, 'rice_bread_info', 'rice_bread_info');
+    } elseif (isset($_POST['delete_quote'])) {
+        handleDeletion($conn, 'quotes', 'quotes');
     }
 }
 
 $conn->close();
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -307,7 +336,8 @@ $conn->close();
             <button class="btn btn-custom mr-2" onclick="handleTabClick('meat_info')">Meat</button>
             <button class="btn btn-custom mr-2" onclick="handleTabClick('fruits_info')">Fruits</button>
             <button class="btn btn-custom mr-2" onclick="handleTabClick('milk_info')">Milk</button>
-            <button class="btn btn-custom" onclick="handleTabClick('rice_bread_info')">Rice and Bread</button>
+            <button class="btn btn-custom mr-2" onclick="handleTabClick('rice_bread_info')">Rice and Bread</button>
+            <button class="btn btn-custom" onclick="handleTabClick('quotes')">Quotes</button>
         </div>
         <?php
         if (isset($_SESSION['message'])) {
@@ -388,7 +418,7 @@ $conn->close();
                                         onclick="editExercise(<?= htmlspecialchars(json_encode($exercise)) ?>)">Edit</button>
                                     <a href="admin_content.php?delete_exercise=<?= $exercise['id'] ?>"
                                         class="btn btn-danger btn-sm"
-                                        onclick="return confirm('Are you sure you want to delete this exercise?');">Delete</a>
+                                        onclick="return confirm('Are you sure you want to delete this entry?');">Delete</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -396,10 +426,10 @@ $conn->close();
                 </table>
             </div>
         </div>
+
+
         <!-- Meat Info section -->
         <div id="meat_info" class="tab-content">
-
-
             <!-- Form for adding or editing Meat Info -->
             <h2>Add or Edit Meat Information</h2>
             <form action="admin_content.php" method="POST" class="food-form meat_info">
@@ -750,6 +780,71 @@ $conn->close();
                 </table>
             </div>
         </div>
+
+
+
+        <div id="quotes" class="tab-content">
+            <h2>Add or Edit Quotes</h2>
+            <form action="admin_content.php" method="POST" enctype="multipart/form-data" class="food-form quotes">
+                <input type="hidden" name="active_section" id="active_section">
+                <input type="hidden" name="id" id="quotes_id">
+                <div class="form-group">
+                    <label for="author">Author</label>
+                    <input type="text" name="author" id="author" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="title">Title</label>
+                    <input type="text" name="title" id="title" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="quote">Quote</label>
+                    <input type="text" name="quote" id="quote" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="image_path">Image</label>
+                    <input type="file" name="image_path" id="image_path" class="form-control" required>
+                </div>
+                <button type="submit" name="save_quote" class="btn btn-primary">Save Quote</button>
+            </form>
+
+
+            <h2 class="mt-4">Existing Quotes</h2>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Author</th>
+                            <th>Title</th>
+                            <th>Quote</th>
+                            <th>Image Path</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($quotes as $quote): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($quote['author']) ?></td>
+                                <td><?= htmlspecialchars($quote['title']) ?></td>
+                                <td><?= htmlspecialchars($quote['quote']) ?></td>
+                                <td><?= htmlspecialchars($quote['image_path']) ?></td>
+                                <td>
+                                    <button class="btn btn-info"
+                                        onclick="editQuote(<?= htmlspecialchars(json_encode($quote)) ?>)">Edit</button>
+                                    <form action="admin_content.php" method="POST" style="display:inline;">
+                                        <input type="hidden" name="id" value="<?= $quote['id'] ?>">
+                                        <button type="submit" name="delete_quote" class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Are you sure you want to delete this entry?');">Delete</button>
+                                    </form>
+                                </td>
+
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
     </div>
     </main>
     <script>
@@ -829,6 +924,14 @@ $conn->close();
             document.getElementById('exercise_type').value = exercise.exercise_type;
             document.getElementById('duration').value = exercise.duration;
             document.getElementById('intensity').value = exercise.intensity;
+        }
+
+        function editQuote(quote) {
+            document.getElementById('id').value = quote.id;
+            document.getElementById('author').value = quote.author;
+            document.getElementById('title').value = quote.title;
+            document.getElementById('quote').value = quote.quote;
+            document.getElementById('image_path').value = quote.image_path;
         }
 
         function editInfo(info, formType) {
