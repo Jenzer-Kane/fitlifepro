@@ -63,7 +63,7 @@ function handleFormSubmission($conn, $tableName, $fields, $redirectTab)
         $_SESSION['message'] = "Error: " . $conn->error;
     }
 
-    header("Location: new_admin_content.php#$redirectTab");
+    header("Location: admin_content.php#$redirectTab");
     exit();
 }
 
@@ -79,7 +79,7 @@ function handleDeletion($conn, $tableName, $redirectTab)
         $_SESSION['message'] = "Error deleting " . $formattedTableName . ": " . $conn->error;
     }
 
-    header("Location: new_admin_content.php#$redirectTab");
+    header("Location: admin_content.php#$redirectTab");
     exit();
 }
 
@@ -268,7 +268,7 @@ $conn->close();
                                     <a class="nav-link" href="./admin_threads.php">Threads</a>
                                 </li>
                                 <li class="nav-item active">
-                                    <a class="nav-link" href="./new_admin_content.php">Content</a>
+                                    <a class="nav-link" href="./admin_content.php">Content</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
@@ -386,7 +386,7 @@ $conn->close();
                                 <td>
                                     <button class="btn btn-info"
                                         onclick="editExercise(<?= htmlspecialchars(json_encode($exercise)) ?>)">Edit</button>
-                                    <a href="new_admin_content.php?delete_exercise=<?= $exercise['id'] ?>"
+                                    <a href="admin_content.php?delete_exercise=<?= $exercise['id'] ?>"
                                         class="btn btn-danger btn-sm"
                                         onclick="return confirm('Are you sure you want to delete this exercise?');">Delete</a>
                                 </td>
@@ -402,7 +402,7 @@ $conn->close();
 
             <!-- Form for adding or editing Meat Info -->
             <h2>Add or Edit Meat Information</h2>
-            <form action="new_admin_content.php" method="POST" class="food-form meat_info">
+            <form action="admin_content.php" method="POST" class="food-form meat_info">
                 <input type="hidden" name="active_section" id="active_section">
                 <input type="hidden" name="id" id="meat_info_id">
                 <div class="form-group">
@@ -420,19 +420,19 @@ $conn->close();
                 </div>
                 <div class="form-group">
                     <label for="carbohydrate_g">Carbohydrate (g)</label>
-                    <input type="text" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
+                    <input type="number" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="protein_g">Protein (g)</label>
-                    <input type="text" name="protein_g" id="protein_g" class="form-control" required>
+                    <input type="number" name="protein_g" id="protein_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="fat_g">Fat (g)</label>
-                    <input type="text" name="fat_g" id="fat_g" class="form-control" required>
+                    <input type="number" name="fat_g" id="fat_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="energy_kcal">Energy (kcal)</label>
-                    <input type="text" name="energy_kcal" id="energy_kcal" class="form-control" required>
+                    <input type="number" name="energy_kcal" id="energy_kcal" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="household_measure">Household Measure</label>
@@ -471,7 +471,7 @@ $conn->close();
                                 <td>
                                     <button class="btn btn-info"
                                         onclick="editInfo(<?= htmlspecialchars(json_encode($info)) ?>, 'meat_info')">Edit</button>
-                                    <form action="new_admin_content.php" method="POST" style="display:inline;">
+                                    <form action="admin_content.php" method="POST" style="display:inline;">
                                         <input type="hidden" name="id" value="<?= $info['id'] ?>">
                                         <button type="submit" name="delete_meat_info" class="btn btn-danger btn-sm"
                                             onclick="return confirm('Are you sure you want to delete this entry?');">Delete</button>
@@ -490,7 +490,7 @@ $conn->close();
 
             <!-- Form for adding or editing Fruits Info -->
             <h2>Add or Edit Fruits Information</h2>
-            <form action="new_admin_content.php" method="POST" class="food-form fruits_info">
+            <form action="admin_content.php" method="POST" class="food-form fruits_info">
                 <input type="hidden" name="active_section" id="active_section">
                 <input type="hidden" name="id" id="fruits_info_id">
                 <div class="form-group">
@@ -508,23 +508,23 @@ $conn->close();
                 </div>
                 <div class="form-group">
                     <label for="carbohydrate_g">Carbohydrate (g)</label>
-                    <input type="text" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
+                    <input type="number" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="calories">Calories</label>
-                    <input type="text" name="calories" id="calories" class="form-control" required>
+                    <input type="number" name="calories" id="calories" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="protein_g">Protein (g)</label>
-                    <input type="text" name="protein_g" id="protein_g" class="form-control" required>
+                    <input type="number" name="protein_g" id="protein_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="fat_g">Fat (g)</label>
-                    <input type="text" name="fat_g" id="fat_g" class="form-control" required>
+                    <input type="number" name="fat_g" id="fat_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="energy_kcal">Energy (kcal)</label>
-                    <input type="text" name="energy_kcal" id="energy_kcal" class="form-control" required>
+                    <input type="number" name="energy_kcal" id="energy_kcal" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="household_measure">Household Measure</label>
@@ -564,7 +564,7 @@ $conn->close();
                                 <td>
                                     <button class="btn btn-info"
                                         onclick="editInfo(<?= htmlspecialchars(json_encode($info)) ?>, 'fruits_info')">Edit</button>
-                                    <form action="new_admin_content.php" method="POST" style="display:inline;">
+                                    <form action="admin_content.php" method="POST" style="display:inline;">
                                         <input type="hidden" name="id" value="<?= $info['id'] ?>">
                                         <button type="submit" name="delete_fruits_info" class="btn btn-danger btn-sm"
                                             onclick="return confirm('Are you sure you want to delete this entry?');">Delete</button>
@@ -582,9 +582,9 @@ $conn->close();
 
             <!-- Form for adding or editing Milk Info -->
             <h2>Add or Edit Milk Information</h2>
-            <form action="new_admin_content.php" method="POST" class="food-form milk_info">
-                <input type="hidden" name="active_section" value="milk_info">
-                <input type="hidden" name="id" value="<?php echo isset($info['id']) ? $info['id'] : ''; ?>">
+            <form action="admin_content.php" method="POST" class="food-form milk_info">
+                <input type="hidden" name="active_section" id="active_section">
+                <input type="hidden" name="id" id="milk_info_id">
                 <div class="form-group">
                     <label for="food_exchange_group">Food Exchange Group</label>
                     <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control"
@@ -600,19 +600,19 @@ $conn->close();
                 </div>
                 <div class="form-group">
                     <label for="carbohydrate_g">Carbohydrate (g)</label>
-                    <input type="text" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
+                    <input type="number" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="protein_g">Protein (g)</label>
-                    <input type="text" name="protein_g" id="protein_g" class="form-control" required>
+                    <input type="number" name="protein_g" id="protein_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="fat_g">Fat (g)</label>
-                    <input type="text" name="fat_g" id="fat_g" class="form-control" required>
+                    <input type="number" name="fat_g" id="fat_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="energy_kcal">Energy (kcal)</label>
-                    <input type="text" name="energy_kcal" id="energy_kcal" class="form-control" required>
+                    <input type="number" name="energy_kcal" id="energy_kcal" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="household_measure">Household Measure</label>
@@ -650,7 +650,7 @@ $conn->close();
                                 <td>
                                     <button class="btn btn-info"
                                         onclick="editInfo(<?= htmlspecialchars(json_encode($info)) ?>, 'milk_info')">Edit</button>
-                                    <form action="new_admin_content.php" method="POST" style="display:inline;">
+                                    <form action="admin_content.php" method="POST" style="display:inline;">
                                         <input type="hidden" name="id" value="<?= $info['id'] ?>">
                                         <button type="submit" name="delete_milk_info" class="btn btn-danger btn-sm"
                                             onclick="return confirm('Are you sure you want to delete this entry?');">Delete</button>
@@ -662,7 +662,6 @@ $conn->close();
 
                 </table>
             </div>
-
         </div>
 
         <!-- Rice and Bread Info section -->
@@ -670,7 +669,7 @@ $conn->close();
 
             <!-- Form for adding or editing Rice and Bread Info -->
             <h2>Add or Edit Rice and Bread Information</h2>
-            <form action="new_admin_content.php" method="POST" class="food-form rice_bread_info">
+            <form action="admin_content.php" method="POST" class="food-form rice_bread_info">
                 <input type="hidden" name="active_section" id="active_section">
                 <input type="hidden" name="id" id="rice_bread_info_id">
                 <div class="form-group">
@@ -688,19 +687,19 @@ $conn->close();
                 </div>
                 <div class="form-group">
                     <label for="carbohydrate_g">Carbohydrate (g)</label>
-                    <input type="text" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
+                    <input type="number" name="carbohydrate_g" id="carbohydrate_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="protein_g">Protein (g)</label>
-                    <input type="text" name="protein_g" id="protein_g" class="form-control" required>
+                    <input type="number" name="protein_g" id="protein_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="fat_g">Fat (g)</label>
-                    <input type="text" name="fat_g" id="fat_g" class="form-control" required>
+                    <input type="number" name="fat_g" id="fat_g" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="energy_kcal">Energy (kcal)</label>
-                    <input type="text" name="energy_kcal" id="energy_kcal" class="form-control" required>
+                    <input type="number" name="energy_kcal" id="energy_kcal" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label for="household_measure">Household Measure</label>
@@ -739,7 +738,7 @@ $conn->close();
                                 <td>
                                     <button class="btn btn-info"
                                         onclick="editInfo(<?= htmlspecialchars(json_encode($info)) ?>, 'rice_bread_info')">Edit</button>
-                                    <form action="new_admin_content.php" method="POST" style="display:inline;">
+                                    <form action="admin_content.php" method="POST" style="display:inline;">
                                         <input type="hidden" name="id" value="<?= $info['id'] ?>">
                                         <button type="submit" name="delete_rice_bread_info" class="btn btn-danger btn-sm"
                                             onclick="return confirm('Are you sure you want to delete this entry?');">Delete</button>
@@ -750,7 +749,6 @@ $conn->close();
                     </tbody>
                 </table>
             </div>
-
         </div>
     </div>
     </main>
