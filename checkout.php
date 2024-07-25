@@ -186,14 +186,32 @@ if ($loggedInUsername) {
             $gcashNumber = $_POST['gcashNumber'];
             $referenceNumber = $_POST['referenceNumber'];
 
-            // Insert the transaction into the database
-            $query = "INSERT INTO transactions (transaction_id, firstname, lastname, user_email, plan, price, description, gcash_number, reference_number) 
-                      VALUES ('$transactionID', '$firstname', '$lastname', '$userEmail', '$plan', $price, '$description', '$gcashNumber', '$referenceNumber')";
-            $result = $mysqli->query($query);
+            // Prepare and execute the query
+            $query = "INSERT INTO transactions (transaction_id, firstname, lastname, username, user_email, plan, price, description, gcash_number, reference_number) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $mysqli->prepare($query);
 
-            if (!$result) {
+            if (!$stmt) {
+                die("Prepare failed: " . htmlspecialchars($mysqli->error));
+            }
+
+            $stmt->bind_param(
+                "ssssssdsss",
+                $transactionID,
+                $firstname,
+                $lastname,
+                $loggedInUsername,
+                $userEmail,
+                $plan,
+                $price,
+                $description,
+                $gcashNumber,
+                $referenceNumber
+            );
+
+            if (!$stmt->execute()) {
                 // Error handling: Unable to insert into the database
-                echo '<div class="alert alert-danger" role="alert">Error processing subscription. Please try again.</div>';
+                echo '<div class="alert alert-danger" role="alert">Error processing subscription: ' . htmlspecialchars($stmt->error) . '</div>';
             } else {
                 // Success message
                 echo '<div class="alert alert-success" role="alert">Thank you for subscribing to FitLifePro! Your subscription has been submitted for approval.</div>';
@@ -215,9 +233,9 @@ if ($loggedInUsername) {
                             }
                         }, 1000);
                     </script>';
-
-
             }
+
+            $stmt->close();
         }
         ?>
 
