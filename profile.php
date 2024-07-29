@@ -622,7 +622,7 @@ if ($result && $result->num_rows > 0) {
     $quote = null;
 }
 
-// Fetch user status
+// Fetch user transaction status
 $query = "SELECT status FROM transactions WHERE username = ?";
 $stmt = $mysqli->prepare($query);
 if (!$stmt) {
@@ -637,6 +637,52 @@ $status = $user['status'];
 // Check if the status is "Pending" or "Disapproved"
 $showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved');
 
+$mealPlans = [];
+$exercisePlans = [];
+
+$sql = "SELECT day, meal_plan_data FROM meal_plans WHERE username = ?";
+if ($stmt = $mysqli->prepare($sql)) {
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $stmt->bind_result($day, $mealPlanData);
+
+    while ($stmt->fetch()) {
+        $mealPlans[strtolower($day)] = json_decode($mealPlanData, true);
+    }
+
+    $stmt->close();
+}
+
+$sql = "SELECT day, exercise_plan_data FROM exercise_plans WHERE username = ?";
+if ($stmt = $mysqli->prepare($sql)) {
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $stmt->bind_result($day, $exercisePlanData);
+
+    while ($stmt->fetch()) {
+        $exercisePlans[strtolower($day)] = json_decode($exercisePlanData, true);
+    }
+
+    $stmt->close();
+}
+
+// Prepare and execute the SQL query to fetch gender from users_info table
+$stmt = $mysqli->prepare("SELECT gender FROM users_info WHERE username = ?");
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$stmt->store_result();
+
+if ($stmt->num_rows > 0) {
+    $stmt->bind_result($gender);
+    $stmt->fetch();
+    // Assign the fetched gender to the $savedUserInfo array
+    $savedUserInfo['gender'] = $gender;
+} else {
+    // Handle the case where no gender is found
+    $savedUserInfo['gender'] = "not specified"; // Or any default value you prefer
+}
+
+$mysqli->close();
 ?>
 
 <!DOCTYPE html>
@@ -1230,11 +1276,13 @@ $showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved');
                                     <p><strong>Height:</strong>
                                         <?php echo $savedUserInfo['bmiHeight']; ?>
                                         cm</p>
-                                    <p><strong>Hip Circumference:</strong>
-                                        <?php echo $savedUserInfo['hip']; ?> cm</p>
-                                    <p><strong>Thigh Circumference:</strong>
-                                        <?php echo $savedUserInfo['thigh']; ?> cm
-                                    </p>
+                                    <?php if (isset($hip) && $hip !== '' && $hip != 0): ?>
+                                        <p><strong>Hip Circumference:</strong> <?php echo $hip; ?> cm</p>
+                                    <?php endif; ?>
+
+                                    <?php if (isset($thigh) && $thigh !== '' && $thigh != 0): ?>
+                                        <p><strong>Thigh Circumference:</strong> <?php echo $thigh; ?> cm</p>
+                                    <?php endif; ?>
                                     <p><strong>Body Fat Percentage:</strong>
                                         <?php echo number_format($bodyFatResults['bodyFatPercentage'], 2); ?>%
                                     </p>
@@ -1536,7 +1584,7 @@ $showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved');
         ?>
     </div>
 
-    <!-- Diet Planning Section -->
+    <!-- CURRENT SESSION Diet Planning Section -->
     <?php if ($showDietPlanningSection): ?>
         <section class="our_schedule_section diet-planning">
             <div class="container">
@@ -1648,239 +1696,299 @@ $showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved');
             </div>
         </section>
 
-        <!-- Exercise Planning Section -->
-        <section class="our_schedule_section exercise-planning">
+        <!-- SAVED Diet Planning Section -->
+        <section class="our_schedule_section diet-planning">
             <div class="container">
                 <div class="row">
                     <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                         <div class="our_schedule_content">
-                            <?php if (!empty($exercise_plan)): ?>
-                                <?php if (isset($goal_name)): ?>
-                                    <h5>EXERCISE PLAN</h5>
-                                    <h2>RECOMMENDED EXERCISE PLAN FOR<br><?php echo strtoupper($goal_name); ?></h2>
+                            <h5>DIET PLAN</h5>
+                            <h2>RECOMMENDED DIET PLAN FOR<br>
+                                <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="diet-horizontal-display">
+                <?php foreach ($days as $day): ?>
+                    <form id="mealPlanForm-<?php echo strtolower($day); ?>" action="save_meal_plan.php" method="POST">
+                        <div class="border-mealplan">
+                            <div class="container">
+                                <div class="row">
+                                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                        <div class="our_schedule_content">
+                                            <h2 class="mt-5"><?php echo $day; ?></h2>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="diet-horizontal-display">
+                                <table class="border border-black" id="mealPlanTable-<?php echo strtolower($day); ?>">
+                                    <thead>
+                                        <tr>
+                                            <th>Time Slot</th>
+                                            <th>Food Item</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (isset($mealPlans[strtolower($day)])): ?>
+                                            <?php foreach ($mealPlans[strtolower($day)] as $meal): ?>
+                                                <tr>
+                                                    <td><?php echo $meal['timeSlot']; ?></td>
+                                                    <td><?php echo $meal['foodItem']; ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <!-- Default meal plan rows -->
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <input type="hidden" name="day" value="<?php echo $day; ?>">
+                            <input type="hidden" name="meal_plan" id="mealPlanData-<?php echo strtolower($day); ?>">
+                            <button type="submit">Save Diet Plan for <?php echo $day; ?></button>
+                        </div>
+                    </form>
+                <?php endforeach; ?>
+            </div>
+
+
+            <!-- CURRENT SESSION Exercise Planning Section -->
+            <section class="our_schedule_section exercise-planning">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            <div class="our_schedule_content">
+                                <?php if (!empty($exercise_plan)): ?>
+                                    <?php if (isset($goal_name)): ?>
+                                        <h5>EXERCISE PLAN</h5>
+                                        <h2>RECOMMENDED EXERCISE PLAN FOR<br><?php echo strtoupper($goal_name); ?></h2>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="exercise-horizontal-display">
-                        <?php
-                        $exerciseIndex = 0;
-                        $totalExercises = count($exercise_plan);
-                        $dailyExerciseTotals = array();
+                        <div class="exercise-horizontal-display">
+                            <?php
+                            $exerciseIndex = 0;
+                            $totalExercises = count($exercise_plan);
+                            $dailyExerciseTotals = array();
 
-                        foreach ($days as $day): ?>
-                            <form id="exercisePlanForm-<?php echo strtolower($day); ?>" action="save_exercise_plan.php" method="POST">
-                                <div class="border-mealplan mt-5">
-                                    <div class="container">
-                                        <div class="row">
-                                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                                <div class="our_schedule_content">
-                                                    <h2 class="mt-5"><?php echo $day; ?></h2>
+                            foreach ($days as $day): ?>
+                                <form id="exercisePlanForm-<?php echo strtolower($day); ?>" action="save_exercise_plan.php"
+                                    method="POST">
+                                    <div class="border-mealplan mt-5">
+                                        <div class="container">
+                                            <div class="row">
+                                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                                    <div class="our_schedule_content">
+                                                        <h2 class="mt-5"><?php echo $day; ?></h2>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <?php if (isset($intakeResults)): ?>
-                                        <p>Track your progress by marking the exercises you've completed.</p>
-                                        <p><strong>Tip: Aim to do at least 5 exercises from all 3 categories in a day (Cardio, Strength,
-                                                Core).</strong></p>
-                                    <?php endif; ?>
-                                    <div class="diet-horizontal-display">
-                                        <table class="border border-black" id="exercisePlanTable-<?php echo strtolower($day); ?>">
-                                            <thead>
-                                                <tr>
-                                                    <th>Time Slot</th>
-                                                    <th>Exercise</th>
-                                                    <th>Exercise</th>
-                                                    <th>Exercise</th>
-                                                    <th>Exercise</th>
-                                                    <th>Exercise</th>
-                                                    <th>Exercise</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($exercisetimeSlots as $timeSlot): ?>
-                                                    <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
+                                        <?php if (isset($intakeResults)): ?>
+                                            <p>Track your progress by marking the exercises you've completed.</p>
+                                            <p><strong>Tip: Aim to do at least 5 exercises from all 3 categories in a day (Cardio,
+                                                    Strength,
+                                                    Core).</strong></p>
+                                        <?php endif; ?>
+                                        <div class="diet-horizontal-display">
+                                            <table class="border border-black" id="exercisePlanTable-<?php echo strtolower($day); ?>">
+                                                <thead>
                                                     <tr>
-                                                        <td><?php echo $timeSlot; ?></td>
-                                                        <?php for ($i = 0; $i < 6; $i++): ?>
-                                                            <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
-                                                            <td class="exerciseItem">
-                                                                <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
-                                                                <strong><?php echo $exerciseItem['intensity']; ?>
-                                                                    Intensity</strong><br><?php echo $exerciseItem['category']; ?><br><br>
-                                                            </td>
-                                                            <?php $exerciseIndex++; ?>
-                                                        <?php endfor; ?>
+                                                        <th>Time Slot</th>
+                                                        <th>Exercise</th>
+                                                        <th>Exercise</th>
+                                                        <th>Exercise</th>
+                                                        <th>Exercise</th>
+                                                        <th>Exercise</th>
+                                                        <th>Exercise</th>
                                                     </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div id="total-exercises-<?php echo strtolower($day); ?>"
-                                        class="border border-grey large-counter-text">
-                                        <?php echo 'Minimum Exercises to Complete: <span class="minimum-to-complete">5</span><br>'; ?>
-                                        <?php echo 'Total Exercises Completed: <span id="exerciseCounter-' . strtolower($day) . '">0</span><br>'; ?>
-                                        <div class="calculator-form form-section border-0">
-                                            <button type="button" class="shuffle-exercises-button"
-                                                data-day="<?php echo strtolower($day); ?>">Regenerate Exercises</button>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($exercisetimeSlots as $timeSlot): ?>
+                                                        <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
+                                                        <tr>
+                                                            <td><?php echo $timeSlot; ?></td>
+                                                            <?php for ($i = 0; $i < 6; $i++): ?>
+                                                                <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
+                                                                <td class="exerciseItem">
+                                                                    <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
+                                                                    <strong><?php echo $exerciseItem['intensity']; ?>
+                                                                        Intensity</strong><br><?php echo $exerciseItem['category']; ?><br><br>
+                                                                </td>
+                                                                <?php $exerciseIndex++; ?>
+                                                            <?php endfor; ?>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
                                         </div>
+                                        <div id="total-exercises-<?php echo strtolower($day); ?>"
+                                            class="border border-grey large-counter-text">
+                                            <?php echo 'Minimum Exercises to Complete: <span class="minimum-to-complete">5</span><br>'; ?>
+                                            <?php echo 'Total Exercises Completed: <span id="exerciseCounter-' . strtolower($day) . '">0</span><br>'; ?>
+                                            <div class="calculator-form form-section border-0">
+                                                <button type="button" class="shuffle-exercises-button"
+                                                    data-day="<?php echo strtolower($day); ?>">Regenerate Exercises</button>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="day" value="<?php echo $day; ?>">
+                                        <input type="hidden" name="exercise_plan" id="exercisePlanData-<?php echo strtolower($day); ?>">
+                                        <button type="submit">Save Exercise Plan for <?php echo $day; ?></button>
                                     </div>
-                                    <input type="hidden" name="day" value="<?php echo $day; ?>">
-                                    <input type="hidden" name="exercise_plan" id="exercisePlanData-<?php echo strtolower($day); ?>">
-                                    <button type="submit">Save Exercise Plan for <?php echo $day; ?></button>
-                                </div>
-                            </form>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-                </div>
-            </section>
-        <?php endif; ?>
+                                </form>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                    </div>
+                </section>
+            <?php endif; ?>
 
-        <!-- QUOTE SECTION -->
-        <section class="quote_section">
-            <div class="container">
-                <div class="row" data-aos="fade-right">
-                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                        <div class="quote_content">
-                            <h2>“<?php echo htmlspecialchars($quote['quote']); ?>”</h2>
-                            <div class="quote_content_wrapper">
-                                <div class="quote_wrapper">
-                                    <h6><?php echo htmlspecialchars($quote['author']); ?></h6>
-                                    <span><?php echo htmlspecialchars($quote['title']); ?></span>
-                                    <?php if (!empty($quote['image_path'])): ?>
-                                        <figure class="quote_image mb-0">
-                                            <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
-                                                class="img-fluid">
-                                        </figure>
-                                    <?php endif; ?>
+            <!-- QUOTE SECTION -->
+            <section class="quote_section">
+                <div class="container">
+                    <div class="row" data-aos="fade-right">
+                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            <div class="quote_content">
+                                <h2>“<?php echo htmlspecialchars($quote['quote']); ?>”</h2>
+                                <div class="quote_content_wrapper">
+                                    <div class="quote_wrapper">
+                                        <h6><?php echo htmlspecialchars($quote['author']); ?></h6>
+                                        <span><?php echo htmlspecialchars($quote['title']); ?></span>
+                                        <?php if (!empty($quote['image_path'])): ?>
+                                            <figure class="quote_image mb-0">
+                                                <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
+                                                    class="img-fluid">
+                                            </figure>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <figure class="quote_left_icon left_icon mb-0">
+                        <img src="./assets/images/quote_left_icon.png" alt="" class="img-fluid">
+                    </figure>
+                    <figure class="quote_right_icon right_icon mb-0">
+                        <img src="./assets/images/quote_right_icon.png" alt="" class="img-fluid">
+                    </figure>
                 </div>
-                <figure class="quote_left_icon left_icon mb-0">
-                    <img src="./assets/images/quote_left_icon.png" alt="" class="img-fluid">
-                </figure>
-                <figure class="quote_right_icon right_icon mb-0">
-                    <img src="./assets/images/quote_right_icon.png" alt="" class="img-fluid">
-                </figure>
+            </section>
+
             </div>
-        </section>
-
-        </div>
-    <?php endif; ?>
+        <?php endif; ?>
 
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Function to update visibility of sections based on gender selection
-            function updateVisibility() {
-                var gender = document.getElementById('gender').value;
-                var hipSection = document.getElementById('hipSection');
-                var thighSection = document.getElementById('thighSection');
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                // Function to update visibility of sections based on gender selection
+                function updateVisibility() {
+                    var gender = document.getElementById('gender').value;
+                    var hipSection = document.getElementById('hipSection');
+                    var thighSection = document.getElementById('thighSection');
 
-                if (gender === 'female') {
-                    hipSection.style.display = 'block';
-                    thighSection.style.display = 'block';
-                } else {
-                    hipSection.style.display = 'none';
-                    thighSection.style.display = 'none';
-                }
-            }
-        });
-
-        // Function to attach event listeners to meal items
-        function attachEventListeners() {
-            const mealItems = document.querySelectorAll('.mealItem');
-            mealItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    const day = item.getAttribute('data-day');
-                    const calories = parseFloat(item.getAttribute('data-calories'));
-                    const protein = parseFloat(item.getAttribute('data-protein'));
-
-                    // Check if intake has reached the threshold
-                    const totalElement = document.getElementById(`total-${day}`);
-                    const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
-                    const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
-                    const maxCalories = <?php echo isset($intakeResults) ? $intakeResults['caloricIntake'] : 0; ?>;
-                    const maxProtein = <?php echo isset($intakeResults) ? $intakeResults['proteinIntake'] : 0; ?>;
-
-                    // Check if the intake is already at or above the threshold
-                    if (currentCalories >= maxCalories) {
-                        // Disable clicking if intake is at or above threshold
-                        return;
-                    }
-
-                    // Toggle the green background
-                    item.classList.toggle('consumed');
-
-                    // Update daily totals
-                    if (item.classList.contains('consumed')) {
-                        totalElement.setAttribute('data-calories', currentCalories + calories);
-                        totalElement.setAttribute('data-protein', currentProtein + protein);
+                    if (gender === 'female') {
+                        hipSection.style.display = 'block';
+                        thighSection.style.display = 'block';
                     } else {
-                        totalElement.setAttribute('data-calories', currentCalories - calories);
-                        totalElement.setAttribute('data-protein', currentProtein - protein);
+                        hipSection.style.display = 'none';
+                        thighSection.style.display = 'none';
                     }
+                }
+            });
 
-                    totalElement.innerHTML = `
+            // Function to attach event listeners to meal items
+            function attachEventListeners() {
+                const mealItems = document.querySelectorAll('.mealItem');
+                mealItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const day = item.getAttribute('data-day');
+                        const calories = parseFloat(item.getAttribute('data-calories'));
+                        const protein = parseFloat(item.getAttribute('data-protein'));
+
+                        // Check if intake has reached the threshold
+                        const totalElement = document.getElementById(`total-${day}`);
+                        const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
+                        const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
+                        const maxCalories = <?php echo isset($intakeResults) ? $intakeResults['caloricIntake'] : 0; ?>;
+                        const maxProtein = <?php echo isset($intakeResults) ? $intakeResults['proteinIntake'] : 0; ?>;
+
+                        // Check if the intake is already at or above the threshold
+                        if (currentCalories >= maxCalories) {
+                            // Disable clicking if intake is at or above threshold
+                            return;
+                        }
+
+                        // Toggle the green background
+                        item.classList.toggle('consumed');
+
+                        // Update daily totals
+                        if (item.classList.contains('consumed')) {
+                            totalElement.setAttribute('data-calories', currentCalories + calories);
+                            totalElement.setAttribute('data-protein', currentProtein + protein);
+                        } else {
+                            totalElement.setAttribute('data-calories', currentCalories - calories);
+                            totalElement.setAttribute('data-protein', currentProtein - protein);
+                        }
+
+                        totalElement.innerHTML = `
                 <div class="large-counter-text">
                     Calories: <span id="calories-${day}">${totalElement.getAttribute('data-calories')}</span> / ${maxCalories}<br>
                     Protein (g): <span id="protein-${day}">${totalElement.getAttribute('data-protein')}</span> / ${maxProtein}
                 </div>
             `;
+                    });
                 });
-            });
-        }
+            }
 
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Attach event listeners when the page loads
-            attachEventListeners();
-        });
-
-        function shuffleMealPlan(day) {
-            const table = document.getElementById('mealPlanTable-' + day);
-            const timeSlots = <?php echo json_encode($timeSlots); ?>;
-            let mealPlan = <?php echo json_encode($meal_plan); ?>;
-            // Separate meal plan items by food exchange group
-            const groupedItems = {};
-            mealPlan.forEach(item => {
-                if (!groupedItems[item.food_exchange_group]) {
-                    groupedItems[item.food_exchange_group] = [];
-                }
-                groupedItems[item.food_exchange_group].push(item);
+            document.addEventListener('DOMContentLoaded', () => {
+                // Attach event listeners when the page loads
+                attachEventListeners();
             });
 
-            // Array to hold the shuffled meal plan
-            let shuffledPlan = [];
+            function shuffleMealPlan(day) {
+                const table = document.getElementById('mealPlanTable-' + day);
+                const timeSlots = <?php echo json_encode($timeSlots); ?>;
+                let mealPlan = <?php echo json_encode($meal_plan); ?>;
+                // Separate meal plan items by food exchange group
+                const groupedItems = {};
+                mealPlan.forEach(item => {
+                    if (!groupedItems[item.food_exchange_group]) {
+                        groupedItems[item.food_exchange_group] = [];
+                    }
+                    groupedItems[item.food_exchange_group].push(item);
+                });
 
-            // Add one item from each group to the shuffled plan
-            Object.values(groupedItems).forEach(group => {
-                shuffledPlan.push(group[Math.floor(Math.random() * group.length)]);
-            });
+                // Array to hold the shuffled meal plan
+                let shuffledPlan = [];
 
-            // Shuffle the remaining items
-            const remainingItems = mealPlan.filter(item => !shuffledPlan.includes(item));
-            shuffledPlan = shuffledPlan.concat(remainingItems.sort(() => Math.random() - 0.5));
+                // Add one item from each group to the shuffled plan
+                Object.values(groupedItems).forEach(group => {
+                    shuffledPlan.push(group[Math.floor(Math.random() * group.length)]);
+                });
 
-            // Generate table rows for the shuffled plan
-            let mealIndex = 0;
-            table.querySelector('tbody').innerHTML = '';
-            timeSlots.forEach(timeSlot => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${timeSlot}</td>`;
-                for (let i = 0; i < timeSlots.length; i++) {
-                    const foodItem = shuffledPlan[mealIndex % shuffledPlan.length];
-                    const cell = document.createElement('td');
-                    cell.classList.add('mealItem');
-                    cell.setAttribute('data-day', day);
-                    cell.setAttribute('data-time-slot', timeSlot);
-                    cell.setAttribute('data-calories', foodItem['energy_kcal']);
-                    cell.setAttribute('data-protein', foodItem['protein_g']);
-                    cell.innerHTML = `
+                // Shuffle the remaining items
+                const remainingItems = mealPlan.filter(item => !shuffledPlan.includes(item));
+                shuffledPlan = shuffledPlan.concat(remainingItems.sort(() => Math.random() - 0.5));
+
+                // Generate table rows for the shuffled plan
+                let mealIndex = 0;
+                table.querySelector('tbody').innerHTML = '';
+                timeSlots.forEach(timeSlot => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${timeSlot}</td>`;
+                    for (let i = 0; i < timeSlots.length; i++) {
+                        const foodItem = shuffledPlan[mealIndex % shuffledPlan.length];
+                        const cell = document.createElement('td');
+                        cell.classList.add('mealItem');
+                        cell.setAttribute('data-day', day);
+                        cell.setAttribute('data-time-slot', timeSlot);
+                        cell.setAttribute('data-calories', foodItem['energy_kcal']);
+                        cell.setAttribute('data-protein', foodItem['protein_g']);
+                        cell.innerHTML = `
         <div class="mealItemContent">
             <br>${foodItem['english_name']}<br><br>
             ${foodItem['filipino_name']}<br><br>
@@ -1889,218 +1997,218 @@ $showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved');
             <strong>Measure:</strong> ${foodItem['household_measure']}<br><br>
         </div>
     `;
-                    row.appendChild(cell);
-                    mealIndex++;
-                }
-                table.querySelector('tbody').appendChild(row);
-            });
-
-            // Reattach event listeners after shuffling
-            attachEventListeners();
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            attachExerciseEventListeners();
-
-            const shuffleButtons = document.querySelectorAll('.shuffle-exercises-button');
-            shuffleButtons.forEach(button => {
-                button.addEventListener('click', function () {
-                    const day = this.getAttribute('data-day');
-                    shuffleExercises(day);
-                });
-            });
-
-            const exerciseTypeButtons = document.querySelectorAll('.exercise-type-btn');
-            exerciseTypeButtons.forEach(button => {
-                button.addEventListener('click', function () {
-                    const exerciseType = this.value;
-                    fetchExercises(exerciseType);
-                });
-            });
-
-            function attachExerciseEventListeners() {
-                const exerciseItems = document.querySelectorAll('.exerciseItem');
-                exerciseItems.forEach(item => {
-                    item.addEventListener('click', toggleCompleted);
-                });
-            }
-
-            function shuffleExercises(day) {
-                const tableBody = document.querySelector(`#exercisePlanTable-${day} tbody`);
-                const rows = Array.from(tableBody.rows);
-
-                // Extract all cells (excluding the first column) into a flat array
-                let cells = [];
-                rows.forEach(row => {
-                    for (let i = 1; i < row.cells.length; i++) {
-                        cells.push(row.cells[i]);
+                        row.appendChild(cell);
+                        mealIndex++;
                     }
-                });
-
-                // Shuffle the cells array
-                for (let i = cells.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [cells[i].innerHTML, cells[j].innerHTML] = [cells[j].innerHTML, cells[i].innerHTML];
-                }
-
-                // Append shuffled cells back into rows
-                let cellIndex = 0;
-                rows.forEach(row => {
-                    for (let i = 1; i < row.cells.length; i++) {
-                        row.cells[i].innerHTML = cells[cellIndex].innerHTML;
-                        cellIndex++;
-                    }
+                    table.querySelector('tbody').appendChild(row);
                 });
 
                 // Reattach event listeners after shuffling
-                attachExerciseEventListeners();
-
-                // Update counter after shuffling
-                updateCounter(day);
-            }
-
-            function toggleCompleted() {
-                this.classList.toggle('completed');
-                const tableId = this.closest('table').id.split('-')[1]; // Extract table ID
-                updateCounter(tableId);
-                hideRegenerateButton(this);
-            }
-
-            function updateCounter(day) {
-                const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
-                document.getElementById(`exerciseCounter-${day}`).innerText = completedExercises;
-            }
-
-            function hideRegenerateButton(item) {
-                // Find the parent container of the clicked exercise item
-                const tableContainer = item.closest('.border-mealplan');
-
-                // Find and hide the "Regenerate Exercises" button within the parent container
-                const regenerateButton = tableContainer.querySelector('.shuffle-exercises-button');
-                regenerateButton.style.display = 'none';
-            }
-
-            function updateCounter(day) {
-                const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
-                const minimumExercises = 5;
-                const exerciseCounter = document.getElementById(`exerciseCounter-${day}`);
-                exerciseCounter.innerText = completedExercises;
-
-                if (completedExercises >= minimumExercises) {
-                    exerciseCounter.classList.add('minimum-hit');
-                    const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
-                    minimumToComplete.innerHTML = `<span style="color: green;">${minimumExercises} - Minimum hit! Good job!</span>`;
-                } else {
-                    exerciseCounter.classList.remove('minimum-hit');
-                    const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
-                    minimumToComplete.innerHTML = `${minimumExercises}`;
-                }
+                attachEventListeners();
             }
 
             document.addEventListener('DOMContentLoaded', () => {
-                // Example function to populate the hidden inputs with results
-                function populateResults() {
-                    document.getElementById('username').value = $_SESSION['username']; // Replace with actual username logic
-                    document.getElementById('bmi').value = calculatedBMI;
-                    document.getElementById('bmiCategory').value = bmiCategory;
-                    document.getElementById('bodyFatPercentage').value = bodyFatPercentage;
-                    document.getElementById('fatMass').value = fatMass;
-                    document.getElementById('leanMass').value = leanMass;
-                    document.getElementById('hamwilBW_kg').value = hamwilBW_kg;
-                    document.getElementById('devineIBW').value = devineIBW;
-                    document.getElementById('robinsonIBW').value = robinsonIBW;
-                    document.getElementById('millerIBW').value = millerIBW;
-                    document.getElementById('caloricIntake').value = caloricIntake;
-                    document.getElementById('proteinIntake').value = proteinIntake;
+                attachExerciseEventListeners();
+
+                const shuffleButtons = document.querySelectorAll('.shuffle-exercises-button');
+                shuffleButtons.forEach(button => {
+                    button.addEventListener('click', function () {
+                        const day = this.getAttribute('data-day');
+                        shuffleExercises(day);
+                    });
+                });
+
+                const exerciseTypeButtons = document.querySelectorAll('.exercise-type-btn');
+                exerciseTypeButtons.forEach(button => {
+                    button.addEventListener('click', function () {
+                        const exerciseType = this.value;
+                        fetchExercises(exerciseType);
+                    });
+                });
+
+                function attachExerciseEventListeners() {
+                    const exerciseItems = document.querySelectorAll('.exerciseItem');
+                    exerciseItems.forEach(item => {
+                        item.addEventListener('click', toggleCompleted);
+                    });
                 }
 
-                // Call this function when your calculations are done
-                populateResults();
-            });
+                function shuffleExercises(day) {
+                    const tableBody = document.querySelector(`#exercisePlanTable-${day} tbody`);
+                    const rows = Array.from(tableBody.rows);
 
-            $(document).ready(function () {
-                $("#resultsForm").on("submit", function (event) {
-                    event.preventDefault(); // Prevent the default form submission
-
-                    $.ajax({
-                        type: "POST",
-                        url: "store_results.php", // Your PHP script to handle the form submission
-                        data: $(this).serialize(), // Serialize the form data
-                        success: function (response) {
-                            $("#message").html(response); // Display the response message
-                            if (response.includes("")) {
-                                // Optional: handle success case
-                            }
-                        },
-                        error: function () {
-                            $("#message").html("There was an error processing the form.");
+                    // Extract all cells (excluding the first column) into a flat array
+                    let cells = [];
+                    rows.forEach(row => {
+                        for (let i = 1; i < row.cells.length; i++) {
+                            cells.push(row.cells[i]);
                         }
+                    });
+
+                    // Shuffle the cells array
+                    for (let i = cells.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [cells[i].innerHTML, cells[j].innerHTML] = [cells[j].innerHTML, cells[i].innerHTML];
+                    }
+
+                    // Append shuffled cells back into rows
+                    let cellIndex = 0;
+                    rows.forEach(row => {
+                        for (let i = 1; i < row.cells.length; i++) {
+                            row.cells[i].innerHTML = cells[cellIndex].innerHTML;
+                            cellIndex++;
+                        }
+                    });
+
+                    // Reattach event listeners after shuffling
+                    attachExerciseEventListeners();
+
+                    // Update counter after shuffling
+                    updateCounter(day);
+                }
+
+                function toggleCompleted() {
+                    this.classList.toggle('completed');
+                    const tableId = this.closest('table').id.split('-')[1]; // Extract table ID
+                    updateCounter(tableId);
+                    hideRegenerateButton(this);
+                }
+
+                function updateCounter(day) {
+                    const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
+                    document.getElementById(`exerciseCounter-${day}`).innerText = completedExercises;
+                }
+
+                function hideRegenerateButton(item) {
+                    // Find the parent container of the clicked exercise item
+                    const tableContainer = item.closest('.border-mealplan');
+
+                    // Find and hide the "Regenerate Exercises" button within the parent container
+                    const regenerateButton = tableContainer.querySelector('.shuffle-exercises-button');
+                    regenerateButton.style.display = 'none';
+                }
+
+                function updateCounter(day) {
+                    const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
+                    const minimumExercises = 5;
+                    const exerciseCounter = document.getElementById(`exerciseCounter-${day}`);
+                    exerciseCounter.innerText = completedExercises;
+
+                    if (completedExercises >= minimumExercises) {
+                        exerciseCounter.classList.add('minimum-hit');
+                        const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
+                        minimumToComplete.innerHTML = `<span style="color: green;">${minimumExercises} - Minimum hit! Good job!</span>`;
+                    } else {
+                        exerciseCounter.classList.remove('minimum-hit');
+                        const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
+                        minimumToComplete.innerHTML = `${minimumExercises}`;
+                    }
+                }
+
+                document.addEventListener('DOMContentLoaded', () => {
+                    // Example function to populate the hidden inputs with results
+                    function populateResults() {
+                        document.getElementById('username').value = $_SESSION['username']; // Replace with actual username logic
+                        document.getElementById('bmi').value = calculatedBMI;
+                        document.getElementById('bmiCategory').value = bmiCategory;
+                        document.getElementById('bodyFatPercentage').value = bodyFatPercentage;
+                        document.getElementById('fatMass').value = fatMass;
+                        document.getElementById('leanMass').value = leanMass;
+                        document.getElementById('hamwilBW_kg').value = hamwilBW_kg;
+                        document.getElementById('devineIBW').value = devineIBW;
+                        document.getElementById('robinsonIBW').value = robinsonIBW;
+                        document.getElementById('millerIBW').value = millerIBW;
+                        document.getElementById('caloricIntake').value = caloricIntake;
+                        document.getElementById('proteinIntake').value = proteinIntake;
+                    }
+
+                    // Call this function when your calculations are done
+                    populateResults();
+                });
+
+                $(document).ready(function () {
+                    $("#resultsForm").on("submit", function (event) {
+                        event.preventDefault(); // Prevent the default form submission
+
+                        $.ajax({
+                            type: "POST",
+                            url: "store_results.php", // Your PHP script to handle the form submission
+                            data: $(this).serialize(), // Serialize the form data
+                            success: function (response) {
+                                $("#message").html(response); // Display the response message
+                                if (response.includes("")) {
+                                    // Optional: handle success case
+                                }
+                            },
+                            error: function () {
+                                $("#message").html("There was an error processing the form.");
+                            }
+                        });
                     });
                 });
             });
-        });
 
-        function captureMealPlanData(day) {
-            var table = document.getElementById('mealPlanTable-' + day);
-            var rows = table.getElementsByTagName('tr');
-            var mealPlanData = [];
+            function captureMealPlanData(day) {
+                var table = document.getElementById('mealPlanTable-' + day);
+                var rows = table.getElementsByTagName('tr');
+                var mealPlanData = [];
 
-            for (var i = 1; i < rows.length; i++) { // Skip header row
-                var cells = rows[i].getElementsByTagName('td');
-                for (var j = 1; j < cells.length; j++) { // Skip time slot column
-                    var foodItem = cells[j].innerText.trim();
-                    mealPlanData.push({
-                        timeSlot: cells[0].innerText.trim(),
-                        foodItem: foodItem
-                    });
+                for (var i = 1; i < rows.length; i++) { // Skip header row
+                    var cells = rows[i].getElementsByTagName('td');
+                    for (var j = 1; j < cells.length; j++) { // Skip time slot column
+                        var foodItem = cells[j].innerText.trim();
+                        mealPlanData.push({
+                            timeSlot: cells[0].innerText.trim(),
+                            foodItem: foodItem
+                        });
+                    }
                 }
+
+                document.getElementById('mealPlanData-' + day).value = JSON.stringify(mealPlanData);
             }
 
-            document.getElementById('mealPlanData-' + day).value = JSON.stringify(mealPlanData);
-        }
+            function captureExercisePlanData(day) {
+                var table = document.getElementById('exercisePlanTable-' + day);
+                var rows = table.getElementsByTagName('tr');
+                var exercisePlanData = [];
 
-        function captureExercisePlanData(day) {
-            var table = document.getElementById('exercisePlanTable-' + day);
-            var rows = table.getElementsByTagName('tr');
-            var exercisePlanData = [];
-
-            for (var i = 1; i < rows.length; i++) { // Skip header row
-                var cells = rows[i].getElementsByTagName('td');
-                for (var j = 1; j < cells.length; j++) { // Skip time slot column
-                    var exerciseItem = cells[j].innerText.trim();
-                    exercisePlanData.push({
-                        timeSlot: cells[0].innerText.trim(),
-                        exerciseItem: exerciseItem
-                    });
+                for (var i = 1; i < rows.length; i++) { // Skip header row
+                    var cells = rows[i].getElementsByTagName('td');
+                    for (var j = 1; j < cells.length; j++) { // Skip time slot column
+                        var exerciseItem = cells[j].innerText.trim();
+                        exercisePlanData.push({
+                            timeSlot: cells[0].innerText.trim(),
+                            exerciseItem: exerciseItem
+                        });
+                    }
                 }
+
+                document.getElementById('exercisePlanData-' + day).value = JSON.stringify(exercisePlanData);
             }
 
-            document.getElementById('exercisePlanData-' + day).value = JSON.stringify(exercisePlanData);
-        }
-
-        document.querySelectorAll('form').forEach(function (form) {
-            form.addEventListener('submit', function (event) {
-                var day = form.querySelector('input[name="day"]').value.toLowerCase();
-                if (form.id.startsWith('mealPlanForm')) {
-                    captureMealPlanData(day);
-                } else if (form.id.startsWith('exercisePlanForm')) {
-                    captureExercisePlanData(day);
-                }
+            document.querySelectorAll('form').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    var day = form.querySelector('input[name="day"]').value.toLowerCase();
+                    if (form.id.startsWith('mealPlanForm')) {
+                        captureMealPlanData(day);
+                    } else if (form.id.startsWith('exercisePlanForm')) {
+                        captureExercisePlanData(day);
+                    }
+                });
             });
-        });
-    </script>
+        </script>
 
-    <script src="assets/js/jquery-3.6.0.min.js"></script>
-    <script src="assets/js/popper.min.js"></script>
-    <script src="assets/js/video-popup.js"></script>
-    <script src="assets/js/bootstrap.min.js"></script>
-    <script src="assets/js/custom.js"></script>
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script src="assets/js/owl.carousel.js"></script>
-    <script src="assets/js/carousel.js"></script>
-    <script src="assets/js/video-section.js"></script>
-    <script src="assets/js/counter.js"></script>
-    <script src="assets/js/animation.js"></script>
+        <script src="assets/js/jquery-3.6.0.min.js"></script>
+        <script src="assets/js/popper.min.js"></script>
+        <script src="assets/js/video-popup.js"></script>
+        <script src="assets/js/bootstrap.min.js"></script>
+        <script src="assets/js/custom.js"></script>
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script src="assets/js/owl.carousel.js"></script>
+        <script src="assets/js/carousel.js"></script>
+        <script src="assets/js/video-section.js"></script>
+        <script src="assets/js/counter.js"></script>
+        <script src="assets/js/animation.js"></script>
 </body>
 
 </html>

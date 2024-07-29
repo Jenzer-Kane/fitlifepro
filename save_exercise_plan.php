@@ -2,30 +2,29 @@
 include 'database.php'; // Include your database connection file
 session_start(); // Start the session to access session variables
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_SESSION['username'])) {
-        $username = $_SESSION['username']; // Get the username from the session
-        $day = $_POST['day'];
-        $exercisePlanData = json_decode($_POST['exercise_plan'], true);
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $username = $_SESSION['username']; // Assuming the username is stored in the session
+    $day = $_POST['day'];
+    $exercisePlanData = $_POST['exercise_plan'];
 
-        // Prepare SQL statement
-        $stmt = $mysqli->prepare("INSERT INTO exercise_plans (username, day, time_slot, exercise_item) VALUES (?, ?, ?, ?)");
+    $sql = "INSERT INTO exercise_plans (username, day, exercise_plan_data, created_at) VALUES (?, ?, ?, NOW()) 
+            ON DUPLICATE KEY UPDATE exercise_plan_data = VALUES(exercise_plan_data), updated_at = NOW()";
 
-        foreach ($exercisePlanData as $exercise) {
-            $timeSlot = $exercise['timeSlot'];
-            $exerciseItem = $exercise['exerciseItem'];
+    if ($stmt = $mysqli->prepare($sql)) {
+        $stmt->bind_param("sss", $username, $day, $exercisePlanData);
 
-            // Bind parameters and execute
-            $stmt->bind_param('ssss', $username, $day, $timeSlot, $exerciseItem);
-            $stmt->execute();
+        if ($stmt->execute()) {
+            $_SESSION['message'] = "Exercise plan saved successfully.";
+        } else {
+            $_SESSION['message'] = "Error saving exercise plan.";
         }
 
-        // Redirect or display a success message
-        header('Location: profile.php');
-        exit();
-    } else {
-        // Handle case where user is not logged in
-        echo "User not logged in.";
+        $stmt->close();
     }
+
+    $mysqli->close();
 }
+
+header("Location: profile.php");
+exit;
 ?>
