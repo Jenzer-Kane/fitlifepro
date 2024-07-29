@@ -1688,7 +1688,6 @@ $mysqli->close();
                                 </div>
                                 <input type="hidden" name="day" value="<?php echo $day; ?>">
                                 <input type="hidden" name="meal_plan" id="mealPlanData-<?php echo strtolower($day); ?>">
-                                <button type="submit">Save Diet Plan for <?php echo $day; ?></button>
                             </div>
                         </form>
                     <?php endforeach; ?>
@@ -1696,62 +1695,6 @@ $mysqli->close();
             </div>
         </section>
 
-        <!-- SAVED Diet Planning Section -->
-        <section class="our_schedule_section diet-planning">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                        <div class="our_schedule_content">
-                            <h5>DIET PLAN</h5>
-                            <h2>RECOMMENDED DIET PLAN FOR<br>
-                                <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
-                            </h2>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="diet-horizontal-display">
-                <?php foreach ($days as $day): ?>
-                    <form id="mealPlanForm-<?php echo strtolower($day); ?>" action="save_meal_plan.php" method="POST">
-                        <div class="border-mealplan">
-                            <div class="container">
-                                <div class="row">
-                                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                        <div class="our_schedule_content">
-                                            <h2 class="mt-5"><?php echo $day; ?></h2>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="diet-horizontal-display">
-                                <table class="border border-black" id="mealPlanTable-<?php echo strtolower($day); ?>">
-                                    <thead>
-                                        <tr>
-                                            <th>Time Slot</th>
-                                            <th>Food Item</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php if (isset($mealPlans[strtolower($day)])): ?>
-                                            <?php foreach ($mealPlans[strtolower($day)] as $meal): ?>
-                                                <tr>
-                                                    <td><?php echo $meal['timeSlot']; ?></td>
-                                                    <td><?php echo $meal['foodItem']; ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        <?php else: ?>
-                                            <!-- Default meal plan rows -->
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <input type="hidden" name="day" value="<?php echo $day; ?>">
-                            <input type="hidden" name="meal_plan" id="mealPlanData-<?php echo strtolower($day); ?>">
-                            <button type="submit">Save Diet Plan for <?php echo $day; ?></button>
-                        </div>
-                    </form>
-                <?php endforeach; ?>
-            </div>
 
 
             <!-- CURRENT SESSION Exercise Planning Section -->
@@ -1836,7 +1779,6 @@ $mysqli->close();
                                         </div>
                                         <input type="hidden" name="day" value="<?php echo $day; ?>">
                                         <input type="hidden" name="exercise_plan" id="exercisePlanData-<?php echo strtolower($day); ?>">
-                                        <button type="submit">Save Exercise Plan for <?php echo $day; ?></button>
                                     </div>
                                 </form>
                             <?php endforeach; ?>
