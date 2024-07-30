@@ -272,9 +272,6 @@ $result = $conn->query($sql);
                                     <a class="nav-link" href="./services.php">Services</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./pricing.php">Pricing</a>
-                                </li>
-                                <li class="nav-item">
                                     <a class="nav-link" href="./collaborators.php">Collaborators</a>
                                 </li>
                                 <li class="nav-item active">

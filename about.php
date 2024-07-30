@@ -119,9 +119,6 @@
                                     <a class="nav-link" href="./services.php">Services</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./pricing.php">Pricing</a>
-                                </li>
-                                <li class="nav-item">
                                     <a class="nav-link" href="./collaborators.php">Collaborators</a>
                                 </li>
                                 <li class="nav-item">
@@ -239,7 +236,7 @@
                             <h6>PROGRESS MONITORING</h6>
                             <p>Log and track your progress with our built-in progress logging.</p>
                             <div class="btn_wrapper">
-                                <a class="read_more_btn text-decoration-none" href="./index.php">Read more</a>
+                                <a class="read_more_btn text-decoration-none" href="./services.php">Read more</a>
                             </div>
                         </div>
                     </div>
@@ -249,7 +246,7 @@
                             <h6>NUTRITIONAL GUIDANCE</h6>
                             <p>Get optimal bulking and cutting guidance with meals.</p>
                             <div class="btn_wrapper">
-                                <a class="read_more_btn text-decoration-none" href="./index.php">Read more</a>
+                                <a class="read_more_btn text-decoration-none" href="./services.php">Read more</a>
                             </div>
                         </div>
                     </div>
@@ -259,7 +256,7 @@
                             <h6>BODY-WEIGHT EXERCISES</h6>
                             <p>Get body-weight exercises and programs sent to your phone.</p>
                             <div class="btn_wrapper">
-                                <a class="read_more_btn text-decoration-none" href="./index.php">Read more</a>
+                                <a class="read_more_btn text-decoration-none" href="./services.php">Read more</a>
                             </div>
                         </div>
                     </div>
@@ -269,7 +266,7 @@
                             <h6>WEIGHT LIFTING</h6>
                             <p>Get personalized weight-lifting routines according to your physique goals.</p>
                             <div class="btn_wrapper">
-                                <a class="read_more_btn text-decoration-none" href="./index.php">Read more</a>
+                                <a class="read_more_btn text-decoration-none" href="./services.php">Read more</a>
                             </div>
                         </div>
                     </div>

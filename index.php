@@ -131,9 +131,6 @@ session_start();
                                     <a class="nav-link" href="./services.php">Services</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./pricing.php">Pricing</a>
-                                </li>
-                                <li class="nav-item">
                                     <a class="nav-link" href="./collaborators.php">Collaborators</a>
                                 </li>
                                 <li class="nav-item">
@@ -193,7 +190,7 @@ session_start();
                                         <p data-aos="fade-right">A personalized gym routine curator and nutritional
                                             guidance platform.</p>
                                         <div class="btn_wrapper" data-aos="fade-up">
-                                            <a class="text-decoration-none join_now_btn" href="./pricing.php">Join us
+                                            <a class="text-decoration-none join_now_btn" href="./services.php">Join us
                                                 now
                                                 <i class="fa-solid fa-play"></i>
                                             </a>

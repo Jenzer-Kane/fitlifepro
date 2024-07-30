@@ -226,9 +226,6 @@ $mysqli->close();
                                     <a class="nav-link" href="./services.php">Services</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="./pricing.php">Pricing</a>
-                                </li>
-                                <li class="nav-item">
                                     <a class="nav-link" href="./collaborators.php">Collaborators</a>
                                 </li>
                                 <li class="nav-item">
@@ -278,8 +275,9 @@ $mysqli->close();
     <div id="popup" class="popup">
         <span class="popup-close" onclick="closePopup()">&times;</span>
         <div class="popup-content">
-            <h2>Register Now for Free!</h2>
-            <h3>Register now and try our free BMI calculator!</h3>
+            <h2>Try our free BMI calculator!</h2>
+            <h4>Learn about your BMI, Body Fat Percentage, Ideal Weight and more!</h4>
+            <h2>Register Now to access!</h2>
             <div class="popup-button-container">
                 <a href="./register.html" class="popup-button">Register</a>
             </div>
@@ -315,13 +313,13 @@ $mysqli->close();
                             <h5>ESSENTIAL TIER</h5>
                             <ul class="list-unstyled">
                                 <li>
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Basic content
-                                </li>
-                                <li>
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Bodyweight exercises
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Meal Plan
                                 </li>
                                 <li>
                                     <i class="fa-solid fa-check" aria-hidden="true"></i>Progress Tracking
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Access to Forums
                                 </li>
                             </ul>
                             <!-- Update your HTML with the logSubscription function calls -->
@@ -348,16 +346,16 @@ $mysqli->close();
                             <h5>PREMIUM TIER</h5>
                             <ul class="list-unstyled">
                                 <li>
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Intermediate content
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Meal Plan
                                 </li>
                                 <li>
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Bodyweight exercises
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Exercises
                                 </li>
                                 <li>
                                     <i class="fa-solid fa-check" aria-hidden="true"></i>Progress Tracking
                                 </li>
                                 <li>
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Nutritional Guidance
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Access to Forums
                                 </li>
                             </ul>
                             <div class="btn_wrapper">
@@ -383,25 +381,25 @@ $mysqli->close();
                             <h5>ELITE TIER</h5>
                             <ul class="list-unstyled">
                                 <li>
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Advanced content
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Meal Plan
                                 </li>
                                 <li>
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Bodyweight exercises
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Exercises
                                 </li>
                                 <li>
                                     <i class="fa-solid fa-check" aria-hidden="true"></i>Progress Tracking
                                 </li>
                                 <li>
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Nutritional Guidance
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Access to Forums
                                 </li>
                                 <li>
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Curated weight-lifting routines
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Bonus Exercise routines
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;from
+                                    world famous &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bodybuilders. (Mike
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mentzer,
+                                    Arnold &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Schwarzenegger, and
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;more!)
                                 </li>
-
-                                <li>
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>24/7 Live Support
-                                </li>
-
                             </ul>
                             <div class="btn_wrapper">
                                 <a class="join_now_btn text-decoration-none"
