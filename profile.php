@@ -2076,7 +2076,6 @@ $mysqli->close();
                     </div>
                 </section>
 
-                ==
                 <!-- CURRENT SESSION (PREMIUM AND ELITE TIER) EXERCISE PLAN -->
                 <section class="our_schedule_section exercise-planning">
                     <div class="container">

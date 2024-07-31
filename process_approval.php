@@ -17,7 +17,7 @@ function sendEmail($to, $plan, $price, $description)
         $mail->Host = 'smtp.gmail.com'; // Gmail SMTP server
         $mail->SMTPAuth = true;
         $mail->Username = 'fitlifepro2024@gmail.com'; // Gmail email address
-        $mail->Password = 'wnoa azlq gxqc peef'; // The app password  generated
+        $mail->Password = 'wnoa azlq gxqc peef'; // The app password generated
         $mail->SMTPSecure = 'tls'; // Use 'tls' or 'ssl'
         $mail->Port = 587; // TCP port to connect to
 
@@ -71,33 +71,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reference_number'], $
     if (isset($_POST['approve'])) {
         // Perform approval logic here
 
-        // Update status in the database to "Approved"
-        $updateStatusQuery = "UPDATE transactions SET status = 'Approved' WHERE reference_number = '$reference_number'";
-        if ($mysqli->query($updateStatusQuery) === TRUE) {
-            // Status updated successfully
+        // Fetch the user email associated with the transaction
+        $transactionQuery = "SELECT * FROM transactions WHERE reference_number = '$reference_number'";
+        $result = $mysqli->query($transactionQuery);
+        if ($result && $result->num_rows > 0) {
+            $transactionData = $result->fetch_assoc();
+            $userEmail = $transactionData['user_email'];
 
-            if (sendEmail($email, $plan, $price, $description)) {
-                // Email sent successfully
-                // Fetch transaction details from the database
-                $approvedTransaction = $mysqli->query("SELECT * FROM transactions WHERE reference_number = '$reference_number'");
-                if ($approvedTransaction && $approvedTransaction->num_rows > 0) {
-                    $transactionData = $approvedTransaction->fetch_assoc();
-                    $approvedTransactionDetails = "Transaction approved. Transaction ID: " . $transactionData['transaction_id'] . " | Reference Number: " . $transactionData['reference_number'];
-                    // Redirect back to admin_subscription_approval.php with success message
-                    header("Location: admin_subscription_approval.php?message=" . urlencode($approvedTransactionDetails));
-                    exit();
+            // Delete previous transactions by this user
+            $deleteOldTransactionsQuery = "DELETE FROM transactions WHERE user_email = '$userEmail' AND reference_number != '$reference_number'";
+            if ($mysqli->query($deleteOldTransactionsQuery) === TRUE) {
+                // Update status of the new transaction to "Approved"
+                $updateStatusQuery = "UPDATE transactions SET status = 'Approved' WHERE reference_number = '$reference_number'";
+                if ($mysqli->query($updateStatusQuery) === TRUE) {
+                    // Status updated successfully
+
+                    if (sendEmail($email, $plan, $price, $description)) {
+                        // Email sent successfully
+                        // Fetch transaction details from the database
+                        $approvedTransaction = $mysqli->query("SELECT * FROM transactions WHERE reference_number = '$reference_number'");
+                        if ($approvedTransaction && $approvedTransaction->num_rows > 0) {
+                            $transactionData = $approvedTransaction->fetch_assoc();
+                            $approvedTransactionDetails = "Transaction approved. Transaction ID: " . $transactionData['transaction_id'] . " | Reference Number: " . $transactionData['reference_number'];
+                            // Redirect back to admin_subscription_approval.php with success message
+                            header("Location: admin_subscription_approval.php?message=" . urlencode($approvedTransactionDetails));
+                            exit();
+                        } else {
+                            // Transaction details not found
+                            echo 'Error: Transaction details not found.';
+                        }
+                    } else {
+                        // Error sending email
+                        echo 'Error sending email.';
+                    }
                 } else {
-                    // Transaction details not found
-                    echo 'Error: Transaction details not found.';
+                    // Error updating status
+                    echo 'Error updating status: ' . $mysqli->error;
                 }
             } else {
-                // Error sending email
-                echo 'Error sending email.';
+                // Error deleting old transactions
+                echo 'Error deleting old transactions: ' . $mysqli->error;
             }
-
         } else {
-            // Error updating status
-            echo 'Error updating status: ' . $mysqli->error;
+            // Transaction not found
+            echo 'Error: Transaction not found.';
         }
     } elseif (isset($_POST['disapprove'])) {
         // Perform disapproval logic here
