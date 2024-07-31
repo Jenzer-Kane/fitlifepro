@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reference_number'], $
             $transactionData = $result->fetch_assoc();
             $userEmail = $transactionData['user_email'];
 
-            // Delete previous transactions by this user
+            // Delete all previous transactions by this user except the new one
             $deleteOldTransactionsQuery = "DELETE FROM transactions WHERE user_email = '$userEmail' AND reference_number != '$reference_number'";
             if ($mysqli->query($deleteOldTransactionsQuery) === TRUE) {
                 // Update status of the new transaction to "Approved"
