@@ -612,6 +612,13 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
     $generatedText = "";
 }
 
+// Fetch user info from transactions table
+$userTransactionsSql = "SELECT * FROM transactions WHERE username = ?";
+$userTransactionsStmt = $mysqli->prepare($userTransactionsSql);
+$userTransactionsStmt->bind_param('s', $username);
+$userTransactionsStmt->execute();
+$userTransactionsResult = $userTransactionsStmt->get_result();
+
 $query = "SELECT * FROM quotes ORDER BY RAND() LIMIT 1";
 $result = $mysqli->query($query);
 
@@ -637,6 +644,9 @@ $plan = isset($user['plan']) ? $user['plan'] : null;
 
 // Check if the status is not "Pending" or "Disapproved"
 $showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved' && $status !== null);
+
+// Show subscription status if status is not "Disapproved" or not null
+$showSubscriptionInfoSection = ($status !== 'Disapproved' && $status !== null);
 
 $showSubscribeMessage = ($status === null && $status == 'Pending' && $status == 'Disapproved' && $plan === null);
 
@@ -1010,6 +1020,50 @@ $mysqli->close();
             </div>
         </section>
     </div>
+
+    <?php if ($showSubscriptionInfoSection): ?>
+        <div class="container-fluid">
+            <table class="table table-bordered table-striped mt-4" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Plan</th>
+                        <th>Description</th>
+                        <th>Date Requested</th>
+                        <th>Date End</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    if ($userTransactionsResult && $userTransactionsResult->num_rows > 0) {
+                        // Output data of each row
+                        while ($row = $userTransactionsResult->fetch_assoc()) {
+                            // Handle undefined keys
+                            $id = isset($row["id"]) ? $row["id"] : "";
+                            $plan = isset($row["plan"]) ? $row["plan"] : "";
+                            $description = isset($row["description"]) ? $row["description"] : "";
+                            $price = isset($row["price"]) ? $row["price"] : "";
+                            $gcash_number = isset($row["gcash_number"]) ? $row["gcash_number"] : "";
+                            $reference_number = isset($row["reference_number"]) ? $row["reference_number"] : "";
+                            $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
+                            $date_end = isset($row["date_end"]) ? date("F j, Y | g:i A", strtotime($row["date_end"])) : "";
+                            $status = isset($row["status"]) ? $row["status"] : "";
+
+                            // Add style attribute to center align the values
+                            echo "<tr>
+                        <td style='text-align: center;'>" . htmlspecialchars($plan) . "</td>
+                        <td style='text-align: center;'>" . htmlspecialchars($description) . "</td>
+                        <td style='text-align: center;'>" . htmlspecialchars($created_at) . "</td>
+                        <td style='text-align: center;'>" . htmlspecialchars($date_end) . "</td>
+                        <td style='text-align: center;'>" . htmlspecialchars($status) . "</td>";
+                        }
+                    }
+                    ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+
 
     <!DOCTYPE html>
 
@@ -2071,7 +2125,6 @@ $mysqli->close();
                                     <input type="hidden" name="meal_plan_<?php echo strtolower($day); ?>"
                                         id="mealPlanData-<?php echo strtolower($day); ?>">
                                 <?php endforeach; ?>
-                                <button type="submit">Save Meal Plans</button>
                             </form>
                         </div>
                 </div>
@@ -2160,7 +2213,6 @@ $mysqli->close();
                                         </div>
                                         <input type="hidden" name="day" value="<?php echo $day; ?>">
                                         <input type="hidden" name="exercise_plan" id="exercisePlanData-<?php echo strtolower($day); ?>">
-                                        <button type="submit">Save Exercise Plan for <?php echo $day; ?></button>
                                     </div>
                                 </form>
                             <?php endforeach; ?>
@@ -2221,131 +2273,115 @@ $mysqli->close();
                     thighSection.style.display = 'none';
                 }
             }
-
-            // Function to attach event listeners to meal items
-            function attachEventListeners() {
-                const mealItems = document.querySelectorAll('.mealItem');
-                mealItems.forEach(item => {
-                    item.addEventListener('click', () => {
-                        const day = item.getAttribute('data-day');
-                        const calories = parseFloat(item.getAttribute('data-calories'));
-                        const protein = parseFloat(item.getAttribute('data-protein'));
-
-                        // Check if intake has reached the threshold
-                        const totalElement = document.getElementById(`total-${day}`);
-                        const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
-                        const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
-                        const maxCalories = <?php echo isset($intakeResults) ? $intakeResults['caloricIntake'] : 0; ?>;
-                        const maxProtein = <?php echo isset($intakeResults) ? $intakeResults['proteinIntake'] : 0; ?>;
-
-                        // Check if the intake is already at or above the threshold
-                        if (currentCalories >= maxCalories) {
-                            return; // Disable clicking if intake is at or above threshold
-                        }
-
-                        // Toggle the green background
-                        item.classList.toggle('consumed');
-
-                        // Update daily totals
-                        if (item.classList.contains('consumed')) {
-                            totalElement.setAttribute('data-calories', currentCalories + calories);
-                            totalElement.setAttribute('data-protein', currentProtein + protein);
-                        } else {
-                            totalElement.setAttribute('data-calories', currentCalories - calories);
-                            totalElement.setAttribute('data-protein', currentProtein - protein);
-                        }
-
-                        totalElement.innerHTML = `
-                    <div class="large-counter-text">
-                        Calories: <span id="calories-${day}">${totalElement.getAttribute('data-calories')}</span> / ${maxCalories}<br>
-                        Protein (g): <span id="protein-${day}">${totalElement.getAttribute('data-protein')}</span> / ${maxProtein}
-                    </div>
-                `;
-                    });
-                });
-            }
-
-            // Attach event listeners when the page loads
-            attachEventListeners();
-
-            // Function to shuffle meal plan
-            function shuffleMealPlan(day) {
-                const table = document.getElementById('mealPlanTable-' + day);
-                const timeSlots = <?php echo json_encode($timeSlots); ?>;
-                let mealPlan = <?php echo json_encode($meal_plan); ?>;
-
-                // Separate meal plan items by food exchange group
-                const groupedItems = {};
-                mealPlan.forEach(item => {
-                    if (!groupedItems[item.food_exchange_group]) {
-                        groupedItems[item.food_exchange_group] = [];
-                    }
-                    groupedItems[item.food_exchange_group].push(item);
-                });
-
-                // Array to hold the shuffled meal plan
-                let shuffledPlan = [];
-
-                // Add one item from each group to the shuffled plan
-                Object.values(groupedItems).forEach(group => {
-                    shuffledPlan.push(group[Math.floor(Math.random() * group.length)]);
-                });
-
-                // Shuffle the remaining items
-                const remainingItems = mealPlan.filter(item => !shuffledPlan.includes(item));
-                shuffledPlan = shuffledPlan.concat(remainingItems.sort(() => Math.random() - 0.5));
-
-                // Generate table rows for the shuffled plan
-                let mealIndex = 0;
-                table.querySelector('tbody').innerHTML = '';
-                timeSlots.forEach(timeSlot => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `<td>${timeSlot}</td>`;
-                    for (let i = 0; i < timeSlots.length; i++) {
-                        const foodItem = shuffledPlan[mealIndex % shuffledPlan.length];
-                        const cell = document.createElement('td');
-                        cell.classList.add('mealItem');
-                        cell.setAttribute('data-day', day);
-                        cell.setAttribute('data-time-slot', timeSlot);
-                        cell.setAttribute('data-calories', foodItem['energy_kcal']);
-                        cell.setAttribute('data-protein', foodItem['protein_g']);
-                        cell.innerHTML = `
-                    <div class="mealItemContent">
-                        <br>${foodItem['english_name']}<br><br>
-                        ${foodItem['filipino_name']}<br><br>
-                        <strong>Protein (g):</strong> ${foodItem['protein_g']}<br>
-                        <strong>Calories (kcal):</strong> ${foodItem['energy_kcal']}<br>
-                        <strong>Measure:</strong> ${foodItem['household_measure']}<br><br>
-                    </div>
-                `;
-                        row.appendChild(cell);
-                        mealIndex++;
-                    }
-                    table.querySelector('tbody').appendChild(row);
-                });
-
-                // Reattach event listeners after shuffling
-                attachEventListeners();
-            }
-
-            // Event listener for the Save button
-            document.getElementById('saveMealPlansForm').addEventListener('submit', function (event) {
-                const days = <?php echo json_encode($days); ?>;
-                days.forEach(day => {
-                    const mealPlanTable = document.getElementById(`mealPlanTable-${day.toLowerCase()}`);
-                    const mealPlanData = [];
-                    mealPlanTable.querySelectorAll('tbody tr').forEach(row => {
-                        const timeSlot = row.cells[0].textContent.trim();
-                        for (let i = 1; i < row.cells.length; i++) {
-                            const foodItem = row.cells[i].innerText.trim();
-                            mealPlanData.push({ timeSlot, foodItem });
-                        }
-                    });
-                    document.getElementById(`mealPlanData-${day.toLowerCase()}`).value = JSON.stringify(mealPlanData);
-                });
-            });
         });
 
+        // Function to attach event listeners to meal items
+        function attachEventListeners() {
+            const mealItems = document.querySelectorAll('.mealItem');
+            mealItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const day = item.getAttribute('data-day');
+                    const calories = parseFloat(item.getAttribute('data-calories'));
+                    const protein = parseFloat(item.getAttribute('data-protein'));
+
+                    // Check if intake has reached the threshold
+                    const totalElement = document.getElementById(`total-${day}`);
+                    const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
+                    const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
+                    const maxCalories = <?php echo isset($intakeResults) ? $intakeResults['caloricIntake'] : 0; ?>;
+                    const maxProtein = <?php echo isset($intakeResults) ? $intakeResults['proteinIntake'] : 0; ?>;
+
+                    // Check if the intake is already at or above the threshold
+                    if (currentCalories >= maxCalories) {
+                        // Disable clicking if intake is at or above threshold
+                        return;
+                    }
+
+                    // Toggle the green background
+                    item.classList.toggle('consumed');
+
+                    // Update daily totals
+                    if (item.classList.contains('consumed')) {
+                        totalElement.setAttribute('data-calories', currentCalories + calories);
+                        totalElement.setAttribute('data-protein', currentProtein + protein);
+                    } else {
+                        totalElement.setAttribute('data-calories', currentCalories - calories);
+                        totalElement.setAttribute('data-protein', currentProtein - protein);
+                    }
+
+                    totalElement.innerHTML = `
+                <div class="large-counter-text">
+                    Calories: <span id="calories-${day}">${totalElement.getAttribute('data-calories')}</span> / ${maxCalories}<br>
+                    Protein (g): <span id="protein-${day}">${totalElement.getAttribute('data-protein')}</span> / ${maxProtein}
+                </div>
+            `;
+                });
+            });
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Attach event listeners when the page loads
+            attachEventListeners();
+        });
+
+        function shuffleMealPlan(day) {
+            const table = document.getElementById('mealPlanTable-' + day);
+            const timeSlots = <?php echo json_encode($timeSlots); ?>;
+            let mealPlan = <?php echo json_encode($meal_plan); ?>;
+            // Separate meal plan items by food exchange group
+            const groupedItems = {};
+            mealPlan.forEach(item => {
+                if (!groupedItems[item.food_exchange_group]) {
+                    groupedItems[item.food_exchange_group] = [];
+                }
+                groupedItems[item.food_exchange_group].push(item);
+            });
+
+            // Array to hold the shuffled meal plan
+            let shuffledPlan = [];
+
+            // Add one item from each group to the shuffled plan
+            Object.values(groupedItems).forEach(group => {
+                shuffledPlan.push(group[Math.floor(Math.random() * group.length)]);
+            });
+
+            // Shuffle the remaining items
+            const remainingItems = mealPlan.filter(item => !shuffledPlan.includes(item));
+            shuffledPlan = shuffledPlan.concat(remainingItems.sort(() => Math.random() - 0.5));
+
+            // Generate table rows for the shuffled plan
+            let mealIndex = 0;
+            table.querySelector('tbody').innerHTML = '';
+            timeSlots.forEach(timeSlot => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${timeSlot}</td>`;
+                for (let i = 0; i < timeSlots.length; i++) {
+                    const foodItem = shuffledPlan[mealIndex % shuffledPlan.length];
+                    const cell = document.createElement('td');
+                    cell.classList.add('mealItem');
+                    cell.setAttribute('data-day', day);
+                    cell.setAttribute('data-time-slot', timeSlot);
+                    cell.setAttribute('data-calories', foodItem['energy_kcal']);
+                    cell.setAttribute('data-protein', foodItem['protein_g']);
+                    cell.innerHTML = `
+        <div class="mealItemContent">
+            <br>${foodItem['english_name']}<br><br>
+            ${foodItem['filipino_name']}<br><br>
+            <strong>Protein (g):</strong> ${foodItem['protein_g']}<br>
+            <strong>Calories (kcal):</strong> ${foodItem['energy_kcal']}<br>
+            <strong>Measure:</strong> ${foodItem['household_measure']}<br><br>
+        </div>
+    `;
+                    row.appendChild(cell);
+                    mealIndex++;
+                }
+                table.querySelector('tbody').appendChild(row);
+            });
+
+            // Reattach event listeners after shuffling
+            attachEventListeners();
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             attachExerciseEventListeners();

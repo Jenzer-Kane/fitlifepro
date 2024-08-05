@@ -42,6 +42,42 @@ $userTransactionsStmt = $mysqli->prepare($userTransactionsSql);
 $userTransactionsStmt->bind_param('s', $username);
 $userTransactionsStmt->execute();
 $userTransactionsResult = $userTransactionsStmt->get_result();
+
+// Fetch all threads with forum details
+$sql = "SELECT t.id, t.title, t.content, t.username, t.created_at, f.name AS forum_name 
+        FROM threads t 
+        JOIN forums f ON t.forum_id = f.id";
+$result = $mysqli->query($sql);
+
+// Filter threads by username
+$userThreads = [];
+while ($row = $result->fetch_assoc()) {
+    if ($row['username'] === $username) {
+        $userThreads[] = $row;
+    }
+}
+
+// Prepare the SQL query to fetch replies with thread and forum details
+$repliesSql = "SELECT r.id, r.thread_id, r.username, r.content, r.created_at, 
+                      t.title AS thread_title, t.username AS thread_author, f.name AS forum_name
+               FROM replies r
+               JOIN threads t ON r.thread_id = t.id
+               JOIN forums f ON t.forum_id = f.id
+               WHERE r.username = ?";
+$repliesStmt = $mysqli->prepare($repliesSql);
+$repliesStmt->bind_param('s', $username);
+$repliesStmt->execute();
+$repliesResult = $repliesStmt->get_result();
+
+$userReplies = [];
+while ($row = $repliesResult->fetch_assoc()) {
+    $userReplies[] = $row;
+}
+
+function format_date($date)
+{
+    return date('F j, Y | g:i A', strtotime($date));
+}
 ?>
 
 <html>
@@ -347,6 +383,83 @@ $userTransactionsResult = $userTransactionsStmt->get_result();
             </table>
         <?php else: ?>
             <p>No body reports found for this user.</p>
+        <?php endif; ?>
+
+
+        <h2>Threads Created</h2>
+        <?php if (count($userThreads) > 0): ?>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Thread</th>
+                        <th>Forum Located</th>
+                        <th>Description</th>
+                        <th>Date Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($userThreads as $thread): ?>
+                        <tr>
+                            <td style='text-align: center;'><?= htmlspecialchars($thread['id']) ?></td>
+                            <td style='text-align: center;'>
+                                <a href="admin_replies.php?thread_id=<?= urlencode($thread['id']) ?>">
+                                    <?= htmlspecialchars($thread['title']) ?>
+                                </a>
+                            </td>
+                            <td style='text-align: center;'><?= htmlspecialchars($thread['forum_name']) ?></td>
+                            <td style="white-space: nowrap;"><?= htmlspecialchars($thread['content']) ?></td>
+                            <td style='text-align: center;'><?= format_date($thread['created_at']) ?></td>
+                            <td style='text-align: center;'>
+                                <a href="delete_thread.php?id=<?= urlencode($thread['id']) ?>" class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Are you sure you want to delete this thread?');">Delete</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php else: ?>
+            <p>No threads created by this user.</p>
+        <?php endif; ?>
+
+        <h2>Replies Made</h2>
+        <?php if (count($userReplies) > 0): ?>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Thread Located</th>
+                        <th>Forum Located</th>
+                        <th>Reply Content</th>
+                        <th>Date Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($userReplies as $reply): ?>
+                        <tr>
+                            <td style='text-align: center;'><?= htmlspecialchars($reply['id']) ?></td>
+                            <td style='text-align: center;'>
+                                <a href="admin_replies.php?thread_id=<?= urlencode($reply['thread_id']) ?>">
+                                    <?= htmlspecialchars($reply['thread_title']) ?>
+                                </a>
+                            </td>
+                            <td style='text-align: center;'><?= htmlspecialchars($reply['forum_name']) ?></td>
+                            <td style="white-space: nowrap;"><?= htmlspecialchars($reply['content']) ?></td>
+                            <td style='text-align: center;'>
+                                <?= date("F j, Y | g:i A", strtotime($reply['created_at'])) ?>
+                            </td>
+                            <td style='text-align: center;'>
+                                <a href="delete_reply.php?id=<?= urlencode($reply['id']) ?>" class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Are you sure you want to delete this reply?');">Delete</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php else: ?>
+            <p>No replies found by this user.</p>
         <?php endif; ?>
     </div>
 
