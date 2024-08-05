@@ -20,7 +20,6 @@ $result = $mysqli->query($sql);
 
 <head>
     <title>Members | FITLIFE PRO ADMIN</title>
-    <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
     <link rel="apple-touch-icon" sizes="57x57" href="./assets/images/favicon/apple-icon-57x57.png">
@@ -40,12 +39,9 @@ $result = $mysqli->query($sql);
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
-    <!-- Latest compiled and minified CSS -->
     <link href="assets/bootstrap/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="./assets/js/bootstrap.min.js">
-    <!-- Font Awesome link -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-    <!-- StyleSheet link CSS -->
     <link href="assets/css/style.css" rel="stylesheet" type="text/css">
     <link href="assets/css/mediaqueries.css" rel="stylesheet" type="text/css">
     <link href="assets/css/owl.carousel.min.css" rel="stylesheet" type="text/css">
@@ -57,7 +53,6 @@ $result = $mysqli->query($sql);
             background-color: rgba(0, 0, 0, 0.6);
             position: relative;
             z-index: 2;
-
         }
 
         .navbar-nav {
@@ -76,22 +71,16 @@ $result = $mysqli->query($sql);
             color: #007bff;
         }
 
-
         .team_member_box_content2 img {
             border-radius: 50%;
             overflow: hidden;
-            /* Ensure the image stays within the circular boundary */
             width: 300px;
-            /* Set the desired width */
             height: 300px;
-            /* Set the desired height */
             object-fit: cover;
-            /* Maintain the aspect ratio and cover the container */
         }
 
         .table-responsive {
             width: 100%;
-            /* Adjust this value to set the width of the table */
         }
     </style>
 </head>
@@ -101,13 +90,11 @@ $result = $mysqli->query($sql);
         <header>
             <div class="container">
                 <div class="d-flex align-items-center justify-content-between">
-                    <!-- Logo outside the navbar -->
                     <a class="navbar-brand mb-0" href="./admin_dashboard.php">
                         <figure class="mb-0">
                             <img src="./assets/images/fitlife_pro_logo2.png" alt="" class="img-fluid">
                         </figure>
                     </a>
-                    <!-- Navbar -->
                     <nav class="navbar navbar-expand-lg navbar-light">
                         <button class="navbar-toggler collapsed" type="button" data-toggle="collapse"
                             data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
@@ -139,14 +126,10 @@ $result = $mysqli->query($sql);
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
-                                        // If admin is logged in, display "Admin" instead of username
                                         echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Admin</a></li>';
-
                                     } elseif (isset($_SESSION['username'])) {
-                                        // If user is logged in, show name and logout button
                                         echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
                                     } else {
-                                        // If user is not logged in, show login and register buttons
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./login.html">Login</a></li>';
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
                                     }
@@ -161,41 +144,46 @@ $result = $mysqli->query($sql);
                 </div>
             </div>
         </header>
-    </div> <!-- Closing banner-section-outer -->
+    </div>
 
-    <div class="container-fluid"> <!-- Changed from container to container-fluid -->
+    <div class="container-fluid">
         <h2>Members</h2>
+        <h5>Existing Members. Click Username for more Info.</h5>
         <table class="table table-bordered table-striped" style="width: 100%;">
-            <!-- Added style="width: 100%;" to ensure table takes up whole width -->
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
                     <th>First Name</th>
                     <th>Last Name</th>
                     <th>Gender</th>
-                    <th>Email</th>
                     <th>Date Registered</th>
                 </tr>
             </thead>
             <tbody>
                 <?php
                 if ($result && $result->num_rows > 0) {
-                    // Output data of each row
                     while ($row = $result->fetch_assoc()) {
-                        // Handle undefined keys
-                        $id = isset($row["id"]) ? $row["id"] : "";
+                        $username = isset($row["username"]) ? $row["username"] : "";
+                        $email = isset($row["email"]) ? $row["email"] : "";
                         $firstname = isset($row["firstname"]) ? $row["firstname"] : "";
                         $lastname = isset($row["lastname"]) ? $row["lastname"] : "";
                         $gender = isset($row["gender"]) ? $row["gender"] : "";
-                        $email = isset($row["email"]) ? $row["email"] : "";
+
                         $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
 
-                        // Add style attribute to center align the values
-                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $firstname . "</td><td style='text-align: center;'>" . $lastname . "</td><td style='text-align: center;'>" . $gender . "</td><td style='text-align: center;'>" . $email . "</td><td style='text-align: center;'>" . $created_at . "</td></tr>";
+                        echo "<tr>
+                            <td style='text-align: center;'><a href='view_user.php?username=$username'>$username</a></td>
+                                                        <td style='text-align: center;'>$email</td>
+                            <td style='text-align: center;'>$firstname</td>
+                            <td style='text-align: center;'>$lastname</td>
+                            <td style='text-align: center;'>$gender</td>
+
+                            <td style='text-align: center;'>$created_at</td>
+                        </tr>";
                     }
                 } else {
-                    // Display a message if no data is found
-                    echo "<tr><td colspan='4' style='text-align: center;'>No ID found.</td></tr>";
+                    echo "<tr><td colspan='7' style='text-align: center;'>No members found.</td></tr>";
                 }
                 ?>
             </tbody>
@@ -213,10 +201,10 @@ $result = $mysqli->query($sql);
     <script src="assets/js/video-section.js"></script>
     <script src="assets/js/counter.js"></script>
     <script src="assets/js/animation.js"></script>
+</body>
 
 </html>
 
 <?php
-// Close the database connection
 $mysqli->close();
 ?>

@@ -52,7 +52,7 @@ function format_date($date)
 
 <head>
     <meta charset="UTF-8">
-    <title>Replies | FITLIFE PRO ADMIN</title>
+    <title>Thread Replies | FITLIFE PRO ADMIN</title>
     <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
@@ -194,8 +194,8 @@ function format_date($date)
     </div>
 
     <div class="container">
-        <h2>Replies for Thread: <?= htmlspecialchars($thread_title) ?></h2>
-        <h5>Forum: <?= htmlspecialchars($forum_name) ?></h5>
+        <h2>Replies for Thread: <br><?= htmlspecialchars($thread_title) ?></h2>
+        <h5>Forum Located: <?= htmlspecialchars($forum_name) ?></h5>
         <?php
         if (isset($_SESSION['message'])) {
             echo '<div class="alert alert-info">' . $_SESSION['message'] . '</div>';

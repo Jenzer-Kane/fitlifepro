@@ -177,7 +177,7 @@ function format_date($date)
         ?>
 
         <!-- Display list of forums -->
-        <h5>Existing Forums</h5>
+        <h5>Existing Forums. Edit or Delete here.</h5>
         <table class="table table-bordered table-striped">
             <thead>
                 <tr>
@@ -204,7 +204,7 @@ function format_date($date)
         </table>
 
         <!-- Form for creating a new forum -->
-        <h5 class="mt-5">New Forum</h5>
+        <h5 class="mt-5">Create New Forum</h5>
         <form action="create_forum.php" method="post">
             <div class="form-group">
                 <label for="forum_name">Forum Name:</label>

@@ -10,8 +10,12 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     exit();
 }
 
-// Retrieve data from the registration table
-$sql = "SELECT * FROM contact_form";
+// Retrieve data from the contact_form table, including username from the registration table
+$sql = "
+    SELECT cf.*, u.username 
+    FROM contact_form cf
+    LEFT JOIN registration u ON cf.email = u.email
+";
 $result = $mysqli->query($sql);
 ?>
 
@@ -162,15 +166,15 @@ $result = $mysqli->query($sql);
         </header>
     </div>
 
-    <div class="container-fluid"> <!-- Changed from container to container-fluid -->
+    <div class="container-fluid">
         <h2>Inquiries</h2>
+        <h5>Existing Inquiries. Click User Email for more Info.</h5>
         <table class="table table-bordered table-striped" style="width: 100%;">
-            <!-- Added style="width: 100%;" to ensure table takes up whole width -->
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>User Email</th>
+                    <th>Username</th>
                     <th>Full Name</th>
-                    <th>Email</th>
                     <th>Subject</th>
                     <th>Message</th>
                     <th>Date Received</th>
@@ -179,24 +183,26 @@ $result = $mysqli->query($sql);
             <tbody>
                 <?php
                 if ($result && $result->num_rows > 0) {
-                    // Output data of each row
                     while ($row = $result->fetch_assoc()) {
-                        // Handle undefined keys
-                        $id = isset($row["id"]) ? $row["id"] : "";
-                        $name = isset($row["name"]) ? $row["name"] : "";
                         $email = isset($row["email"]) ? $row["email"] : "";
+                        $username = isset($row["username"]) ? $row["username"] : "";
+                        $name = isset($row["name"]) ? $row["name"] : "";
                         $subject = isset($row["subject"]) ? $row["subject"] : "";
                         $message = isset($row["message"]) ? $row["message"] : "";
                         $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
 
-
-
-                        // Add style attribute to center align the values
-                        echo "<tr><td style='text-align: center;'>" . $id . "</td><td style='text-align: center;'>" . $name . "</td><td style='text-align: center;'>" . $email . "</td><td style='text-align: center;'>" . $subject . "</td><td style='text-align: center;'>" . $message . "</td><td style='text-align: center;'>" . $created_at . "</td></tr>";
+                        // Add a link to the username
+                        echo "<tr>
+                            <td style='text-align: center;'><a href='view_user.php?username=" . urlencode($username) . "'>" . $email . "</a></td>
+                            <td style='text-align: center;'>" . $username . "</td>
+                            <td style='text-align: center;'>" . $name . "</td>
+                            <td style='text-align: center;'>" . $subject . "</td>
+                            <td style='text-align: center;'>" . $message . "</td>
+                            <td style='text-align: center;'>" . $created_at . "</td>
+                        </tr>";
                     }
                 } else {
-                    // Display a message if no data is found
-                    echo "<tr><td colspan='4' style='text-align: center;'>No ID found.</td></tr>";
+                    echo "<tr><td colspan='7' style='text-align: center;'>No inquiries found.</td></tr>";
                 }
                 ?>
             </tbody>

@@ -165,6 +165,7 @@ $result = $mysqli->query($sql);
 
     <div class="container-fluid"> <!-- Changed from container to container-fluid -->
         <h2>Transactions</h2>
+        <h5>Existing Transactions. Click Transaction ID for more Info.</h5>
         <?php
         // Display success message if present in the URL
         $message = isset($_GET['message']) ? $_GET['message'] : '';
@@ -177,6 +178,7 @@ $result = $mysqli->query($sql);
             <thead>
                 <tr>
                     <th>Transaction ID</th>
+                    <th>Username</th>
                     <th>First Name</th>
                     <th>Last Name</th>
                     <th>User Email</th>
@@ -198,6 +200,7 @@ $result = $mysqli->query($sql);
                     while ($row = $result->fetch_assoc()) {
                         // Handle undefined keys
                         $id = isset($row["id"]) ? $row["id"] : "";
+                        $username = isset($row["username"]) ? $row["username"] : "";
                         $transaction_id = isset($row["transaction_id"]) ? $row["transaction_id"] : "";
                         $firstname = isset($row["firstname"]) ? $row["firstname"] : "";
                         $lastname = isset($row["lastname"]) ? $row["lastname"] : "";
@@ -213,7 +216,8 @@ $result = $mysqli->query($sql);
 
                         // Add style attribute to center align the values
                         echo "<tr>
-                            <td style='text-align: center;'>" . $transaction_id . "</td>
+<td style='text-align: center;'><a href='view_user.php?username=" . urlencode($username) . "'>" . htmlspecialchars($transaction_id) . "</a></td>
+                            <td style='text-align: center;'>" . $username . "</td>
                             <td style='text-align: center;'>" . $firstname . "</td>
                             <td style='text-align: center;'>" . $lastname . "</td>
                             <td style='text-align: center;'>" . $user_email . "</td>
@@ -257,17 +261,33 @@ $result = $mysqli->query($sql);
     <script>
         // JavaScript function to populate fields and submit the form
         function populateFields(id, email, plan, price, description, status) {
+            var form = document.getElementById('emailForm' + id);
             document.getElementById('email_' + id).value = email;
             document.getElementById('plan_' + id).value = plan;
             document.getElementById('price_' + id).value = price;
             document.getElementById('description_' + id).value = description;
             document.getElementById('status_' + id).value = status;
-            document.getElementById('emailForm' + id).submit();
+
+            // Use AJAX to submit the form
+            var formData = new FormData(form);
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'process_approval.php', true);
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    handleApprovalSuccess();
+                } else {
+                    // Handle errors here
+                    alert('There was an error with the request.');
+                }
+            };
+
+            xhr.send(formData);
         }
 
         // JavaScript function to handle the success of approval
         function handleApprovalSuccess() {
-            alert('Email sent successfully!'); // You can customize this alert message
+            alert('Transaction approved. Subscription Confirmation Email sent successfully!'); // Customize this alert message
             location.reload(); // Reload the page to reflect the updated status
         }
     </script>

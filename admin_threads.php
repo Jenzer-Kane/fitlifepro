@@ -186,9 +186,9 @@ function format_date($date)
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Title</th>
+                    <th>Thread Title</th>
+                    <th>Forum Located</th>
                     <th>Description</th>
-                    <th>Forum</th>
                     <th>Author</th>
                     <th>Date Created</th>
                     <th>Actions</th>
@@ -198,13 +198,14 @@ function format_date($date)
                 <?php while ($row = $result->fetch_assoc()): ?>
                     <tr>
                         <td><?= $row['id'] ?></td>
+                        <td><?= htmlspecialchars($row['forum_name']) ?></td>
                         <td style="white-space: nowrap;">
                             <a href="admin_replies.php?thread_id=<?= $row['id'] ?>">
                                 <?= htmlspecialchars($row['title']) ?>
                             </a>
                         </td>
                         <td style="white-space: nowrap;"><?= htmlspecialchars($row['content']) ?></td>
-                        <td><?= htmlspecialchars($row['forum_name']) ?></td>
+
                         <td><?= htmlspecialchars($row['username']) ?></td>
                         <td style="white-space: nowrap;"><?= format_date($row['created_at']) ?></td>
                         <td>
