@@ -168,7 +168,7 @@ $result = $mysqli->query($sql);
 
     <div class="container-fluid">
         <h2>Inquiries</h2>
-        <h5>Existing Inquiries. Click User Email for more Info.</h5>
+        <h5>Existing Inquiries. Click User Email for more details.</h5>
         <table class="table table-bordered table-striped" style="width: 100%;">
             <thead>
                 <tr>

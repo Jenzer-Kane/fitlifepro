@@ -217,7 +217,11 @@ function format_date($date)
                     <tr>
                         <td><?= $row['id'] ?></td>
                         <td><?= htmlspecialchars($row['content']) ?></td>
-                        <td><?= htmlspecialchars($row['username']) ?></td>
+                        <td>
+                            <a href="view_user.php?username=<?= urlencode($row['username']) ?>">
+                                <?= htmlspecialchars($row['username']) ?>
+                            </a>
+                        </td>
                         <td><?= format_date($row['created_at']) ?></td>
                         <td>
                             <a href="delete_reply.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"

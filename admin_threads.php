@@ -186,7 +186,7 @@ function format_date($date)
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Thread Title</th>
+                    <th>Thread</th>
                     <th>Forum Located</th>
                     <th>Description</th>
                     <th>Author</th>
@@ -198,15 +198,19 @@ function format_date($date)
                 <?php while ($row = $result->fetch_assoc()): ?>
                     <tr>
                         <td><?= $row['id'] ?></td>
-                        <td><?= htmlspecialchars($row['forum_name']) ?></td>
                         <td style="white-space: nowrap;">
                             <a href="admin_replies.php?thread_id=<?= $row['id'] ?>">
                                 <?= htmlspecialchars($row['title']) ?>
                             </a>
+                        <td><?= htmlspecialchars($row['forum_name']) ?></td>
                         </td>
                         <td style="white-space: nowrap;"><?= htmlspecialchars($row['content']) ?></td>
 
-                        <td><?= htmlspecialchars($row['username']) ?></td>
+                        <td>
+                            <a href="view_user.php?username=<?= urlencode($row['username']) ?>">
+                                <?= htmlspecialchars($row['username']) ?>
+                            </a>
+                        </td>
                         <td style="white-space: nowrap;"><?= format_date($row['created_at']) ?></td>
                         <td>
                             <a href="delete_thread.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"

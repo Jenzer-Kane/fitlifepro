@@ -148,7 +148,7 @@ $result = $mysqli->query($sql);
 
     <div class="container-fluid">
         <h2>Members</h2>
-        <h5>Existing Members. Click Username for more Info.</h5>
+        <h5>Existing Members. Click Username for more details.</h5>
         <table class="table table-bordered table-striped" style="width: 100%;">
             <thead>
                 <tr>

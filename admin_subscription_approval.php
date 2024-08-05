@@ -165,7 +165,7 @@ $result = $mysqli->query($sql);
 
     <div class="container-fluid"> <!-- Changed from container to container-fluid -->
         <h2>Transactions</h2>
-        <h5>Existing Transactions. Click Transaction ID for more Info.</h5>
+        <h5>Existing Transactions. Click Transaction ID for more details.</h5>
         <?php
         // Display success message if present in the URL
         $message = isset($_GET['message']) ? $_GET['message'] : '';

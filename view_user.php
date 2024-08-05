@@ -209,7 +209,6 @@ $userTransactionsResult = $userTransactionsStmt->get_result();
 
 
         <h2>Transactions</h2>
-        <h5>Existing Transactions. Click Transaction ID for more Info.</h5>
         <?php
         // Display success message if present in the URL
         $message = isset($_GET['message']) ? $_GET['message'] : '';
