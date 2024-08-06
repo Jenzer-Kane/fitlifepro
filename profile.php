@@ -648,36 +648,8 @@ $showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved' &
 // Show subscription status if status is not "Disapproved" or not null
 $showSubscriptionInfoSection = ($status !== 'Disapproved' && $status !== null);
 
+// Show subscribe message if status is null or pending or disapproved or plan is null
 $showSubscribeMessage = ($status === null && $status == 'Pending' && $status == 'Disapproved' && $plan === null);
-
-$mealPlans = [];
-$exercisePlans = [];
-
-$sql = "SELECT day, meal_plan_data FROM meal_plans WHERE username = ?";
-if ($stmt = $mysqli->prepare($sql)) {
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $stmt->bind_result($day, $mealPlanData);
-
-    while ($stmt->fetch()) {
-        $mealPlans[strtolower($day)] = json_decode($mealPlanData, true);
-    }
-
-    $stmt->close();
-}
-
-$sql = "SELECT day, exercise_plan_data FROM exercise_plans WHERE username = ?";
-if ($stmt = $mysqli->prepare($sql)) {
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $stmt->bind_result($day, $exercisePlanData);
-
-    while ($stmt->fetch()) {
-        $exercisePlans[strtolower($day)] = json_decode($exercisePlanData, true);
-    }
-
-    $stmt->close();
-}
 
 // Prepare and execute the SQL query to fetch gender from users_info table
 $stmt = $mysqli->prepare("SELECT gender FROM users_info WHERE username = ?");
