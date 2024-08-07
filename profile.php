@@ -649,6 +649,7 @@ $showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved' &
 $showSubscriptionInfoSection = ($status !== 'Disapproved' && $status !== null);
 
 // Show subscribe message if status is null or pending or disapproved or plan is null
+// Show subscribe message if status is null or pending or disapproved or plan is null
 $showSubscribeMessage = ($status === null && $status == 'Pending' && $status == 'Disapproved' && $plan === null);
 
 // Prepare and execute the SQL query to fetch gender from users_info table
