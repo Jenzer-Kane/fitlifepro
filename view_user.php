@@ -28,6 +28,13 @@ $userResultsStmt->bind_param('s', $username);
 $userResultsStmt->execute();
 $userResultsResult = $userResultsStmt->get_result();
 
+$userResultsData = [];
+if ($userResultsResult->num_rows > 0) {
+    while ($result = $userResultsResult->fetch_assoc()) {
+        $userResultsData[] = $result;
+    }
+}
+
 // Fetch user info from registration table
 $userRegistrationInfoSql = "SELECT * FROM registration WHERE username = ?";
 $userRegistrationInfoStmt = $mysqli->prepare($userRegistrationInfoSql);
@@ -335,55 +342,51 @@ function format_date($date)
         </table>
 
         <h2>Body Reports</h2>
-        <?php if ($userResultsResult->num_rows > 0): ?>
+        <?php if (count($userResultsData) > 0): ?>
             <table class="table table-bordered table-striped">
                 <thead>
                     <tr>
+                        <th>Date Generated</th>
                         <th>BMI</th>
                         <th>BMI Category</th>
                         <th>Recommended Goal</th>
                         <th>Body Fat Percentage</th>
                         <th>Fat Mass</th>
                         <th>Lean Mass</th>
-                        <th>Hamwi Ideal Bodyweight</th>
-                        <th>Devine Ideal Bodyweight</th>
-                        <th>Robinson Ideal Bodyweight</th>
-                        <th>Miller Ideal Bodyweight</th>
                         <th>Recommended Daily Caloric Intake</th>
                         <th>Recommended Daily Protein Intake</th>
-                        <th>Date Generated</th>
+
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while ($result = $userResultsResult->fetch_assoc()): ?>
+                    <?php foreach ($userResultsData as $result): ?>
                         <tr>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['bmi']); ?></td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['bmiCategory']); ?></td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['recommendedGoal']); ?></td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['bodyFatPercentage']); ?>
-                            </td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['fatMass']); ?></td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['leanMass']); ?></td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['hamwiIBW_kg']); ?></td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['devineIBW']); ?></td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['robinsonIBW']); ?></td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['millerIBW']); ?></td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['caloricIntake']); ?></td>
-                            <td style='text-align: center;'><?php echo htmlspecialchars($result['proteinIntake']); ?></td>
                             <td style='text-align: center;'>
                                 <?php
-                                // Assuming $result['created_at'] is in 'Y-m-d H:i:s' format
                                 $formattedDate = isset($result['created_at']) ? date("F j, Y | g:i A", strtotime($result['created_at'])) : "";
                                 echo htmlspecialchars($formattedDate);
                                 ?>
                             </td>
+                            <td style='text-align: center;'><?php echo htmlspecialchars($result['bmi']); ?></td>
+                            <td style='text-align: center;'><?php echo htmlspecialchars($result['bmiCategory']); ?></td>
+                            <td style='text-align: center;'><?php echo htmlspecialchars($result['recommendedGoal']); ?></td>
+                            <td style='text-align: center;'><?php echo htmlspecialchars($result['bodyFatPercentage']); ?></td>
+                            <td style='text-align: center;'><?php echo htmlspecialchars($result['fatMass']); ?></td>
+                            <td style='text-align: center;'><?php echo htmlspecialchars($result['leanMass']); ?></td>
+                            <td style='text-align: center;'><?php echo htmlspecialchars($result['caloricIntake']); ?></td>
+                            <td style='text-align: center;'><?php echo htmlspecialchars($result['proteinIntake']); ?></td>
                         </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         <?php else: ?>
             <p>No body reports found for this user.</p>
         <?php endif; ?>
+
+        <!--<h2>Body Reports Graphs</h2>-->
+        <div id="chartContainer">
+            <canvas id="bodyReportsChart"></canvas>
+        </div>
 
 
         <h2>Threads Created</h2>
@@ -495,9 +498,112 @@ function format_date($date)
             alert('Transaction approved. Subscription Confirmation Email sent successfully!'); // Customize this alert message
             location.reload(); // Reload the page to reflect the updated status
         }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const ctx = document.getElementById('bodyReportsChart').getContext('2d');
+            const data = <?php echo json_encode($userResultsData); ?>;
+            const labels = data.map(item => new Date(item.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }));
+            const bmiData = data.map(item => item.bmi);
+            const bodyFatPercentageData = data.map(item => item.bodyFatPercentage);
+            const fatMassData = data.map(item => item.fatMass);
+            const leanMassData = data.map(item => item.leanMass);
+            const recommendedGoal = data.length > 0 ? data[data.length - 1].recommendedGoal : "No Goal";
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'BMI',
+                            data: bmiData,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderWidth: 3, // Thicker line
+                            pointStyle: 'circle', // Customize point style
+                            pointRadius: 5, // Larger points
+                            pointBackgroundColor: 'rgba(75, 192, 192, 1)', // Point color
+                        },
+                        {
+                            label: 'Body Fat Percentage',
+                            data: bodyFatPercentageData,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderWidth: 3, // Thicker line
+                            pointStyle: 'rect', // Customize point style
+                            pointRadius: 5, // Larger points
+                            pointBackgroundColor: 'rgba(255, 99, 132, 1)', // Point color
+                        },
+                        {
+                            label: 'Fat Mass',
+                            data: fatMassData,
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderWidth: 3, // Thicker line
+                            pointStyle: 'triangle', // Customize point style
+                            pointRadius: 5, // Larger points
+                            pointBackgroundColor: 'rgba(54, 162, 235, 1)', // Point color
+                        },
+                        {
+                            label: 'Lean Mass',
+                            data: leanMassData,
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                            borderWidth: 3, // Thicker line
+                            pointStyle: 'rectRot', // Customize point style
+                            pointRadius: 5, // Larger points
+                            pointBackgroundColor: 'rgba(255, 206, 86, 1)', // Point color
+                        },
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Value', // Label for the y-axis
+                                font: {
+                                    size: 18
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date', // Label for the x-axis
+                                font: {
+                                    size: 18
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 14, // Increase font size for dates
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Body Reports Graphs',
+                            font: {
+                                size: 18
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                    }
+                }
+            });
+        });
+
+
     </script>
 
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="assets/js/jquery-3.6.0.min.js"></script>
     <script src="assets/js/popper.min.js"></script>
     <script src="assets/js/video-popup.js"></script>
