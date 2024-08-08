@@ -35,6 +35,44 @@ if ($userResultsResult->num_rows > 0) {
     }
 }
 
+// Fetch user weight data from users_info table for graphs
+$userWeightQuery = "SELECT created_at AS date, bmiWeight FROM users_info WHERE username = ? ORDER BY created_at";
+$userWeightStmt = $mysqli->prepare($userWeightQuery);
+$userWeightStmt->bind_param('s', $username);
+$userWeightStmt->execute();
+$userWeightResults = $userWeightStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Merge weight data with user results based on closest created_at timestamp
+$mergedData = [];
+foreach ($userResultsData as $result) {
+    $date = $result['created_at'];
+    $closestWeight = null;
+
+    // Find the closest weight entry on or before the result date
+    foreach ($userWeightResults as $weightEntry) {
+        if ($weightEntry['date'] <= $date) {
+            $closestWeight = $weightEntry['bmiWeight'];
+        } else {
+            break;
+        }
+    }
+
+    $mergedData[] = array_merge($result, ['weight' => $closestWeight]);
+}
+
+// Prepare data for Chart.js
+$chartData = [
+    'dates' => array_column($mergedData, 'created_at'),
+    'bmi' => array_column($mergedData, 'bmi'),
+    'bodyFatPercentage' => array_column($mergedData, 'bodyFatPercentage'),
+    'fatMass' => array_column($mergedData, 'fatMass'),
+    'leanMass' => array_column($mergedData, 'leanMass'),
+    'weight' => array_column($mergedData, 'weight')
+];
+
+$encodedChartData = json_encode($chartData);
+
+
 // Fetch user info from registration table
 $userRegistrationInfoSql = "SELECT * FROM registration WHERE username = ?";
 $userRegistrationInfoStmt = $mysqli->prepare($userRegistrationInfoSql);
@@ -342,30 +380,49 @@ function format_date($date)
         </table>
 
         <h2>Body Reports</h2>
-        <?php if (count($userResultsData) > 0): ?>
+        <?php if (count($mergedData) > 0): ?>
+            <div class="chart-container">
+                <canvas id="bodyReportsChart"></canvas>
+            </div>
             <table class="table table-bordered table-striped">
                 <thead>
                     <tr>
-                        <th>Date Generated</th>
-                        <th>BMI</th>
+                        <th
+                            style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: #f0f0f0; color: black;">
+                            Date Generated</th>
+                        <th
+                            style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(153, 102, 255, 1); color: black;">
+                            Weight</th>
+                        <th
+                            style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(75, 192, 192, 1); color: black;">
+                            BMI</th>
                         <th>BMI Category</th>
                         <th>Recommended Goal</th>
-                        <th>Body Fat Percentage</th>
-                        <th>Fat Mass</th>
-                        <th>Lean Mass</th>
+                        <th
+                            style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(255, 99, 132, 1); color: black;">
+                            Body Fat Percentage</th>
+                        <th
+                            style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(54, 162, 235, 1); color: black;">
+                            Fat Mass</th>
+                        <th
+                            style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(255, 206, 86, 1); color: black;">
+                            Lean Mass</th>
                         <th>Recommended Daily Caloric Intake</th>
                         <th>Recommended Daily Protein Intake</th>
 
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($userResultsData as $result): ?>
+                    <?php foreach ($mergedData as $result): ?>
                         <tr>
                             <td style='text-align: center;'>
                                 <?php
                                 $formattedDate = isset($result['created_at']) ? date("F j, Y | g:i A", strtotime($result['created_at'])) : "";
                                 echo htmlspecialchars($formattedDate);
                                 ?>
+                            </td>
+                            <td style='text-align: center;'>
+                                <?php echo isset($result['weight']) ? htmlspecialchars($result['weight']) : 'N/A'; ?>
                             </td>
                             <td style='text-align: center;'><?php echo htmlspecialchars($result['bmi']); ?></td>
                             <td style='text-align: center;'><?php echo htmlspecialchars($result['bmiCategory']); ?></td>
@@ -382,12 +439,6 @@ function format_date($date)
         <?php else: ?>
             <p>No body reports found for this user.</p>
         <?php endif; ?>
-
-        <!--<h2>Body Reports Graphs</h2>-->
-        <div id="chartContainer">
-            <canvas id="bodyReportsChart"></canvas>
-        </div>
-
 
         <h2>Threads Created</h2>
         <?php if (count($userThreads) > 0): ?>
@@ -501,13 +552,13 @@ function format_date($date)
 
         document.addEventListener("DOMContentLoaded", function () {
             const ctx = document.getElementById('bodyReportsChart').getContext('2d');
-            const data = <?php echo json_encode($userResultsData); ?>;
-            const labels = data.map(item => new Date(item.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }));
-            const bmiData = data.map(item => item.bmi);
-            const bodyFatPercentageData = data.map(item => item.bodyFatPercentage);
-            const fatMassData = data.map(item => item.fatMass);
-            const leanMassData = data.map(item => item.leanMass);
-            const recommendedGoal = data.length > 0 ? data[data.length - 1].recommendedGoal : "No Goal";
+            const data = <?php echo $encodedChartData; ?>;
+            const labels = data.dates.map(date => new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }));
+            const bmiData = data.bmi;
+            const bodyFatPercentageData = data.bodyFatPercentage;
+            const fatMassData = data.fatMass;
+            const leanMassData = data.leanMass;
+            const weightData = data.weight;
 
             new Chart(ctx, {
                 type: 'line',
@@ -515,45 +566,56 @@ function format_date($date)
                     labels: labels,
                     datasets: [
                         {
+                            label: 'Weight',
+                            data: weightData,
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                            borderWidth: 3,
+                            pointStyle: 'crossRot',
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(153, 102, 255, 1)',
+                        },
+                        {
                             label: 'BMI',
                             data: bmiData,
                             borderColor: 'rgba(75, 192, 192, 1)',
                             backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderWidth: 3, // Thicker line
-                            pointStyle: 'circle', // Customize point style
-                            pointRadius: 5, // Larger points
-                            pointBackgroundColor: 'rgba(75, 192, 192, 1)', // Point color
+                            borderWidth: 3,
+                            pointStyle: 'circle',
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(75, 192, 192, 1)',
                         },
                         {
                             label: 'Body Fat Percentage',
                             data: bodyFatPercentageData,
                             borderColor: 'rgba(255, 99, 132, 1)',
                             backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                            borderWidth: 3, // Thicker line
-                            pointStyle: 'rect', // Customize point style
-                            pointRadius: 5, // Larger points
-                            pointBackgroundColor: 'rgba(255, 99, 132, 1)', // Point color
+                            borderWidth: 3,
+                            pointStyle: 'rect',
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
                         },
                         {
                             label: 'Fat Mass',
                             data: fatMassData,
                             borderColor: 'rgba(54, 162, 235, 1)',
                             backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                            borderWidth: 3, // Thicker line
-                            pointStyle: 'triangle', // Customize point style
-                            pointRadius: 5, // Larger points
-                            pointBackgroundColor: 'rgba(54, 162, 235, 1)', // Point color
+                            borderWidth: 3,
+                            pointStyle: 'triangle',
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(54, 162, 235, 1)',
                         },
                         {
                             label: 'Lean Mass',
                             data: leanMassData,
                             borderColor: 'rgba(255, 206, 86, 1)',
                             backgroundColor: 'rgba(255, 206, 86, 0.2)',
-                            borderWidth: 3, // Thicker line
-                            pointStyle: 'rectRot', // Customize point style
-                            pointRadius: 5, // Larger points
-                            pointBackgroundColor: 'rgba(255, 206, 86, 1)', // Point color
-                        },
+                            borderWidth: 3,
+                            pointStyle: 'rectRot',
+                            pointRadius: 5,
+                            pointBackgroundColor: 'rgba(255, 206, 86, 1)',
+                        }
+
                     ]
                 },
                 options: {
@@ -562,7 +624,7 @@ function format_date($date)
                             beginAtZero: true,
                             title: {
                                 display: true,
-                                text: 'Value', // Label for the y-axis
+                                text: 'Value',
                                 font: {
                                     size: 18
                                 }
@@ -571,14 +633,14 @@ function format_date($date)
                         x: {
                             title: {
                                 display: true,
-                                text: 'Date', // Label for the x-axis
+                                text: 'Date',
                                 font: {
                                     size: 18
                                 }
                             },
                             ticks: {
                                 font: {
-                                    size: 14, // Increase font size for dates
+                                    size: 14,
                                 }
                             }
                         }
@@ -586,7 +648,7 @@ function format_date($date)
                     plugins: {
                         title: {
                             display: true,
-                            text: 'Body Reports Graphs',
+                            text: 'Saved Results',
                             font: {
                                 size: 18
                             }
@@ -599,7 +661,6 @@ function format_date($date)
                 }
             });
         });
-
 
     </script>
 
