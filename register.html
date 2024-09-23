@@ -264,6 +264,14 @@ body {
             color: #61dafb; /* Set your desired link color */
             text-decoration: underline;
         }
+
+        .invalid {
+            color: rgb(255, 255, 255);
+        }
+
+        .valid {
+            color: green;
+        }
     </style>
 </head>
 <body>
@@ -286,13 +294,28 @@ body {
                     <label for="female" class="radio-inline"><input type="radio" name="gender" id="female" value="female" required> Female </label>                    
                 </div>
             </div>
+            
             <div class="input-box">
                 <input type="text" class="form-control" placeholder="Email" id="email" name="email" required>
                 <i class='bx bxs-user'></i>
             </div>
-            <div class="input-box">
-                <input type="password" class="form-control" placeholder="Password" id="password" name="password" required>
-                <i class="bx bxs-lock-alt"></i>
+            
+            <div class="input-box" style="position: relative; display: flex; align-items: center;">
+                <input type="password" class="form-control" placeholder="Password" id="password" name="password" required style="flex: 1;">
+                <i class="fa fa-eye" id="toggle-password" style="cursor: pointer; position: absolute; left:295px; top:30px;"></i>
+            </div>            
+            
+
+             <!-- Password validation rules displayed in real-time -->
+             <div id="password-rules" class="error-message" style="color: white; font-size: 14px;">
+                <p>Password must contain:</p>
+                <ul>
+                    <li id="length" class="invalid">At least 8 characters</li>
+                    <li id="uppercase" class="invalid">At least one uppercase letter (A-Z)</li>
+                    <li id="lowercase" class="invalid">At least one lowercase letter (a-z)</li>
+                    <li id="number" class="invalid">At least one number (0-9)</li>
+                    <li id="special" class="invalid">At least one special character (!@#$%^&*)</li>
+                </ul>
             </div>
             
             <div class="remember-forgot">
@@ -300,24 +323,23 @@ body {
             </div>
             <div>
             
-            <button type="submit" class="btn">Register</button>
+                <button type="submit" class="btn" id="register-btn" disabled>Register</button>
             <div class="register-link">
                 <p>Already have an account? <a href="login.html">Login</a></p>
             </div>
         </form>
     </div>
     </div>
-</body>
-</html>
-
-                        </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
 </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</body>
+
 <!-- PRICING TABLES SECTION -->
 
 <!-- OUR NEWS SECTION -->
@@ -499,6 +521,125 @@ body {
             $("#usernameAvailability").php("Please enter a username.");
         }
     }
+</script>
+
+ <!-- Password Validation Script -->
+ <script>
+    const passwordInput = document.getElementById('password');
+    const lengthCheck = document.getElementById('length');
+    const uppercaseCheck = document.getElementById('uppercase');
+    const lowercaseCheck = document.getElementById('lowercase');
+    const numberCheck = document.getElementById('number');
+    const specialCheck = document.getElementById('special');
+
+    passwordInput.addEventListener('input', function () {
+        const password = passwordInput.value;
+
+        // Check password length
+        if (password.length >= 8) {
+            lengthCheck.classList.remove('invalid');
+            lengthCheck.classList.add('valid');
+        } else {
+            lengthCheck.classList.remove('valid');
+            lengthCheck.classList.add('invalid');
+        }
+
+        // Check for uppercase letters
+        if (/[A-Z]/.test(password)) {
+            uppercaseCheck.classList.remove('invalid');
+            uppercaseCheck.classList.add('valid');
+        } else {
+            uppercaseCheck.classList.remove('valid');
+            uppercaseCheck.classList.add('invalid');
+        }
+
+        // Check for lowercase letters
+        if (/[a-z]/.test(password)) {
+            lowercaseCheck.classList.remove('invalid');
+            lowercaseCheck.classList.add('valid');
+        } else {
+            lowercaseCheck.classList.remove('valid');
+            lowercaseCheck.classList.add('invalid');
+        }
+
+        // Check for numbers
+        if (/[0-9]/.test(password)) {
+            numberCheck.classList.remove('invalid');
+            numberCheck.classList.add('valid');
+        } else {
+            numberCheck.classList.remove('valid');
+            numberCheck.classList.add('invalid');
+        }
+
+        // Check for special characters
+        if (/[\W]/.test(password)) {
+            specialCheck.classList.remove('invalid');
+            specialCheck.classList.add('valid');
+        } else {
+            specialCheck.classList.remove('valid');
+            specialCheck.classList.add('invalid');
+        }
+    });
+
+    // Form submission check
+    function validateForm() {
+        const isValidPassword = (
+            passwordInput.value.length >= 8 &&
+            /[A-Z]/.test(passwordInput.value) &&
+            /[a-z]/.test(passwordInput.value) &&
+            /[0-9]/.test(passwordInput.value) &&
+            /[\W]/.test(passwordInput.value)
+        );
+
+        if (!isValidPassword) {
+            alert("Please ensure the password meets all the requirements.");
+            return false; // Prevent form submission
+        }
+        return true; // Allow form submission
+    }
+</script>
+
+<script>
+const passwordField = document.getElementById('password');
+const togglePassword = document.getElementById('toggle-password');
+
+togglePassword.addEventListener('click', function () {
+    // Toggle the type attribute between 'password' and 'text'
+    const type = passwordField.type === 'password' ? 'text' : 'password';
+    passwordField.type = type;
+
+    // Toggle the eye icon between fa-eye and fa-eye-slash
+    this.classList.toggle('fa-eye');
+    this.classList.toggle('fa-eye-slash');
+});
+
+</script>
+
+
+<script>
+    // Reference to the register button
+const registerBtn = document.getElementById('register-btn');
+
+// Function to validate the password and enable/disable the register button
+function updateRegisterButton() {
+    const isValidPassword = (
+        passwordInput.value.length >= 8 &&
+        /[A-Z]/.test(passwordInput.value) &&
+        /[a-z]/.test(passwordInput.value) &&
+        /[0-9]/.test(passwordInput.value) &&
+        /[\W]/.test(passwordInput.value)
+    );
+
+    // Enable the register button if the password is valid, otherwise disable it
+    registerBtn.disabled = !isValidPassword;
+}
+
+// Call updateRegisterButton function whenever the password input changes
+passwordInput.addEventListener('input', function () {
+    // Existing password validation logic...
+    updateRegisterButton(); // Check if the password is valid and update button
+});
+
 </script>
 
 <script>

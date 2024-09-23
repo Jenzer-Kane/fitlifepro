@@ -17,6 +17,54 @@ if (
     $email = $_POST['email'];
     $password = $_POST['password'];
 
+    // Password validation rules
+    $errors = [];
+    if (strlen($password) < 8) {
+        $errors[] = "Password must be at least 8 characters long.";
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        $errors[] = "Password must contain at least one uppercase letter.";
+    }
+    if (!preg_match('/[a-z]/', $password)) {
+        $errors[] = "Password must contain at least one lowercase letter.";
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        $errors[] = "Password must contain at least one number.";
+    }
+    if (!preg_match('/[\W]/', $password)) {
+        $errors[] = "Password must contain at least one special character.";
+    }
+
+    // If there are any errors, display them
+    if (!empty($errors)) {
+        foreach ($errors as $error) {
+            echo "<span style='color:red;'>$error</span><br>";
+        }
+        // Redirect to registration page after displaying errors
+        echo '<html>
+                <head>
+                    <title>Redirecting...</title>
+                    <script>
+                        var countdown = 5;
+                        function updateCountdown() {
+                            document.getElementById("countdown").innerHTML = countdown;
+                            countdown--;
+                            if (countdown < 0) {
+                                window.location.href = "register.html";
+                            } else {
+                                setTimeout(updateCountdown, 1000);
+                            }
+                        }
+                        setTimeout(updateCountdown, 1000);
+                    </script>
+                </head>
+                <body>
+                    <p>Redirecting in <span id="countdown">5</span> seconds...</p>
+                </body>
+            </html>';
+        exit(); // Stop further execution
+    }
+
     // Generate a verification code
     $verificationCode = substr(md5(uniqid(mt_rand(), true)), 0, 6);
 

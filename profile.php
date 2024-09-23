@@ -2636,7 +2636,7 @@ $mysqli->close();
             document.addEventListener('DOMContentLoaded', () => {
                 // Example function to populate the hidden inputs with results
                 function populateResults() {
-                    document.getElementById('username').value = $_SESSION['username']; // Replace with actual username logic
+                    document.getElementById('username').value = $_SESSION['username'];
                     document.getElementById('bmi').value = calculatedBMI;
                     document.getElementById('bmiCategory').value = bmiCategory;
                     document.getElementById('bodyFatPercentage').value = bodyFatPercentage;
