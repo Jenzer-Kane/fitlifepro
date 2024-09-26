@@ -2021,8 +2021,7 @@ $mysqli->close();
                                         </div>
                                     </div>
                                 </div>
-                                <p>Regenerate the recommended meal plan with the Regenerate button.</p>
-                                <p>Click the food you have consumed to track your progress. This disables the Regenerate button.
+                                <p>Click the food you have consumed to track your progress.
                                 </p>
                                 <p><strong>Tip:</strong> You can also eat the foods in any order, as long as you meet the
                                     recommended daily macronutrients.</p>
@@ -2076,10 +2075,6 @@ $mysqli->close();
                                     echo 'Calories: <span id="calories-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['caloricIntake'] . '<br>';
                                     echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
                                     ?>
-                                    <div class="calculator-form form-section border-0">
-                                        <button type="button" class="shuffle-button"
-                                            onclick="shuffleMealPlan('<?php echo strtolower($day); ?>')">Regenerate</button>
-                                    </div>
                                     <div class="note">
                                         <b>Meal plan food suggestions are based on the Philippine Department of Science and
                                             Technology, Food and Nutrition Research Institute, Food Exchange List</b>
@@ -2257,8 +2252,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                             </div>
-                            <p>Regenerate the recommended meal plan with the Regenerate button.</p>
-                            <p>Click the food you have consumed to track your progress. This disables the Regenerate button.</p>
+                            <p>Click the food you have consumed to track your progress.
                             <p><strong>Tip:</strong> You can also eat the foods in any order, as long as you meet the
                                 recommended
                                 daily macronutrients.</p>
@@ -2312,10 +2306,6 @@ $mysqli->close();
                                 echo 'Calories: <span id="calories-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['caloricIntake'] . '<br>';
                                 echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
                                 ?>
-                                <div class="calculator-form form-section border-0">
-                                    <button type="button" class="shuffle-button"
-                                        onclick="shuffleMealPlan('<?php echo strtolower($day); ?>')">Regenerate</button>
-                                </div>
                                 <div class="note">
                                     <b>Meal plan food suggestions are based on the Philippine Department of Science and
                                         Technology,
@@ -2361,8 +2351,7 @@ $mysqli->close();
                                             </div>
                                         </div>
                                     </div>
-                                    <p>Regenerate the recommended exercise plan with the Regenerate button.</p>
-                                    <p>Track your progress by marking the exercises you've completed. This disables the Regenerate button.
+                                    <p>Track your progress by marking the exercises you've completed.
                                     </p>
                                     <p><strong>Tip: Aim to do at least 5 exercises from all 3 categories in a day (Cardio, Strength,
                                             Core).</strong></p>
@@ -2401,10 +2390,6 @@ $mysqli->close();
                                     <div id="total-exercises-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text">
                                         <?php echo 'Minimum Exercises to Complete: <span class="minimum-to-complete">5</span><br>'; ?>
                                         <?php echo 'Total Exercises Completed: <span id="exerciseCounter-' . strtolower($day) . '">0</span><br>'; ?>
-                                        <div class="calculator-form form-section border-0">
-                                            <button type="button" class="shuffle-exercises-button"
-                                                data-day="<?php echo strtolower($day); ?>">Regenerate Exercises</button>
-                                        </div>
                                     </div>
                                     <input type="hidden" name="day" value="<?php echo $day; ?>">
                                     <input type="hidden" name="exercise_plan" id="exercisePlanData-<?php echo strtolower($day); ?>">
@@ -2484,34 +2469,43 @@ $mysqli->close();
                     const totalElement = document.getElementById(`total-${day}`);
                     const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
                     const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
-                    const maxCalories = <?php echo isset($intakeResults) ? $intakeResults['caloricIntake'] : 0; ?>;
-                    const maxProtein = <?php echo isset($intakeResults) ? $intakeResults['proteinIntake'] : 0; ?>;
 
-                    // Check if the intake is already at or above the threshold
-                    if (currentCalories >= maxCalories) {
-                        // Disable clicking if intake is at or above threshold
-                        console.log('Calories intake reached threshold, disabling click.');
+                    // Get max values from the span elements in the HTML
+                    const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).parentElement.textContent.split("/")[1].trim()) || 0;
+                    const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).parentElement.textContent.split("/")[1].trim()) || 0;
+
+                    // Prevent selecting if the intake has reached or exceeded the threshold and the item is not already consumed
+                    if ((currentCalories >= maxCalories && !item.classList.contains('consumed')) ||
+                        (currentProtein >= maxProtein && !item.classList.contains('consumed'))) {
+                        alert('You have reached the maximum intake for calories or protein.');
                         return;
                     }
 
-                    // Toggle the green background
-                    item.classList.toggle('consumed');
-
-                    // Update daily totals
+                    // If already consumed, do nothing (prevent unselecting)
                     if (item.classList.contains('consumed')) {
-                        totalElement.setAttribute('data-calories', currentCalories + calories);
-                        totalElement.setAttribute('data-protein', currentProtein + protein);
-                    } else {
-                        totalElement.setAttribute('data-calories', currentCalories - calories);
-                        totalElement.setAttribute('data-protein', currentProtein - protein);
+                        return;
                     }
 
-                    totalElement.innerHTML = `
-                            <div class="large-counter-text">
-                                Calories: <span id="calories-${day}">${totalElement.getAttribute('data-calories')}</span> / ${maxCalories}<br>
-                                Protein (g): <span id="protein-${day}">${totalElement.getAttribute('data-protein')}</span> / ${maxProtein}
-                            </div>
-                        `;
+                    // Mark the item as consumed and disable further clicks
+                    item.classList.add('consumed');
+                    item.style.pointerEvents = 'none'; // Disable further interaction
+
+                    // Update daily totals
+                    totalElement.setAttribute('data-calories', currentCalories + calories);
+                    totalElement.setAttribute('data-protein', currentProtein + protein);
+
+                    // Update the display values for calories and protein
+                    document.getElementById(`calories-${day}`).innerText = totalElement.getAttribute('data-calories');
+                    document.getElementById(`protein-${day}`).innerText = totalElement.getAttribute('data-protein');
+
+                    // Check if the intake is already at or above the threshold
+                    if (parseFloat(totalElement.getAttribute('data-calories')) >= maxCalories) {
+                        alert('You have reached the maximum calorie intake for the day.');
+                    }
+
+                    if (parseFloat(totalElement.getAttribute('data-protein')) >= maxProtein) {
+                        alert('You have reached the maximum protein intake for the day.');
+                    }
                 });
             });
         }
@@ -2519,253 +2513,35 @@ $mysqli->close();
         document.addEventListener('DOMContentLoaded', () => {
             // Attach event listeners when the page loads
             attachEventListeners();
-        });
-
-        function shuffleMealPlan(day) {
-            const table = document.getElementById('mealPlanTable-' + day);
-            const timeSlots = <?php echo json_encode($timeSlots); ?>;
-            let mealPlan = <?php echo json_encode($meal_plan); ?>;
-            // Separate meal plan items by food exchange group
-            const groupedItems = {};
-            mealPlan.forEach(item => {
-                if (!groupedItems[item.food_exchange_group]) {
-                    groupedItems[item.food_exchange_group] = [];
-                }
-                groupedItems[item.food_exchange_group].push(item);
-            });
-
-            // Array to hold the shuffled meal plan
-            let shuffledPlan = [];
-
-            // Add one item from each group to the shuffled plan
-            Object.values(groupedItems).forEach(group => {
-                shuffledPlan.push(group[Math.floor(Math.random() * group.length)]);
-            });
-
-            // Shuffle the remaining items
-            const remainingItems = mealPlan.filter(item => !shuffledPlan.includes(item));
-            shuffledPlan = shuffledPlan.concat(remainingItems.sort(() => Math.random() - 0.5));
-
-            // Generate table rows for the shuffled plan
-            let mealIndex = 0;
-            table.querySelector('tbody').innerHTML = '';
-            timeSlots.forEach(timeSlot => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${timeSlot}</td>`;
-                for (let i = 0; i < timeSlots.length; i++) {
-                    const foodItem = shuffledPlan[mealIndex % shuffledPlan.length];
-                    const cell = document.createElement('td');
-                    cell.classList.add('mealItem');
-                    cell.setAttribute('data-day', day);
-                    cell.setAttribute('data-time-slot', timeSlot);
-                    cell.setAttribute('data-calories', foodItem.energy_kcal);
-                    cell.setAttribute('data-protein', foodItem.protein_g);
-                    cell.innerHTML = `
-                            <br>${foodItem.english_name}<br>
-                            <br>${foodItem.filipino_name}<br><br>
-                            <strong>Protein (g):</strong> ${foodItem.protein_g}<br>
-                            <strong>Calories (kcal):</strong> ${foodItem.energy_kcal}<br>
-                            <strong>Measure:</strong> ${foodItem.household_measure}<br><br>
-                        `;
-                    row.appendChild(cell);
-                    mealIndex++;
-                }
-                table.querySelector('tbody').appendChild(row);
-            });
-
-            // Re-attach event listeners after shuffling
-            attachEventListeners();
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
             attachExerciseEventListeners();
-
-            const shuffleButtons = document.querySelectorAll('.shuffle-exercises-button');
-            shuffleButtons.forEach(button => {
-                button.addEventListener('click', function () {
-                    const day = this.getAttribute('data-day');
-                    shuffleExercises(day);
-                });
-            });
-
-            const exerciseTypeButtons = document.querySelectorAll('.exercise-type-btn');
-            exerciseTypeButtons.forEach(button => {
-                button.addEventListener('click', function () {
-                    const exerciseType = this.value;
-                    fetchExercises(exerciseType);
-                });
-            });
-
-            function attachExerciseEventListeners() {
-                const exerciseItems = document.querySelectorAll('.exerciseItem');
-                exerciseItems.forEach(item => {
-                    item.addEventListener('click', toggleCompleted);
-                });
-            }
-
-            function shuffleExercises(day) {
-                const tableBody = document.querySelector(`#exercisePlanTable-${day} tbody`);
-                const rows = Array.from(tableBody.rows);
-
-                // Extract all cells (excluding the first column) into a flat array
-                let cells = [];
-                rows.forEach(row => {
-                    for (let i = 1; i < row.cells.length; i++) {
-                        cells.push(row.cells[i]);
-                    }
-                });
-
-                // Shuffle the cells array
-                for (let i = cells.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [cells[i].innerHTML, cells[j].innerHTML] = [cells[j].innerHTML, cells[i].innerHTML];
-                }
-
-                // Append shuffled cells back into rows
-                let cellIndex = 0;
-                rows.forEach(row => {
-                    for (let i = 1; i < row.cells.length; i++) {
-                        row.cells[i].innerHTML = cells[cellIndex].innerHTML;
-                        cellIndex++;
-                    }
-                });
-
-                // Reattach event listeners after shuffling
-                attachExerciseEventListeners();
-
-                // Update counter after shuffling
-                updateCounter(day);
-            }
-
-            function toggleCompleted() {
-                this.classList.toggle('completed');
-                const tableId = this.closest('table').id.split('-')[1]; // Extract table ID
-                updateCounter(tableId);
-                hideRegenerateButton(this);
-            }
-
-            function updateCounter(day) {
-                const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
-                document.getElementById(`exerciseCounter-${day}`).innerText = completedExercises;
-            }
-
-            function hideRegenerateButton(item) {
-                // Find the parent container of the clicked exercise item
-                const tableContainer = item.closest('.border-mealplan');
-
-                // Find and hide the "Regenerate Exercises" button within the parent container
-                const regenerateButton = tableContainer.querySelector('.shuffle-exercises-button');
-                regenerateButton.style.display = 'none';
-            }
-
-            function updateCounter(day) {
-                const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
-                const minimumExercises = 5;
-                const exerciseCounter = document.getElementById(`exerciseCounter-${day}`);
-                exerciseCounter.innerText = completedExercises;
-
-                if (completedExercises >= minimumExercises) {
-                    exerciseCounter.classList.add('minimum-hit');
-                    const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
-                    minimumToComplete.innerHTML = `<span style="color: green;">${minimumExercises} - Minimum hit! Good job!</span>`;
-                } else {
-                    exerciseCounter.classList.remove('minimum-hit');
-                    const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
-                    minimumToComplete.innerHTML = `${minimumExercises}`;
-                }
-            }
-
-            document.addEventListener('DOMContentLoaded', () => {
-                // Example function to populate the hidden inputs with results
-                function populateResults() {
-                    document.getElementById('username').value = $_SESSION['username'];
-                    document.getElementById('bmi').value = calculatedBMI;
-                    document.getElementById('bmiCategory').value = bmiCategory;
-                    document.getElementById('bodyFatPercentage').value = bodyFatPercentage;
-                    document.getElementById('fatMass').value = fatMass;
-                    document.getElementById('leanMass').value = leanMass;
-                    document.getElementById('hamwilBW_kg').value = hamwilBW_kg;
-                    document.getElementById('devineIBW').value = devineIBW;
-                    document.getElementById('robinsonIBW').value = robinsonIBW;
-                    document.getElementById('millerIBW').value = millerIBW;
-                    document.getElementById('caloricIntake').value = caloricIntake;
-                    document.getElementById('proteinIntake').value = proteinIntake;
-                }
-
-                // Call this function when your calculations are done
-                populateResults();
-            });
-
-            $(document).ready(function () {
-                $("#resultsForm").on("submit", function (event) {
-                    event.preventDefault(); // Prevent the default form submission
-
-                    $.ajax({
-                        type: "POST",
-                        url: "store_results.php", // Your PHP script to handle the form submission
-                        data: $(this).serialize(), // Serialize the form data
-                        success: function (response) {
-                            $("#message").html(response); // Display the response message
-                            if (response.includes("")) {
-                                // Optional: handle success case
-                            }
-                        },
-                        error: function () {
-                            $("#message").html("There was an error processing the form.");
-                        }
-                    });
-                });
-            });
         });
 
-        function captureMealPlanData(day) {
-            var table = document.getElementById('mealPlanTable-' + day);
-            var rows = table.getElementsByTagName('tr');
-            var mealPlanData = [];
-
-            for (var i = 1; i < rows.length; i++) { // Skip header row
-                var cells = rows[i].getElementsByTagName('td');
-                for (var j = 1; j < cells.length; j++) { // Skip time slot column
-                    var foodItem = cells[j].innerText.trim();
-                    mealPlanData.push({
-                        timeSlot: cells[0].innerText.trim(),
-                        foodItem: foodItem
-                    });
-                }
-            }
-
-            document.getElementById('mealPlanData-' + day).value = JSON.stringify(mealPlanData);
-        }
-
-        function captureExercisePlanData(day) {
-            var table = document.getElementById('exercisePlanTable-' + day);
-            var rows = table.getElementsByTagName('tr');
-            var exercisePlanData = [];
-
-            for (var i = 1; i < rows.length; i++) { // Skip header row
-                var cells = rows[i].getElementsByTagName('td');
-                for (var j = 1; j < cells.length; j++) { // Skip time slot column
-                    var exerciseItem = cells[j].innerText.trim();
-                    exercisePlanData.push({
-                        timeSlot: cells[0].innerText.trim(),
-                        exerciseItem: exerciseItem
-                    });
-                }
-            }
-
-            document.getElementById('exercisePlanData-' + day).value = JSON.stringify(exercisePlanData);
-        }
-
-        document.querySelectorAll('form').forEach(function (form) {
-            form.addEventListener('submit', function (event) {
-                var day = form.querySelector('input[name="day"]').value.toLowerCase();
-                if (form.id.startsWith('mealPlanForm')) {
-                    captureMealPlanData(day);
-                } else if (form.id.startsWith('exercisePlanForm')) {
-                    captureExercisePlanData(day);
-                }
+        // Function to attach event listeners to exercise items
+        function attachExerciseEventListeners() {
+            const exerciseItems = document.querySelectorAll('.exerciseItem');
+            exerciseItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    item.classList.toggle('completed');
+                    const day = item.closest('table').id.split('-')[1]; // Extract table ID
+                    updateExerciseCounter(day);
+                });
             });
-        });
+        }
+
+        // Update the exercise counter for the specific day
+        function updateExerciseCounter(day) {
+            const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
+            const minimumExercises = 5; // Minimum required exercises
+            const exerciseCounter = document.getElementById(`exerciseCounter-${day}`);
+            exerciseCounter.innerText = completedExercises;
+
+            const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
+            if (completedExercises >= minimumExercises) {
+                minimumToComplete.innerHTML = `<span style="color: green;">${minimumExercises} - Minimum hit! Good job!</span>`;
+            } else {
+                minimumToComplete.innerHTML = `${minimumExercises}`;
+            }
+        }
 
         document.addEventListener("DOMContentLoaded", function () {
             const ctx = document.getElementById('bodyReportsChart').getContext('2d');
