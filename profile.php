@@ -1068,6 +1068,19 @@ $mysqli->close();
                 display: none;
             }
         }
+
+        #tooltip {
+            display: none;
+            position: absolute;
+            padding: 5px;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            border-radius: 5px;
+            font-size: 15px !important;
+            /* Add !important to force the change */
+            pointer-events: none;
+            z-index: 1000;
+        }
     </style>
 
 </head>
@@ -1310,14 +1323,16 @@ $mysqli->close();
 
     <!-- BMI Results Section -->
     <div class="our_schedule_content">
-        <h2>----- RESULTS -----</h2>
+
     </div>
     <div id="resultsSection">
         <div class="results-container" style="border: 1px solid #ddd; padding: 15px;">
             <div class="our_schedule_content">
                 <?php if (!isset($intakeResults) && isset($bodyFatResults)): ?>
-                    <h2 class="mt-5">LAST GENERATED ON <br></h2>
-                    <h5><?php echo $formattedDate; ?> </h5>
+                    <h2 class="mt-5 mb-5" style="font-size: 80px;"><u>---- RESULTS ----</u></h2> <br>
+
+                    <h2 style="font-size: 70px;">GENERATED ON: </h2><br>
+                    <h5 style="font-size: 70px;"><?php echo $formattedDate; ?> </h5>
                 <?php endif; ?>
             </div>
         </div>
@@ -1765,8 +1780,8 @@ $mysqli->close();
         <div class="results-container" style="border: 1px solid #ddd; padding: 15px;">
             <div class="our_schedule_content">
                 <?php if (!isset($intakeResults) && isset($bodyFatResults)): ?>
-                    <h2>PROGRESS TRACKING</h2>
-                    <h5><?php echo $formattedDate; ?> </h5>
+                    <h5 class="mt-5" style="font-size: 60px;">PROGRESS TRACKING</h5>
+                    <h2 style="font-size: 40px;"><?php echo $formattedDate; ?> </h2>
                 </div>
                 <div id="chartContainer">
                     <canvas id="bodyReportsChart"></canvas>
@@ -2253,6 +2268,15 @@ $mysqli->close();
                                 </div>
                             </div>
                             <p>Click the food you have consumed to track your progress.
+
+                            <div id="total-<?php echo strtolower($day); ?>" class="large-counter-text mb-3" data-calories="0"
+                                data-protein="0">
+                                <?php
+                                echo '<u>Total Consumed:</u> <br>';
+                                echo 'Calories: <span id="calories-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['caloricIntake'] . '<br>';
+                                echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
+                                ?>
+                            </div>
                             <p><strong>Tip:</strong> You can also eat the foods in any order, as long as you meet the
                                 recommended
                                 daily macronutrients.</p>
@@ -2299,13 +2323,12 @@ $mysqli->close();
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
+                                <div id="tooltip"
+                                    style="display: none; position: absolute; padding: 5px; background-color: rgba(0, 0, 0, 0.75); color: white; border-radius: 5px; font-size: 12px; pointer-events: none;">
+                                </div>
                             </div>
                             <div id="total-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text"
                                 data-calories="0" data-protein="0">
-                                <?php
-                                echo 'Calories: <span id="calories-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['caloricIntake'] . '<br>';
-                                echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
-                                ?>
                                 <div class="note">
                                     <b>Meal plan food suggestions are based on the Philippine Department of Science and
                                         Technology,
@@ -2457,15 +2480,16 @@ $mysqli->close();
         // Function to attach event listeners to meal items
         function attachEventListeners() {
             const mealItems = document.querySelectorAll('.mealItem');
-            console.log('Attaching event listeners to meal items');
+            const tooltip = document.getElementById('tooltip');  // Tooltip element
+
             mealItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    console.log('Meal item clicked:', item);
+                // Show tooltip when hovering over meal item
+                item.addEventListener('mouseenter', (e) => {
                     const day = item.getAttribute('data-day');
                     const calories = parseFloat(item.getAttribute('data-calories'));
                     const protein = parseFloat(item.getAttribute('data-protein'));
 
-                    // Check if intake has reached the threshold
+                    // Get total element for day
                     const totalElement = document.getElementById(`total-${day}`);
                     const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
                     const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
@@ -2474,21 +2498,57 @@ $mysqli->close();
                     const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).parentElement.textContent.split("/")[1].trim()) || 0;
                     const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).parentElement.textContent.split("/")[1].trim()) || 0;
 
-                    // Prevent selecting if the intake has reached or exceeded the threshold and the item is not already consumed
+                    // Update tooltip content with current totals and max values
+                    tooltip.innerHTML = `
+                <strong><u>Total Consumed:</u></strong><br>
+                Calories: ${totalElement.getAttribute('data-calories')} / ${maxCalories}<br>
+                Protein: ${totalElement.getAttribute('data-protein')} g / ${maxProtein} g
+            `;
+
+                    // Show tooltip
+                    tooltip.style.display = 'block';
+                });
+
+                // Update tooltip position as mouse moves
+                item.addEventListener('mousemove', (e) => {
+                    tooltip.style.top = `${e.pageY + 10}px`;
+                    tooltip.style.left = `${e.pageX + 10}px`;
+                });
+
+                // Hide tooltip when mouse leaves
+                item.addEventListener('mouseleave', () => {
+                    tooltip.style.display = 'none';
+                });
+
+                // Click event to consume item and update counters
+                item.addEventListener('click', () => {
+                    const day = item.getAttribute('data-day');
+                    const calories = parseFloat(item.getAttribute('data-calories'));
+                    const protein = parseFloat(item.getAttribute('data-protein'));
+
+                    // Get total element for day
+                    const totalElement = document.getElementById(`total-${day}`);
+                    const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
+                    const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
+
+                    // Get max values from the span elements in the HTML
+                    const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).parentElement.textContent.split("/")[1].trim()) || 0;
+                    const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).parentElement.textContent.split("/")[1].trim()) || 0;
+
+                    // Prevent clicking if max intake is reached and item is not already consumed
                     if ((currentCalories >= maxCalories && !item.classList.contains('consumed')) ||
                         (currentProtein >= maxProtein && !item.classList.contains('consumed'))) {
                         alert('You have reached the maximum intake for calories or protein.');
                         return;
                     }
 
-                    // If already consumed, do nothing (prevent unselecting)
+                    // Disable unclicking (if it's already consumed, do nothing but allow tooltip)
                     if (item.classList.contains('consumed')) {
                         return;
                     }
 
-                    // Mark the item as consumed and disable further clicks
+                    // Mark the item as consumed
                     item.classList.add('consumed');
-                    item.style.pointerEvents = 'none'; // Disable further interaction
 
                     // Update daily totals
                     totalElement.setAttribute('data-calories', currentCalories + calories);
@@ -2497,6 +2557,13 @@ $mysqli->close();
                     // Update the display values for calories and protein
                     document.getElementById(`calories-${day}`).innerText = totalElement.getAttribute('data-calories');
                     document.getElementById(`protein-${day}`).innerText = totalElement.getAttribute('data-protein');
+
+                    // Update tooltip content with running totals for calories and protein
+                    tooltip.innerHTML = `
+                <strong><u>Total Consumed:</u></strong><br>
+                Calories: ${totalElement.getAttribute('data-calories')} / ${maxCalories}<br>
+                Protein: ${totalElement.getAttribute('data-protein')} g / ${maxProtein} g
+            `;
 
                     // Check if the intake is already at or above the threshold
                     if (parseFloat(totalElement.getAttribute('data-calories')) >= maxCalories) {
@@ -2513,8 +2580,8 @@ $mysqli->close();
         document.addEventListener('DOMContentLoaded', () => {
             // Attach event listeners when the page loads
             attachEventListeners();
-            attachExerciseEventListeners();
         });
+
 
         // Function to attach event listeners to exercise items
         function attachExerciseEventListeners() {
@@ -2546,121 +2613,163 @@ $mysqli->close();
         document.addEventListener("DOMContentLoaded", function () {
             const ctx = document.getElementById('bodyReportsChart').getContext('2d');
             const data = <?php echo json_encode($mergedData); ?>;
-            const labels = data.map(item => new Date(item.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }));
-            const bmiData = data.map(item => item.bmi);
-            const bodyFatPercentageData = data.map(item => item.bodyFatPercentage);
-            const fatMassData = data.map(item => item.fatMass);
-            const leanMassData = data.map(item => item.leanMass);
-            const weightData = data.map(item => item.weight);
+        const labels = data.map(item => new Date(item.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }));
+        const bmiData = data.map(item => item.bmi);
+        const bodyFatPercentageData = data.map(item => item.bodyFatPercentage);
+        const fatMassData = data.map(item => item.fatMass);
+        const leanMassData = data.map(item => item.leanMass);
+        const weightData = data.map(item => item.weight);
 
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Weight',
-                            data: weightData,
-                            borderColor: 'rgba(153, 102, 255, 1)',
-                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                            borderWidth: 3,
-                            pointStyle: 'star',
-                            pointRadius: 5,
-                            pointBackgroundColor: 'rgba(153, 102, 255, 1)',
-                        },
-                        {
-                            label: 'BMI',
-                            data: bmiData,
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderWidth: 3,
-                            pointStyle: 'circle',
-                            pointRadius: 5,
-                            pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                        },
-                        {
-                            label: 'Body Fat Percentage',
-                            data: bodyFatPercentageData,
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                            borderWidth: 3,
-                            pointStyle: 'rect',
-                            pointRadius: 5,
-                            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-                        },
-                        {
-                            label: 'Fat Mass',
-                            data: fatMassData,
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                            borderWidth: 3,
-                            pointStyle: 'triangle',
-                            pointRadius: 5,
-                            pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-                        },
-                        {
-                            label: 'Lean Mass',
-                            data: leanMassData,
-                            borderColor: 'rgba(255, 206, 86, 1)',
-                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
-                            borderWidth: 3,
-                            pointStyle: 'rectRot',
-                            pointRadius: 5,
-                            pointBackgroundColor: 'rgba(255, 206, 86, 1)',
-                        }
-                    ]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Value',
-                                font: {
-                                    size: 18
-                                }
-                            },
-                            ticks: {
-                                font: {
-                                    size: 18,
-                                }
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Weight',
+                        data: weightData,
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        borderWidth: 3,
+                        pointStyle: 'star',
+                        pointRadius: 5,
+                        pointHoverRadius: 7, // Increase point radius on hover
+                        pointBackgroundColor: 'rgba(153, 102, 255, 1)',
+                    },
+                    {
+                        label: 'BMI',
+                        data: bmiData,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderWidth: 3,
+                        pointStyle: 'circle',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                    },
+                    {
+                        label: 'Body Fat Percentage',
+                        data: bodyFatPercentageData,
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderWidth: 3,
+                        pointStyle: 'rect',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                    },
+                    {
+                        label: 'Fat Mass',
+                        data: fatMassData,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderWidth: 3,
+                        pointStyle: 'triangle',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                    },
+                    {
+                        label: 'Lean Mass',
+                        data: leanMassData,
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                        borderWidth: 3,
+                        pointStyle: 'rectRot',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: 'rgba(255, 206, 86, 1)',
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Value',
+                            font: {
+                                size: 18
                             }
                         },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Date',
-                                font: {
-                                    size: 18
-                                }
-                            },
-                            ticks: {
-                                font: {
-                                    size: 18,
-                                }
+                        ticks: {
+                            font: {
+                                size: 18,
                             }
                         }
                     },
-                    plugins: {
+                    x: {
                         title: {
                             display: true,
-                            text: 'Saved Results',
+                            text: 'Date',
                             font: {
-                                size: 18,
-                                color: 'black'
+                                size: 18
                             }
                         },
-                        legend: {
-                            display: true,
-                            position: 'top',
+                        ticks: {
+                            font: {
+                                size: 18,
+                            },
+                            color: 'black'
+                        }
+                    }
+                },
+                plugins: {
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: true, // Enable zooming with the mouse wheel
+                            },
+                            pinch: {
+                                enabled: true, // Enable zooming with pinch gesture
+                            },
+                            mode: 'xy', // Zoom in both directions
                         },
+                        pan: {
+                            enabled: true, // Allow panning
+                            mode: 'xy',
+                        }
+                    },
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            label: function (tooltipItem) {
+                                const label = tooltipItem.dataset.label || '';
+                                const value = tooltipItem.raw;
+                                return `${label}: ${value}`;
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Progress Tracking Chart',
+                        font: {
+                            size: 22,
+                        },
+                        padding: {
+                            top: 10,
+                            bottom: 30
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: {
+                                size: 16
+                            }
+                        }
                     }
                 }
-            });
+            }
         });
+        });
+
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <script src="assets/js/jquery-3.6.0.min.js"></script>
     <script src="assets/js/popper.min.js"></script>
     <script src="assets/js/video-popup.js"></script>
