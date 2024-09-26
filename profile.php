@@ -2613,158 +2613,207 @@ $mysqli->close();
         document.addEventListener("DOMContentLoaded", function () {
             const ctx = document.getElementById('bodyReportsChart').getContext('2d');
             const data = <?php echo json_encode($mergedData); ?>;
-        const labels = data.map(item => new Date(item.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }));
-        const bmiData = data.map(item => item.bmi);
-        const bodyFatPercentageData = data.map(item => item.bodyFatPercentage);
-        const fatMassData = data.map(item => item.fatMass);
-        const leanMassData = data.map(item => item.leanMass);
-        const weightData = data.map(item => item.weight);
+            const labels = data.map(item => new Date(item.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }));
+            const bmiData = data.map(item => item.bmi);
+            const bodyFatPercentageData = data.map(item => item.bodyFatPercentage);
+            const fatMassData = data.map(item => item.fatMass);
+            const leanMassData = data.map(item => item.leanMass);
+            const weightData = data.map(item => item.weight);
 
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Weight',
-                        data: weightData,
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                        borderWidth: 3,
-                        pointStyle: 'star',
-                        pointRadius: 5,
-                        pointHoverRadius: 7, // Increase point radius on hover
-                        pointBackgroundColor: 'rgba(153, 102, 255, 1)',
-                    },
-                    {
-                        label: 'BMI',
-                        data: bmiData,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderWidth: 3,
-                        pointStyle: 'circle',
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                    },
-                    {
-                        label: 'Body Fat Percentage',
-                        data: bodyFatPercentageData,
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        borderWidth: 3,
-                        pointStyle: 'rect',
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-                    },
-                    {
-                        label: 'Fat Mass',
-                        data: fatMassData,
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderWidth: 3,
-                        pointStyle: 'triangle',
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-                    },
-                    {
-                        label: 'Lean Mass',
-                        data: leanMassData,
-                        borderColor: 'rgba(255, 206, 86, 1)',
-                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
-                        borderWidth: 3,
-                        pointStyle: 'rectRot',
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        pointBackgroundColor: 'rgba(255, 206, 86, 1)',
-                    }
-                ]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Value',
-                            font: {
-                                size: 18
-                            }
+            // Creating gradient backgrounds for the lines
+            const gradientWeight = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientWeight.addColorStop(0, 'rgba(153, 102, 255, 0.9)');
+            gradientWeight.addColorStop(1, 'rgba(153, 102, 255, 0.3)');
+
+            const gradientBMI = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientBMI.addColorStop(0, 'rgba(75, 192, 192, 0.9)');
+            gradientBMI.addColorStop(1, 'rgba(75, 192, 192, 0.3)');
+
+            const gradientBodyFat = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientBodyFat.addColorStop(0, 'rgba(255, 99, 132, 0.9)');
+            gradientBodyFat.addColorStop(1, 'rgba(255, 99, 132, 0.3)');
+
+            const gradientFatMass = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientFatMass.addColorStop(0, 'rgba(54, 162, 235, 0.9)');
+            gradientFatMass.addColorStop(1, 'rgba(54, 162, 235, 0.3)');
+
+            const gradientLeanMass = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientLeanMass.addColorStop(0, 'rgba(255, 206, 86, 0.9)');
+            gradientLeanMass.addColorStop(1, 'rgba(255, 206, 86, 0.3)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Weight',
+                            data: weightData,
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            backgroundColor: gradientWeight,
+                            borderWidth: 3,
+                            pointStyle: 'star',
+                            pointRadius: 5,
+                            pointHoverRadius: 10,
+                            pointBackgroundColor: 'rgba(153, 102, 255, 1)',
                         },
-                        ticks: {
-                            font: {
-                                size: 18,
-                            }
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Date',
-                            font: {
-                                size: 18
-                            }
+                        {
+                            label: 'BMI',
+                            data: bmiData,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: gradientBMI,
+                            borderWidth: 3,
+                            pointStyle: 'circle',
+                            pointRadius: 5,
+                            pointHoverRadius: 10,
+                            pointBackgroundColor: 'rgba(75, 192, 192, 1)',
                         },
-                        ticks: {
-                            font: {
-                                size: 18,
-                            },
-                            color: 'black'
+                        {
+                            label: 'Body Fat Percentage',
+                            data: bodyFatPercentageData,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: gradientBodyFat,
+                            borderWidth: 3,
+                            pointStyle: 'rect',
+                            pointRadius: 5,
+                            pointHoverRadius: 10,
+                            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                        },
+                        {
+                            label: 'Fat Mass',
+                            data: fatMassData,
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: gradientFatMass,
+                            borderWidth: 3,
+                            pointStyle: 'triangle',
+                            pointRadius: 5,
+                            pointHoverRadius: 10,
+                            pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                        },
+                        {
+                            label: 'Lean Mass',
+                            data: leanMassData,
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            backgroundColor: gradientLeanMass,
+                            borderWidth: 3,
+                            pointStyle: 'rectRot',
+                            pointRadius: 5,
+                            pointHoverRadius: 10,
+                            pointBackgroundColor: 'rgba(255, 206, 86, 1)',
                         }
-                    }
+                    ]
                 },
-                plugins: {
-                    zoom: {
-                        zoom: {
-                            wheel: {
-                                enabled: true, // Enable zooming with the mouse wheel
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Body Stats',
+                                font: {
+                                    size: 18
+                                }
                             },
-                            pinch: {
-                                enabled: true, // Enable zooming with pinch gesture
-                            },
-                            mode: 'xy', // Zoom in both directions
+                            ticks: {
+                                font: {
+                                    size: 18,
+                                },
+                                callback: function (value) {
+                                    return Math.round(value); // Convert ticks to whole numbers
+                                }
+                            }
                         },
-                        pan: {
-                            enabled: true, // Allow panning
-                            mode: 'xy',
-                        }
-                    },
-                    tooltip: {
-                        enabled: true,
-                        callbacks: {
-                            label: function (tooltipItem) {
-                                const label = tooltipItem.dataset.label || '';
-                                const value = tooltipItem.raw;
-                                return `${label}: ${value}`;
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date',
+                                font: {
+                                    size: 18
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 18,
+                                },
+                                color: 'black'
                             }
                         }
                     },
-                    title: {
-                        display: true,
-                        text: 'Progress Tracking Chart',
-                        font: {
-                            size: 22,
-                        },
-                        padding: {
-                            top: 10,
-                            bottom: 30
-                        }
+                    interaction: {
+                        mode: 'nearest',
+                        intersect: false, // Enable hovering over the lines, not just points
                     },
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            font: {
+                    plugins: {
+                        tooltip: {
+                            enabled: true,
+                            backgroundColor: 'rgba(0,0,0,0.7)',
+                            titleFont: {
                                 size: 16
+                            },
+                            bodyFont: {
+                                size: 14
+                            },
+                            callbacks: {
+                                title: function (tooltipItems) {
+                                    const currentIndex = tooltipItems[0].dataIndex;
+                                    const prevIndex = currentIndex > 0 ? currentIndex - 1 : null;
+                                    if (prevIndex !== null) {
+                                        const prevDate = labels[prevIndex];
+                                        const currentDate = labels[currentIndex];
+                                        return `${prevDate} - ${currentDate}`;
+                                    }
+                                    return tooltipItems[0].label;
+                                },
+                                label: function (tooltipItem) {
+                                    const dataset = tooltipItem.dataset;
+                                    const index = tooltipItem.dataIndex;
+                                    const value = Math.round(tooltipItem.raw); // Current value
+
+                                    if (index > 0) {
+                                        const previousValue = Math.round(dataset.data[index - 1]); // Previous value
+                                        return `${dataset.label}: ${previousValue} → ${value}`;
+                                    }
+                                    return `${dataset.label}: ${value}`;
+                                },
+                                afterLabel: function (tooltipItem) {
+                                    const dataset = tooltipItem.dataset;
+                                    const index = tooltipItem.dataIndex;
+
+                                    if (index > 0) {
+                                        const previousValue = dataset.data[index - 1];
+                                        const currentValue = dataset.data[index];
+                                        const difference = Math.round(currentValue - previousValue); // Round the difference
+                                        return `Difference: ${difference >= 0 ? '+' : ''}${difference}`;
+                                    }
+                                    return null;
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Progress Tracking Chart',
+                            font: {
+                                size: 22,
+                            },
+                            padding: {
+                                top: 10,
+                                bottom: 30
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 16
+                                }
                             }
                         }
                     }
                 }
-            }
+            });
         });
-        });
+
 
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
