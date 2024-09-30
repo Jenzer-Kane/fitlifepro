@@ -766,6 +766,37 @@ if ($lastCalculationDate) {
 
 $disableButton = $remainingDays > 0;
 
+// PROGRESS TRACKING TABLE SECTION ARROW INDICATORS
+if (!function_exists('getArrow')) {
+    function getArrow($currentValue, $previousValue, $goal)
+    {
+        $difference = $currentValue - $previousValue;
+
+        if ($goal === 'weight-loss') {
+            if ($difference < 0) {
+                return "<span style='color: green;'>⬇️ <strong>-" . abs($difference) . "</strong></span>"; // Green for weight loss
+            } else {
+                return "<span style='color: red;'>⬆️ <strong>+" . $difference . "</strong></span>"; // Red for weight gain
+            }
+        } elseif ($goal === 'weight-gain') {
+            if ($difference > 0) {
+                return "<span style='color: green;'>⬆️ <strong>+" . $difference . "</strong></span>"; // Green for weight gain
+            } else {
+                return "<span style='color: red;'>⬇️ <strong>-" . abs($difference) . "</strong></span>"; // Red for weight loss
+            }
+        } elseif ($goal === 'maintenance') {
+            if ($difference === 0) {
+                return "<span style='color: blue;'>↔️ <strong>No Change</strong></span>"; // Blue for no change
+            } elseif ($difference > 0) {
+                return "<span style='color: red;'>⬆️ <strong>+" . $difference . "</strong></span>"; // Red for increase
+            } else {
+                return "<span style='color: green;'>⬇️ <strong>-" . abs($difference) . "</strong></span>"; // Green for decrease
+            }
+        }
+
+        return ''; // Default return if no goal is set
+    }
+}
 
 $mysqli->close();
 ?>
@@ -1331,8 +1362,8 @@ $mysqli->close();
                 <?php if (!isset($intakeResults) && isset($bodyFatResults)): ?>
                     <h2 class="mt-5 mb-5" style="font-size: 80px;"><u>---- RESULTS ----</u></h2> <br>
 
-                    <h2 style="font-size: 70px;">GENERATED ON: </h2><br>
-                    <h5 style="font-size: 70px;"><?php echo $formattedDate; ?> </h5>
+                    <h5 class="mt-5" style="font-size: 80px;">GENERATED ON</h5><br>
+                    <h2 style="font-size: 70px;"><?php echo $formattedDate; ?> </h2>
                 <?php endif; ?>
             </div>
         </div>
@@ -1563,9 +1594,9 @@ $mysqli->close();
                                     <?php if (isset($intakeResults)): ?>
                                         <!-- SESSION STUFF -->
                                         <h2>Current Recommended Goal, Calorie and Protein Intake:</h2>
-                                        <p><strong>Recommended Goal:</strong>
-                                            <?php echo ucwords(str_replace('-', ' ', $intakeResults['goal'])); ?></p>
-                                        <p><strong>Lifestyle:</strong> <?php echo ucfirst($activityLevel); ?></p>
+                                        <p><u><strong>Recommended Goal:</strong>
+                                                <?php echo ucwords(str_replace('-', ' ', $intakeResults['goal'])); ?></p>
+                                        <p><strong>Lifestyle:</strong> <?php echo ucfirst($activityLevel); ?></p></u>
                                         <p><strong>Caloric Intake:</strong>
                                             <?php echo number_format($intakeResults['caloricIntake']); ?> calories/day</p>
                                         <p><strong>Protein Intake:</strong>
@@ -1575,9 +1606,9 @@ $mysqli->close();
                                     <?php elseif (isset($bodyFatResults)): ?>
                                         <!-- DATABASE STUFF -->
                                         <h2>Recommended Goal, Calorie and Protein Intake:</h2>
-                                        <p><strong>Recommended Goal:</strong>
-                                            <?php echo ucwords(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
-                                        </p>
+                                        <p><u><strong>Recommended Goal:</strong>
+                                                <?php echo ucwords(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
+                                        </p></u>
                                         <p><strong>Lifestyle:</strong>
                                             <?php echo ucfirst($bodyFatResults['activityLevel']); ?>
                                         </p>
@@ -1601,7 +1632,9 @@ $mysqli->close();
                                     <?php if (isset($intakeResults)): ?>
                                         <!-- SESSION STUFF -->
                                         <h2>Current Food Recommendations:</h2>
-                                        <h2><?php echo ucwords(str_replace('-', ' ', $goal)); ?></h2>
+                                        <h2><u>
+                                                <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
+                                            </u></h2>
                                         <ul>
                                             <?php if ($goal === 'weight-loss'): ?>
                                                 <?php
@@ -1673,8 +1706,9 @@ $mysqli->close();
                                     <?php elseif (isset($bodyFatResults)): ?>
                                         <!-- DATABASE STUFF -->
                                         <h2>Food Recommendations:</h2>
-                                        <h2><?php echo ucwords(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
-                                        </h2>
+                                        <h2><u>
+                                                <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
+                                            </u></h2>
                                         <ul>
                                             <?php if ($bodyFatResults['recommendedGoal'] === 'weight-loss'): ?>
                                                 <?php
@@ -1778,66 +1812,109 @@ $mysqli->close();
 
     <?php if ($showDietPlanningSection): ?>
         <div class="results-container" style="border: 1px solid #ddd; padding: 15px;">
-            <div class="our_schedule_content">
+            <div class="our_schedule_content" style="text-align: center;"> <!-- Center the content -->
                 <?php if (!isset($intakeResults) && isset($bodyFatResults)): ?>
-                    <h5 class="mt-5" style="font-size: 60px;">PROGRESS TRACKING</h5>
-                    <h2 style="font-size: 40px;"><?php echo $formattedDate; ?> </h2>
+                    <h5 class="mt-5" style="font-size: 80px;">PROGRESS TRACKING</h5>
+                    <h2 class="mt-5"><u>
+                            <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
+                        </u></h2>
                 </div>
-                <div id="chartContainer">
+
+                <!-- Recommended Goal Description Section -->
+                <div id="goalDescription" style="margin-top: 20px; text-align: center;"> <!-- Centered description -->
+                    <?php
+                    $goalDescription = "";
+                    if ($bodyFatResults['recommendedGoal'] === 'weight-loss') {
+                        $goalDescription = "Your goal is weight loss. You should aim for a gradual decrease in weight, body fat percentage, fat mass, and BMI over time. In your chart, look for a downward trend in these metrics.";
+                    } elseif ($bodyFatResults['recommendedGoal'] === 'weight-gain') {
+                        $goalDescription = "Your goal is weight gain. You should aim for a gradual increase in weight and lean mass. In the chart, watch for an upward trend in weight and lean mass while keeping body fat percentage steady.";
+                    } elseif ($bodyFatResults['recommendedGoal'] === 'maintenance') {
+                        $goalDescription = "Your goal is maintenance. You should aim to keep your weight, BMI, and body fat percentage steady. Look for minimal fluctuations in your chart to ensure you're staying within your maintenance zone.";
+                    }
+                    ?>
+                    <p style="font-size: 20px; line-height: 1.5; margin: 0 auto; max-width: 800px;">
+                        <?php echo $goalDescription; ?>
+                    </p>
+                </div>
+
+                <!-- Chart Section -->
+                <div id="chartContainer" style="text-align: center; margin-top: 20px;"> <!-- Center the chart -->
                     <canvas id="bodyReportsChart"></canvas>
                 </div>
-                <div id="tableContainer">
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                        <thead>
+
+                <!-- Chart Table Section -->
+                <?php
+                $previousData = null; // To hold the previous row data
+                ?>
+
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                    <thead>
+                        <tr>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: #f0f0f0; color: black;">
+                                Date</th>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(153, 102, 255, 1); color: black;">
+                                Weight</th>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(75, 192, 192, 1); color: black;">
+                                BMI</th>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(255, 99, 132, 1); color: black;">
+                                Body Fat Percentage</th>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(54, 162, 235, 1); color: black;">
+                                Fat Mass</th>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(255, 206, 86, 1); color: black;">
+                                Lean Mass</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($mergedData as $data): ?>
                             <tr>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: #f0f0f0; color: black;">
-                                    Date
-                                </th>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(153, 102, 255, 1); color: black;">
-                                    Weight</th>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(75, 192, 192, 1); color: black;">
-                                    BMI</th>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(255, 99, 132, 1); color: black;">
-                                    Body Fat Percentage</th>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(54, 162, 235, 1); color: black;">
-                                    Fat Mass</th>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(255, 206, 86, 1); color: black;">
-                                    Lean Mass</th>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">
+                                    <?php echo date('M d, Y', strtotime($data['created_at'])); ?>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                    <?php echo round($data['weight']); ?>
+                                    <?php if ($previousData): ?>
+                                        <?php echo getArrow(round($data['weight']), round($previousData['weight']), $bodyFatResults['recommendedGoal']); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                    <?php echo round($data['bmi']); ?>
+                                    <?php if ($previousData): ?>
+                                        <?php echo getArrow(round($data['bmi']), round($previousData['bmi']), $bodyFatResults['recommendedGoal']); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                    <?php echo round($data['bodyFatPercentage']); ?>
+                                    <?php if ($previousData): ?>
+                                        <?php echo getArrow(round($data['bodyFatPercentage']), round($previousData['bodyFatPercentage']), $bodyFatResults['recommendedGoal']); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                    <?php echo round($data['fatMass']); ?>
+                                    <?php if ($previousData): ?>
+                                        <?php echo getArrow(round($data['fatMass']), round($previousData['fatMass']), $bodyFatResults['recommendedGoal']); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                    <?php echo round($data['leanMass']); ?>
+                                    <?php if ($previousData): ?>
+                                        <?php echo getArrow(round($data['leanMass']), round($previousData['leanMass']), $bodyFatResults['recommendedGoal']); ?>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($mergedData as $data): ?>
-                                <tr>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo date('M d, Y', strtotime($data['created_at'])); ?>
-                                    </td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo htmlspecialchars($data['weight']); ?>
-                                    </td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo htmlspecialchars($data['bmi']); ?>
-                                    </td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo htmlspecialchars($data['bodyFatPercentage']); ?>
-                                    </td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo htmlspecialchars($data['fatMass']); ?>
-                                    </td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo htmlspecialchars($data['leanMass']); ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
+                            <?php
+                            $previousData = $data; // Set the current data as the previous data for the next iteration
+                            ?>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
         </div>
     <?php endif; ?>
 
@@ -2012,8 +2089,8 @@ $mysqli->close();
                             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                 <div class="our_schedule_content">
                                     <?php if (!empty($meal_plan)): ?>
-                                        <h5>DIET PLAN</h5>
-                                        <h2>RECOMMENDED DIET PLAN FOR<br><?php echo strtoupper($goal_name); ?></h2>
+                                        <h5 class="mt-5" style="font-size: 80px;">DIET PLAN</h5>
+                                        <h2>RECOMMENDED DIET PLAN FOR<br><u><?php echo strtoupper($goal_name); ?></h2></u>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -2036,9 +2113,9 @@ $mysqli->close();
                                         </div>
                                     </div>
                                 </div>
-                                <p>Click the food you have consumed to track your progress.
-                                </p>
-                                <p><strong>Tip:</strong> You can also eat the foods in any order, as long as you meet the
+                                <p style="font-size: 20px;">Click the food you have consumed to track your progress.</p>
+
+                                <p><strong>Tip:</strong> You can eat the foods in any order, as long as you meet the
                                     recommended daily macronutrients.</p>
                                 <div class="diet-horizontal-display">
                                     <table class="border border-black" id="mealPlanTable-<?php echo strtolower($day); ?>">
@@ -2084,11 +2161,12 @@ $mysqli->close();
                                         </tbody>
                                     </table>
                                 </div>
-                                <div id="total-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text"
-                                    data-calories="0" data-protein="0">
+                                <div id="total-<?php echo strtolower($day); ?>" class="large-counter-text mb-3" data-calories="0"
+                                    data-protein="0">
                                     <?php
-                                    echo 'Calories: <span id="calories-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['caloricIntake'] . '<br>';
-                                    echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
+                                    echo '<u>Total Consumed:</u> <br>';
+                                    echo 'Calories: <span id="calories-' . strtolower($day) . '" class="calories-counter">0</span> / ' . $bodyFatResults['caloricIntake'] . '<br>';
+                                    echo 'Protein (g): <span id="protein-' . strtolower($day) . '" class="protein-counter">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
                                     ?>
                                     <div class="note">
                                         <b>Meal plan food suggestions are based on the Philippine Department of Science and
@@ -2243,8 +2321,8 @@ $mysqli->close();
                         <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                             <div class="our_schedule_content">
                                 <?php if (!empty($meal_plan)): ?>
-                                    <h5>DIET PLAN</h5>
-                                    <h2>RECOMMENDED DIET PLAN FOR<br><?php echo strtoupper($goal_name); ?></h2>
+                                    <h5 class="mt-5" style="font-size: 80px;">DIET PLAN</h5>
+                                    <h2>RECOMMENDED DIET PLAN FOR<br><u><?php echo strtoupper($goal_name); ?></h2></u>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -2267,7 +2345,8 @@ $mysqli->close();
                                     </div>
                                 </div>
                             </div>
-                            <p>Click the food you have consumed to track your progress.
+                            <p style="font-size: 20px;">Click the food you have consumed to track your progress.</p>
+
 
                             <div id="total-<?php echo strtolower($day); ?>" class="large-counter-text mb-3" data-calories="0"
                                 data-protein="0">
@@ -2277,7 +2356,7 @@ $mysqli->close();
                                 echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
                                 ?>
                             </div>
-                            <p><strong>Tip:</strong> You can also eat the foods in any order, as long as you meet the
+                            <p><strong>Tip:</strong> You can eat the foods in any order, as long as you meet the
                                 recommended
                                 daily macronutrients.</p>
                             <div class="diet-horizontal-display">
@@ -2350,8 +2429,8 @@ $mysqli->close();
                                 <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                     <div class="our_schedule_content">
                                         <?php if (!empty($exercise_plan)): ?>
-                                            <h5>EXERCISE PLAN</h5>
-                                            <h2>RECOMMENDED EXERCISE PLAN FOR<br><?php echo strtoupper($goal_name); ?></h2>
+                                            <h5 class="mt-5" style="font-size: 80px;">EXERCISE PLAN</h5>
+                                            <h2>RECOMMENDED EXERCISE PLAN FOR<br><u><?php echo strtoupper($goal_name); ?></h2></u>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -2374,7 +2453,7 @@ $mysqli->close();
                                             </div>
                                         </div>
                                     </div>
-                                    <p>Track your progress by marking the exercises you've completed.
+                                    <p style="font-size: 20px;">Track your progress by marking the exercises you've completed.
                                     </p>
                                     <p><strong>Tip: Aim to do at least 5 exercises from all 3 categories in a day (Cardio, Strength,
                                             Core).</strong></p>
@@ -2494,15 +2573,19 @@ $mysqli->close();
                     const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
                     const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
 
-                    // Get max values from the span elements in the HTML
-                    const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).parentElement.textContent.split("/")[1].trim()) || 0;
-                    const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).parentElement.textContent.split("/")[1].trim()) || 0;
+                    // Get max values specifically from the span elements for calories and protein
+                    const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
+                    const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
+
+                    // Determine colors based on whether the maximum is reached
+                    const calorieColor = currentCalories >= maxCalories ? 'lightgreen' : 'white';
+                    const proteinColor = currentProtein >= maxProtein ? 'lightgreen' : 'white';
 
                     // Update tooltip content with current totals and max values
                     tooltip.innerHTML = `
-                <strong><u>Total Consumed:</u></strong><br>
-                Calories: ${totalElement.getAttribute('data-calories')} / ${maxCalories}<br>
-                Protein: ${totalElement.getAttribute('data-protein')} g / ${maxProtein} g
+            <strong style="color: white;"><u>Total Consumed:</u></strong><br>
+            <span style="color:${calorieColor};">Calories: ${currentCalories} / ${maxCalories}</span><br>
+            <span style="color:${proteinColor};">Protein: ${currentProtein} g / ${maxProtein} g</span>
             `;
 
                     // Show tooltip
@@ -2531,14 +2614,13 @@ $mysqli->close();
                     const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
                     const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
 
-                    // Get max values from the span elements in the HTML
-                    const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).parentElement.textContent.split("/")[1].trim()) || 0;
-                    const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).parentElement.textContent.split("/")[1].trim()) || 0;
+                    // Get max values specifically from the span elements for calories and protein
+                    const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
+                    const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
 
-                    // Prevent clicking if max intake is reached and item is not already consumed
-                    if ((currentCalories >= maxCalories && !item.classList.contains('consumed')) ||
-                        (currentProtein >= maxProtein && !item.classList.contains('consumed'))) {
-                        alert('You have reached the maximum intake for calories or protein.');
+                    // Prevent clicking if calorie intake is max (protein can exceed max)
+                    if (currentCalories >= maxCalories && !item.classList.contains('consumed')) {
+                        alert('You have reached the maximum calorie intake for the day.');
                         return;
                     }
 
@@ -2555,23 +2637,50 @@ $mysqli->close();
                     totalElement.setAttribute('data-protein', currentProtein + protein);
 
                     // Update the display values for calories and protein
-                    document.getElementById(`calories-${day}`).innerText = totalElement.getAttribute('data-calories');
-                    document.getElementById(`protein-${day}`).innerText = totalElement.getAttribute('data-protein');
+                    const calorieElement = document.getElementById(`calories-${day}`);
+                    const proteinElement = document.getElementById(`protein-${day}`);
 
-                    // Update tooltip content with running totals for calories and protein
-                    tooltip.innerHTML = `
-                <strong><u>Total Consumed:</u></strong><br>
-                Calories: ${totalElement.getAttribute('data-calories')} / ${maxCalories}<br>
-                Protein: ${totalElement.getAttribute('data-protein')} g / ${maxProtein} g
-            `;
+                    // Set colors for counter text (outside tooltip) based on max value reached
+                    const newCalorieValue = parseFloat(totalElement.getAttribute('data-calories'));
+                    calorieElement.innerText = newCalorieValue;
+                    calorieElement.style.color = newCalorieValue >= maxCalories ? 'lightgreen' : 'black';
 
-                    // Check if the intake is already at or above the threshold
-                    if (parseFloat(totalElement.getAttribute('data-calories')) >= maxCalories) {
-                        alert('You have reached the maximum calorie intake for the day.');
+                    const newProteinValue = parseFloat(totalElement.getAttribute('data-protein'));
+                    proteinElement.innerText = newProteinValue;
+                    proteinElement.style.color = newProteinValue >= maxProtein ? 'lightgreen' : 'black';
+
+                    // Set both current and max values to lightgreen if max is reached
+                    const maxCalorieSpan = document.querySelector(`#calories-${day}`).nextSibling;
+                    maxCalorieSpan.textContent = ` / ${maxCalories}`;
+                    if (newCalorieValue >= maxCalories) {
+                        calorieElement.style.color = 'lightgreen';
+                        maxCalorieSpan.style.color = 'lightgreen';
+                    } else {
+                        maxCalorieSpan.style.color = 'black';
                     }
 
-                    if (parseFloat(totalElement.getAttribute('data-protein')) >= maxProtein) {
-                        alert('You have reached the maximum protein intake for the day.');
+                    const maxProteinSpan = document.querySelector(`#protein-${day}`).nextSibling;
+                    maxProteinSpan.textContent = ` / ${maxProtein}`;
+                    if (newProteinValue >= maxProtein) {
+                        proteinElement.style.color = 'lightgreen';
+                        maxProteinSpan.style.color = 'lightgreen';
+                    } else {
+                        maxProteinSpan.style.color = 'black';
+                    }
+
+                    // Update tooltip content with running totals for calories and protein
+                    const calorieColor = newCalorieValue >= maxCalories ? 'lightgreen' : 'white';
+                    const proteinColor = newProteinValue >= maxProtein ? 'lightgreen' : 'white';
+
+                    tooltip.innerHTML = `
+            <strong style="color: white;"><u>Total Consumed:</u></strong><br>
+            <span style="color:${calorieColor};">Calories: ${newCalorieValue} / ${maxCalories}</span><br>
+            <span style="color:${proteinColor};">Protein: ${newProteinValue} g / ${maxProtein} g</span>
+            `;
+
+                    // Only show an alert if the calorie intake reaches the maximum
+                    if (newCalorieValue >= maxCalories) {
+                        alert('You have reached the maximum calorie intake for the day.');
                     }
                 });
             });
@@ -2580,6 +2689,7 @@ $mysqli->close();
         document.addEventListener('DOMContentLoaded', () => {
             // Attach event listeners when the page loads
             attachEventListeners();
+            attachExerciseEventListeners();
         });
 
 
@@ -2620,6 +2730,9 @@ $mysqli->close();
             const leanMassData = data.map(item => item.leanMass);
             const weightData = data.map(item => item.weight);
 
+            // Recommended goal fetched from PHP
+            const recommendedGoal = '<?php echo $bodyFatResults["recommendedGoal"]; ?>';
+
             // Creating gradient backgrounds for the lines
             const gradientWeight = ctx.createLinearGradient(0, 0, 0, 400);
             gradientWeight.addColorStop(0, 'rgba(153, 102, 255, 0.9)');
@@ -2651,7 +2764,7 @@ $mysqli->close();
                             data: weightData,
                             borderColor: 'rgba(153, 102, 255, 1)',
                             backgroundColor: gradientWeight,
-                            borderWidth: 3,
+                            borderWidth: 5,
                             pointStyle: 'star',
                             pointRadius: 5,
                             pointHoverRadius: 10,
@@ -2662,7 +2775,7 @@ $mysqli->close();
                             data: bmiData,
                             borderColor: 'rgba(75, 192, 192, 1)',
                             backgroundColor: gradientBMI,
-                            borderWidth: 3,
+                            borderWidth: 5,
                             pointStyle: 'circle',
                             pointRadius: 5,
                             pointHoverRadius: 10,
@@ -2673,7 +2786,7 @@ $mysqli->close();
                             data: bodyFatPercentageData,
                             borderColor: 'rgba(255, 99, 132, 1)',
                             backgroundColor: gradientBodyFat,
-                            borderWidth: 3,
+                            borderWidth: 5,
                             pointStyle: 'rect',
                             pointRadius: 5,
                             pointHoverRadius: 10,
@@ -2684,7 +2797,7 @@ $mysqli->close();
                             data: fatMassData,
                             borderColor: 'rgba(54, 162, 235, 1)',
                             backgroundColor: gradientFatMass,
-                            borderWidth: 3,
+                            borderWidth: 5,
                             pointStyle: 'triangle',
                             pointRadius: 5,
                             pointHoverRadius: 10,
@@ -2695,7 +2808,7 @@ $mysqli->close();
                             data: leanMassData,
                             borderColor: 'rgba(255, 206, 86, 1)',
                             backgroundColor: gradientLeanMass,
-                            borderWidth: 3,
+                            borderWidth: 5,
                             pointStyle: 'rectRot',
                             pointRadius: 5,
                             pointHoverRadius: 10,
@@ -2748,21 +2861,29 @@ $mysqli->close();
                             enabled: true,
                             backgroundColor: 'rgba(0,0,0,0.7)',
                             titleFont: {
-                                size: 16
+                                size: 20, // Bigger font for title
+                                weight: 'bold'
                             },
                             bodyFont: {
-                                size: 14
+                                size: 20 // Bigger font for body
+                            },
+                            padding: {
+                                top: 10,
+                                right: 15,
+                                bottom: 10,
+                                left: 15
                             },
                             callbacks: {
                                 title: function (tooltipItems) {
                                     const currentIndex = tooltipItems[0].dataIndex;
                                     const prevIndex = currentIndex > 0 ? currentIndex - 1 : null;
+                                    const goal = recommendedGoal.charAt(0).toUpperCase() + recommendedGoal.slice(1); // Capitalize goal
                                     if (prevIndex !== null) {
                                         const prevDate = labels[prevIndex];
                                         const currentDate = labels[currentIndex];
-                                        return `${prevDate} - ${currentDate}`;
+                                        return `${prevDate} - ${currentDate}\nGoal: ${goal}`; // Adding the goal to the title
                                     }
-                                    return tooltipItems[0].label;
+                                    return `${tooltipItems[0].label}\nGoal: ${goal}`;
                                 },
                                 label: function (tooltipItem) {
                                     const dataset = tooltipItem.dataset;
@@ -2783,7 +2904,19 @@ $mysqli->close();
                                         const previousValue = dataset.data[index - 1];
                                         const currentValue = dataset.data[index];
                                         const difference = Math.round(currentValue - previousValue); // Round the difference
-                                        return `Difference: ${difference >= 0 ? '+' : ''}${difference}`;
+
+                                        let colorText = ''; // No coloring
+
+                                        // Define text-based indicators for the differences
+                                        if (recommendedGoal === 'weight-loss') {
+                                            colorText = difference < 0 ? '⬇️ ' : '⬆️ '; // Down arrow for loss, up arrow for gain
+                                        } else if (recommendedGoal === 'weight-gain') {
+                                            colorText = difference > 0 ? '⬆️ ' : '⬇️ '; // Up arrow for gain, down arrow for loss
+                                        } else if (recommendedGoal === 'maintenance') {
+                                            colorText = Math.abs(difference) === 0 ? '↔️ ' : (difference > 0 ? '⬆️ ' : '⬇️ '); // Steady arrow for no change
+                                        }
+
+                                        return `Difference: ${colorText}${difference >= 0 ? '+' : ''}${difference}`;
                                     }
                                     return null;
                                 }
@@ -2813,7 +2946,6 @@ $mysqli->close();
                 }
             });
         });
-
 
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
