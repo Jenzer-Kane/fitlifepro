@@ -1052,6 +1052,45 @@ $mysqli->close();
             font-size: 14px;
             margin-top: 5px;
         }
+
+        /* Initially hide the infographic section */
+        .infographic-section {
+            opacity: 0;
+            transform: translateX(100%);
+            /* Position it off-screen to the right */
+            transition: all 0.5s ease;
+            /* Smooth slide-in effect */
+            border: 2px solid #ddd;
+            /* Add border outline */
+            padding: 15px;
+            /* Add some padding for content inside */
+            border-radius: 8px;
+            /* Optional: Rounded corners */
+            background-color: #f9f9f9;
+            /* Light background for visibility */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            /* Add shadow for a nice effect */
+            height: 55%;
+            /* Make sure it occupies the full height of the column */
+        }
+
+        /* When active, slide it in */
+        .infographic-section.active {
+            opacity: 1;
+            transform: translateX(0);
+            /* Slide it into view */
+        }
+
+        /* Styling for the text inside the infographic */
+        .infographic-section h3 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .infographic-section p {
+            font-size: 18px;
+            line-height: 1.5;
+        }
     </style>
 
     <style>
@@ -1271,9 +1310,9 @@ $mysqli->close();
     <section class="calculator-section">
         <div class="container">
             <div class="row">
-                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                <div class="col-lg-8 col-md-12 col-sm-12">
                     <div class="calculator-form form-section">
-                        <h2>BMI, Body Fat, Calorie and Protein Intake Calculator</h2>
+                        <h2>BMI, Body Fat, Calorie, and Protein Intake Calculator</h2>
 
                         <!-- Combined Form -->
                         <form method="post" action="" id="calculatorForm">
@@ -1310,23 +1349,14 @@ $mysqli->close();
                                     <input type="number" id="thigh" name="thigh" min="5"
                                         value="<?php echo isset($thigh) ? $thigh : ''; ?>" <?php echo isset($disableButton) && $disableButton ? 'disabled' : ''; ?> required>
                                 </div>
-                            <?php else: ?>
-                                <div id="hipSection" style="display: none;">
-                                    <label for="hip">Hip Circumference (cm):</label>
-                                    <input type="number" id="hip" name="hip" value="<?php echo isset($hip) ? $hip : ''; ?>"
-                                        <?php echo isset($disableButton) && $disableButton ? 'disabled' : ''; ?>>
-
-                                    <label for="thigh">Thigh Circumference (cm):</label>
-                                    <input type="number" id="thigh" name="thigh"
-                                        value="<?php echo isset($thigh) ? $thigh : ''; ?>" <?php echo isset($disableButton) && $disableButton ? 'disabled' : ''; ?>>
-                                </div>
                             <?php endif; ?>
 
                             <label for="activityLevel">Lifestyle:</label>
                             <select name="activityLevel" <?php echo isset($disableButton) && $disableButton ? 'disabled' : ''; ?> required>
-                                <option value="sedentary" <?php echo isset($activityLevel) && $activityLevel === 'sedentary' ? 'selected' : ''; ?>>Sedentary - Much resting and very
-                                    little physical exercise.</option>
-                                <option value="active" <?php echo isset($activityLevel) && $activityLevel === 'active' ? 'selected' : ''; ?>>Active - Every day tasks require physical activity.</option>
+                                <option value="sedentary" <?php echo isset($activityLevel) && $activityLevel === 'sedentary' ? 'selected' : ''; ?>>
+                                    Sedentary - Little to no physical activity.</option>
+                                <option value="active" <?php echo isset($activityLevel) && $activityLevel === 'active' ? 'selected' : ''; ?>>
+                                    Active - Regular physical activity.</option>
                             </select>
 
                             <!-- Show Calculate button if no data from DB is showing -->
@@ -1346,9 +1376,19 @@ $mysqli->close();
                         </form>
                     </div>
                 </div>
-            </div>
-        </div>
+
+                <!-- Infographic Section (Initially hidden) -->
+                <div class="col-lg-4 col-md-12 col-sm-12">
+                    <div id="infographicSection" class="infographic-section"
+                        style="border: 1px solid black; padding: 15px;">
+                        <h3>Input Details:</h3>
+                        <p id="infoContent">Click an input field to see its details.</p>
+                        <img id="infoImage" src="" alt="Infographic Image"
+                            style="display: none; max-width: 100%; border: 1px solid black; margin-top: 15px;">
+                    </div>
+                </div>
     </section>
+
 
 
 
@@ -1360,10 +1400,12 @@ $mysqli->close();
         <div class="results-container" style="border: 1px solid #ddd; padding: 15px;">
             <div class="our_schedule_content">
                 <?php if (!isset($intakeResults) && isset($bodyFatResults)): ?>
-                    <h2 class="mt-5 mb-5" style="font-size: 80px;"><u>---- RESULTS ----</u></h2> <br>
-
-                    <h5 class="mt-5" style="font-size: 80px;">GENERATED ON</h5><br>
-                    <h2 style="font-size: 70px;"><?php echo $formattedDate; ?> </h2>
+                    <h5 class="mt-5 mb-5" style="font-size: 80px;">RECOMMENDED GOAL <br></h5>
+                    <h2 style="font-size: 80px;" class="mt-5"><u>
+                            <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
+                        </u></h2>
+                    <h5 class="mt-5" style="font-size: 50px;">AS OF</h5><br>
+                    <h2 style="font-size: 50px;"><u><?php echo $formattedDate; ?> </u></h2>
                 <?php endif; ?>
             </div>
         </div>
@@ -1563,27 +1605,58 @@ $mysqli->close();
                                     <?php if (isset($intakeResults)): ?>
                                         <!-- SESSION STUFF -->
                                         <h2>Current Ideal Weight:</h2>
-                                        <p>Hamwi (1964): <?php echo number_format($hamwiIBW_kg, 2); ?> kg</p>
-                                        <p>Devine (1974): <?php echo number_format($devineIBW, 2); ?> kg</p>
-                                        <p>Robinson (1983): <?php echo number_format($robinsonIBW, 2); ?> kg</p>
-                                        <p>Miller (1983): <?php echo number_format($millerIBW, 2); ?> kg</p>
+                                        <p><strong>Hamwi (1964):</strong> <?php echo number_format($hamwiIBW_kg, 2); ?> kg
+                                            <br>
+                                            <em>The Hamwi method calculates ideal body weight based on height. It is widely
+                                                used for weight management and setting dietary goals.</em>
+                                        </p>
+                                        <p><strong>Devine (1974):</strong> <?php echo number_format($devineIBW, 2); ?> kg
+                                            <br>
+                                            <em>The Devine formula was originally developed to calculate ideal body weight
+                                                for drug dosage purposes, especially in clinical settings.</em>
+                                        </p>
+                                        <p><strong>Robinson (1983):</strong> <?php echo number_format($robinsonIBW, 2); ?>
+                                            kg <br>
+                                            <em>The Robinson formula adjusts ideal body weight based on both height and
+                                                weight, offering a more refined approach than earlier methods.</em>
+                                        </p>
+                                        <p><strong>Miller (1983):</strong> <?php echo number_format($millerIBW, 2); ?> kg
+                                            <br>
+                                            <em>The Miller formula offers another perspective on ideal weight, slightly
+                                                adjusting the figures used by the other formulas to better fit modern
+                                                populations.</em>
+                                        </p>
                                     <?php elseif (isset($bodyFatResults)): ?>
                                         <!-- DATABASE STUFF -->
                                         <h2>Ideal Weight:</h2>
                                         <p><strong>Hamwi (1964):</strong>
-                                            <?php echo number_format($bodyFatResults['hamwiIBW_kg'], 2); ?> kg</p>
+                                            <?php echo number_format($bodyFatResults['hamwiIBW_kg'], 2); ?> kg <br>
+                                            <em>The Hamwi method calculates ideal body weight based on height. It is widely
+                                                used for weight management and setting dietary goals.</em>
+                                        </p>
                                         <p><strong>Devine (1974):</strong>
-                                            <?php echo number_format($bodyFatResults['devineIBW'], 2); ?> kg</p>
+                                            <?php echo number_format($bodyFatResults['devineIBW'], 2); ?> kg <br>
+                                            <em>The Devine formula was originally developed to calculate ideal body weight
+                                                for drug dosage purposes, especially in clinical settings.</em>
+                                        </p>
                                         <p><strong>Robinson (1983):</strong>
-                                            <?php echo number_format($bodyFatResults['robinsonIBW'], 2); ?> kg</p>
+                                            <?php echo number_format($bodyFatResults['robinsonIBW'], 2); ?> kg <br>
+                                            <em>The Robinson formula adjusts ideal body weight based on both height and
+                                                weight, offering a more refined approach than earlier methods.</em>
+                                        </p>
                                         <p><strong>Miller (1983):</strong>
-                                            <?php echo number_format($bodyFatResults['millerIBW'], 2); ?> kg</p>
+                                            <?php echo number_format($bodyFatResults['millerIBW'], 2); ?> kg <br>
+                                            <em>The Miller formula offers another perspective on ideal weight, slightly
+                                                adjusting the figures used by the other formulas to better fit modern
+                                                populations.</em>
+                                        </p>
                                     <?php endif; ?>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
+
 
                 <!-- Caloric and Protein Intake Results Section -->
                 <section class="calculator-results">
@@ -1913,6 +1986,74 @@ $mysqli->close();
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                <?php
+                $firstEntry = reset($mergedData); // Get the first data entry
+                $lastEntry = end($mergedData); // Get the last data entry
+        
+                // Calculate the difference in weight
+                $weightDifference = round($lastEntry['weight']) - round($firstEntry['weight']);
+                $startDate = date('M d, Y', strtotime($firstEntry['created_at']));
+                $endDate = date('M d, Y', strtotime($lastEntry['created_at']));
+
+                // Set the color and sign for weight change
+                $weightChangeSign = $weightDifference >= 0 ? "+" : "-";
+                $weightChangeValue = abs($weightDifference); // Use absolute value for positive and negative display
+        
+                $colorClass = ""; // Default color class
+                $message = "";
+
+                // Generate a message based on the recommended goal
+                if ($bodyFatResults['recommendedGoal'] === 'weight-loss') {
+                    if ($weightDifference < 0) {
+                        // Positive progress in weight loss (loss is good)
+                        $colorClass = "green";
+                        $message = "Great job! Since $startDate, you've lost <span class=\"$colorClass\">$weightChangeSign$weightChangeValue kg</span>. Keep up the fantastic progress!";
+                    } else {
+                        // Negative progress in weight loss (gain is bad)
+                        $colorClass = "red";
+                        $message = "It seems you've gained <span class=\"$colorClass\">$weightChangeSign$weightChangeValue kg</span> since $startDate. Stay motivated and keep going!";
+                    }
+                } elseif ($bodyFatResults['recommendedGoal'] === 'weight-gain') {
+                    if ($weightDifference > 0) {
+                        // Positive progress in weight gain (gain is good)
+                        $colorClass = "green";
+                        $message = "Awesome! Since $startDate, you've gained <span class=\"$colorClass\">$weightChangeSign$weightChangeValue kg</span>. Keep pushing!";
+                    } else {
+                        // Negative progress in weight gain (loss is bad)
+                        $colorClass = "red";
+                        $message = "It seems you've lost <span class=\"$colorClass\">$weightChangeSign$weightChangeValue kg</span> since $startDate. Stay strong!";
+                    }
+                } elseif ($bodyFatResults['recommendedGoal'] === 'maintenance') {
+                    if ($weightDifference === 0) {
+                        // Ideal progress in maintenance (no change is good)
+                        $colorClass = "green";
+                        $message = "Great job maintaining your weight since $startDate. Keep it steady!";
+                    } else {
+                        // Any change in maintenance is considered bad
+                        $colorClass = "red";
+                        $message = "Your weight has changed by <span class=\"$colorClass\">$weightChangeSign$weightChangeValue kg</span> since $startDate. <br> It's okay to regress sometimes, now let's get you back on track!";
+                    }
+                }
+                ?>
+
+                <!-- Display the message with colors based on the goal -->
+                <div class="congratulatory-message"
+                    style="margin-top: 20px; text-align: center; font-size: 24px; font-weight: bold;">
+                    <?php echo $message; ?>
+                </div>
+
+                <!-- Add some basic CSS styling for green and red -->
+                <style>
+                    .green {
+                        color: green;
+                        font-weight: bold;
+                    }
+
+                    .red {
+                        color: red;
+                        font-weight: bold;
+                    }
+                </style>
             </div>
         <?php endif; ?>
         </div>
@@ -2090,7 +2231,7 @@ $mysqli->close();
                                 <div class="our_schedule_content">
                                     <?php if (!empty($meal_plan)): ?>
                                         <h5 class="mt-5" style="font-size: 80px;">DIET PLAN</h5>
-                                        <h2>RECOMMENDED DIET PLAN FOR<br><u><?php echo strtoupper($goal_name); ?></h2></u>
+                                        <h2><u><?php echo strtoupper($goal_name); ?></h2></u>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -2322,7 +2463,7 @@ $mysqli->close();
                             <div class="our_schedule_content">
                                 <?php if (!empty($meal_plan)): ?>
                                     <h5 class="mt-5" style="font-size: 80px;">DIET PLAN</h5>
-                                    <h2>RECOMMENDED DIET PLAN FOR<br><u><?php echo strtoupper($goal_name); ?></h2></u>
+                                    <h2><u><?php echo strtoupper($goal_name); ?></h2></u>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -2429,8 +2570,8 @@ $mysqli->close();
                                 <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                     <div class="our_schedule_content">
                                         <?php if (!empty($exercise_plan)): ?>
-                                            <h5 class="mt-5" style="font-size: 80px;">EXERCISE PLAN</h5>
-                                            <h2>RECOMMENDED EXERCISE PLAN FOR<br><u><?php echo strtoupper($goal_name); ?></h2></u>
+                                            <h5 style="font-size: 80px;">EXERCISE PLAN</h5>
+                                            <h2><u><?php echo strtoupper($goal_name); ?></h2></u>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -2486,6 +2627,7 @@ $mysqli->close();
                                                         <?php endfor; ?>
                                                     </tr>
                                                 <?php endforeach; ?>
+
                                             </tbody>
                                         </table>
                                     </div>
@@ -2696,6 +2838,7 @@ $mysqli->close();
         // Function to attach event listeners to exercise items
         function attachExerciseEventListeners() {
             const exerciseItems = document.querySelectorAll('.exerciseItem');
+
             exerciseItems.forEach(item => {
                 item.addEventListener('click', () => {
                     item.classList.toggle('completed');
@@ -2946,6 +3089,72 @@ $mysqli->close();
                 }
             });
         });
+        document.addEventListener("DOMContentLoaded", function () {
+            const infoSection = document.getElementById('infographicSection');
+            const infoContent = document.getElementById('infoContent');
+            const infoImage = document.getElementById('infoImage');  // New image element for the infographic
+
+            const tooltips = {
+                bmiWeight: {
+                    text: "Weight: Enter your current weight in kilograms. This will be used to calculate your BMI and body fat percentage. Weight is a key factor in determining your overall health and fitness level.",
+                    image: "https://www.wikihow.com/images/thumb/3/3b/Weigh-Yourself-Step-1.jpg/v4-460px-Weigh-Yourself-Step-1.jpg.webp"  // Add image URL if needed
+                },
+                bmiHeight: {
+                    text: "Height: Enter your height in centimeters. It’s essential for calculating your BMI. Taller individuals with the same weight as shorter individuals will have different BMIs.",
+                    image: "https://www.wikihow.com/images/thumb/9/97/Measure-Your-Height-by-Yourself-Step-12-Version-3.jpg/aid1624233-v4-728px-Measure-Your-Height-by-Yourself-Step-12-Version-3.jpg.webp"  // Add image URL if needed
+                },
+                age: {
+                    text: "Age: Enter your age. Age is important as it affects your metabolism and how your body stores fat. Body fat percentage tends to increase as you age.",
+                    image: "https://www.wikihow.com/images/thumb/2/25/Calculate-Body-Fat-With-a-Tape-Measure-Step-5-Version-3.jpg/v4-460px-Calculate-Body-Fat-With-a-Tape-Measure-Step-5-Version-3.jpg.webp"  // Add image URL if needed
+                },
+                waist: {
+                    text: "Waist: Measure the circumference of your waist in centimeters, typically at the narrowest point. This is used to estimate visceral fat, a key indicator of health risks.",
+                    image: "https://www.wikihow.com/images/thumb/6/60/Measure-Your-Waist-Step-3-Version-3.jpg/aid1375483-v4-728px-Measure-Your-Waist-Step-3-Version-3.jpg.webp"
+                },
+                neck: {
+                    text: "Neck: Measure the circumference of your neck in centimeters at its narrowest point. Neck circumference helps estimate body fat distribution, especially in men.",
+                    image: "https://www.wikihow.com/images/thumb/2/2a/Calculate-Body-Fat-With-a-Tape-Measure-Step-6-Version-3.jpg/v4-460px-Calculate-Body-Fat-With-a-Tape-Measure-Step-6-Version-3.jpg.webp"  // Add image URL if needed
+                },
+                hip: {
+                    text: "Hip: For females, measure the widest part of your hips. This measurement helps assess body fat distribution, which is different between men and women.",
+                    image: "https://www.wikihow.com/images/thumb/f/f7/Measure-Hips-Step-5-Version-5.jpg/aid2669718-v4-728px-Measure-Hips-Step-5-Version-5.jpg.webp"  // Add image URL if needed
+                },
+                thigh: {
+                    text: "Thigh: Measure the circumference of your thigh at its widest part. It helps in calculating body fat percentage and assessing lower body fat distribution.",
+                    image: "https://www.wikihow.com/images/thumb/5/51/Take-Measurements-%28For-Women%29-Step-23-Version-5.jpg/v4-460px-Take-Measurements-%28For-Women%29-Step-23-Version-5.jpg.webp"  // Add image URL if needed
+                },
+                activityLevel: {
+                    text: "Lifestyle: Select your level of physical activity. It’s important for calculating your daily caloric needs based on your metabolism and activity.",
+                    image: ""  // Add image URL if needed
+                }
+            };
+
+            // Add focus event listener to each input field
+            document.querySelectorAll('input, select').forEach(input => {
+                input.addEventListener('focus', (e) => {
+                    const fieldName = e.target.id;
+                    const tooltip = tooltips[fieldName] || { text: "Click an input field to see its details.", image: "" };
+
+                    // Update content and image
+                    infoContent.textContent = tooltip.text;
+                    if (tooltip.image) {
+                        infoImage.src = tooltip.image;
+                        infoImage.style.display = 'block';  // Show image if it exists
+                    } else {
+                        infoImage.style.display = 'none';  // Hide image if there's no link
+                    }
+
+                    // Make the infographic section visible with sliding animation
+                    infoSection.classList.add('active');
+                });
+
+                input.addEventListener('blur', () => {
+                    // Optionally, you could hide the infographic again on blur
+                    // infoSection.classList.remove('active');
+                });
+            });
+        });
+
 
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
