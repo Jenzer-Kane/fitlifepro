@@ -28,8 +28,52 @@ if (!isset($_SESSION['2fa_code'])) {
 
     // Send 2FA code to the user's email
     $userEmail = $_SESSION['email'];
-    $subject = "FitLifePro - Login Authentication Code";
-    $message = "Your login authentication code is: $twoFactorCode";
+    $subject = "FitLifePro - Two-Step Verification Code";
+    $message = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                .message-content { 
+                    border: 1px solid #ddd; 
+                    padding: 20px; 
+                    background-color: #f9f9f9; 
+                }
+                .message-header {
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #007bff;
+                }
+                .message-body {
+                    margin-top: 10px;
+                    font-size: 16px;
+                }
+                .message-footer {
+                    margin-top: 20px;
+                    font-size: 14px;
+                    color: gray;
+                }
+            </style>
+        </head>
+        <body>
+            <div class='message-content'>
+                <div class='message-header'>FitLife Pro - Secure Login</div>
+                <div class='message-body'>
+                    Dear valued user, <br><br>
+                    As part of our commitment to ensuring your privacy and security, we require Two-Step Verification for login. 
+                    Please use the verification code below to complete your login to FitLife Pro:
+                    <br><br>
+                    <strong>Verification Code: $twoFactorCode</strong><br><br>
+                    If you did not request this code, please contact our support team immediately.<br><br>
+                </div>
+                <div class='message-footer'>
+                    This is an automated message from FitLife Pro. Please do not reply to this email.<br>
+                    Thank you for choosing FitLife Pro to help you achieve your fitness goals.
+                </div>
+            </div>
+        </body>
+        </html>
+    ";
 
     // Create a new PHPMailer instance
     $mail = new PHPMailer(true);
@@ -55,7 +99,7 @@ if (!isset($_SESSION['2fa_code'])) {
 
         $mail->send();
     } catch (Exception $e) {
-        echo "Failed to send Login authentication code. Please try again later. Mailer Error: {$mail->ErrorInfo}";
+        echo "Failed to send Two-Step Verification code. Please try again later. Mailer Error: {$mail->ErrorInfo}";
         exit();
     }
 }
@@ -113,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="zxx">
 
 <head>
-    <title>Authentication | FITLIFE PRO</title>
+    <title>Two-Step Verification | FITLIFE PRO</title>
     <!-- /SEO Ultimate -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
@@ -398,9 +442,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="wrapper-container">
                 <div class="wrapper">
                     <form action="verify_2fa.php" method="post">
-                        <h1>LOGIN <br>AUTHENTICATION</h1>
+                        <h1>TWO-STEP <br>VERIFICATION</h1>
                         <div class="register-link">
-                            <p>Enter the Login Code sent to your email,<br>
+                            <p>Enter the Code sent to your email,<br>
                                 <?php echo htmlspecialchars($_SESSION['username']); ?>
                             </p>
                         </div>

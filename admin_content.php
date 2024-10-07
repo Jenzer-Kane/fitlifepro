@@ -97,23 +97,28 @@ function handleFormSubmission($conn, $tableName, $fields, $redirectTab)
 // Function to handle deletions
 function handleDeletion($conn, $tableName, $redirectTab)
 {
-    $id = $conn->real_escape_string($_POST['id']);
-    $sql = "DELETE FROM $tableName WHERE id='$id'";
-    $formattedTableName = str_replace('_', ' ', $tableName);
-    if ($conn->query($sql) === TRUE) {
-        $_SESSION['message'] = ucfirst($formattedTableName) . " deleted successfully!";
-    } else {
-        $_SESSION['message'] = "Error deleting " . $formattedTableName . ": " . $conn->error;
-    }
+    // Make sure to check for the ID in the POST request
+    if (isset($_POST['id'])) {
+        $id = $conn->real_escape_string($_POST['id']);
+        $sql = "DELETE FROM $tableName WHERE id='$id'";
+        $formattedTableName = str_replace('_', ' ', $tableName);
 
-    header("Location: admin_content.php#$redirectTab");
-    exit();
+        if ($conn->query($sql) === TRUE) {
+            $_SESSION['message'] = ucfirst($formattedTableName) . " deleted successfully!";
+        } else {
+            $_SESSION['message'] = "Error deleting " . $formattedTableName . ": " . $conn->error;
+        }
+
+        header("Location: admin_content.php#$redirectTab");
+        exit();
+    }
 }
+
 
 // Handle form submissions and deletions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['save_exercise'])) {
-        handleFormSubmission($conn, 'exercises', ['name', 'description', 'intensity', 'exercise_type', 'category', 'duration'], 'exercises');
+        handleFormSubmission($conn, 'exercises', ['name', 'description', 'intensity', 'exercise_type', 'category', 'duration', 'image_link'], 'exercises');
     } elseif (isset($_POST['save_meat_info'])) {
         handleFormSubmission($conn, 'meat_info', ['food_exchange_group', 'filipino_name', 'english_name', 'carbohydrate_g', 'protein_g', 'fat_g', 'energy_kcal', 'household_measure'], 'meat_info');
     } elseif (isset($_POST['save_fruits_info'])) {
@@ -387,6 +392,10 @@ $conn->close();
                     <label for="duration">Duration</label>
                     <input type="text" name="duration" id="duration" class="form-control" required>
                 </div>
+                <div class="form-group">
+                    <label for="image_link">Image</label>
+                    <input type="text" name="image_link" id="image_link" class="form-control" required>
+                </div>
                 <button type="submit" name="save_exercise" class="btn btn-primary">Save Exercise</button>
             </form>
 
@@ -401,6 +410,7 @@ $conn->close();
                             <th>Exercise Type</th>
                             <th>Category</th>
                             <th>Duration</th>
+                            <th>Image</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -414,11 +424,26 @@ $conn->close();
                                 <td><?= htmlspecialchars($exercise['category']) ?></td>
                                 <td><?= htmlspecialchars($exercise['duration']) ?></td>
                                 <td>
+                                    <!-- Display the actual image if the link is available -->
+                                    <?php if (!empty($exercise['image_link'])): ?>
+                                        <img src="<?= htmlspecialchars($exercise['image_link']) ?>" alt="Exercise Image"
+                                            style="max-width: 100px; height: auto;">
+                                    <?php else: ?>
+                                        No image
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <button class="btn btn-info"
                                         onclick="editExercise(<?= htmlspecialchars(json_encode($exercise)) ?>)">Edit</button>
-                                    <a href="admin_content.php?delete_exercise=<?= $exercise['id'] ?>"
-                                        class="btn btn-danger btn-sm"
-                                        onclick="return confirm('Are you sure you want to delete this entry?');">Delete</a>
+
+                                    <!-- Wrap delete action in a form -->
+                                    <form action="admin_content.php" method="POST" style="display:inline;">
+                                        <input type="hidden" name="id" value="<?= $exercise['id'] ?>">
+                                        <button type="submit" name="delete_exercise" class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Are you sure you want to delete this exercise?');">
+                                            Delete
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

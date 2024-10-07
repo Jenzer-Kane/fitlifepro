@@ -158,6 +158,39 @@ function format_date($date)
             font-weight: bold;
         }
 
+        .thread-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-top: 40px;
+            margin-bottom: 40px;
+        }
+
+        .thread-container h5 {
+            margin-bottom: 20px;
+        }
+
+        .thread-container img {
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+        }
+
+        .thread-description {
+            font-size: 1.5rem;
+            /* Increase the font size */
+            font-weight: bold;
+            /* Make it bold */
+            line-height: 1.6;
+            /* Add some spacing between lines */
+            margin-top: 20px;
+            /* Add margin to separate it from the rest */
+            color: #333;
+            /* Ensure the color is distinct */
+        }
+
         .profile-image {
             width: 80px;
             height: 80px;
@@ -166,38 +199,40 @@ function format_date($date)
             border: 1px solid #ccc;
         }
 
-        .thread-container {
-            padding: 10px;
-            margin-bottom: 20px;
-            margin-top: 20px;
+        h5 {
+            font-size: 1.2rem;
+            font-weight: normal;
+        }
+
+        .text-muted {
+            font-size: 0.9rem;
         }
 
         .reply {
             display: flex;
-            align-items: flex-start;
+            padding: 15px;
             margin-bottom: 20px;
-            padding: 10px;
-            background-color: #f0f0f0;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         }
 
-        .reply-profile {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .reply img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 50%;
             margin-right: 15px;
-            border-right: 2px solid #d9d7d7;
-            padding-right: 15px;
         }
 
-        .username {
-            font-size: 14px;
+        .reply .username {
             font-weight: bold;
-            text-align: center;
+            color: #007bff;
         }
 
-        .date-replied {
+        .reply .date-replied {
             font-size: 12px;
-            text-align: center;
+            color: #888;
         }
 
         .reply-content {
@@ -205,8 +240,45 @@ function format_date($date)
         }
 
         .post-reply-section {
-            margin-top: 20px;
-            background-color: #f0f0f0;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .post-reply-section h5 {
+            margin-bottom: 15px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        @media (max-width: 768px) {
+            .thread-container {
+                margin-top: 20px;
+            }
+
+            .reply {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .reply img {
+                margin-bottom: 10px;
+            }
+        }
+
+        .author-label {
+            color: green;
+            font-weight: 300;
+            /* Thinner font */
         }
     </style>
 </head>
@@ -294,37 +366,45 @@ function format_date($date)
 
 
     <body>
-        <div class="container">
+        <!-- Main Content Section -->
+        <div class="container mt-5">
+            <!-- Thread Container -->
             <div class="thread-container">
-                <h5 class="mt-5">
-                    <p>Thread Description:</p>
-                    <img src="<?= !empty($thread['thread_creator_image']) ? htmlspecialchars($thread['thread_creator_image']) : 'assets/images/no_pfp.jpg' ?>"
-                        alt="Thread Creator" class="profile-image">
-                    <?= nl2br(htmlspecialchars($thread['content'])) ?>
-                </h5>
-                <p>Posted by: <?= htmlspecialchars($thread['username']) ?> on <?= format_date($thread['created_at']) ?>
-                </p>
+                <h5>Thread Description:</h5>
+                <div class="d-flex align-items-center mb-3">
+                    <img src="<?= htmlspecialchars($thread['thread_creator_image']) ?>" alt="Thread Creator"
+                        class="profile-image">
+                    <div>
+                        <h6>Created by: <?= htmlspecialchars($thread['username']) ?></h6> <!-- Author of the thread -->
+                        <p class="text-muted"><?= format_date($thread['created_at']) ?></p>
+                    </div>
+                </div>
+                <!-- Make the thread description larger and more prominent -->
+                <p class="thread-description"><?= nl2br(htmlspecialchars($thread['content'])) ?></p>
             </div>
-            <hr style="border-color: #f5936c;">
 
-            <h5 class="mt-5 mb-4">Replies</h5>
+            <!-- Replies Section -->
+            <h5 class="mt-5 mb-4">Replies:</h5>
             <?php while ($reply = $replies_result->fetch_assoc()): ?>
                 <div class="reply">
-                    <div class="reply-profile">
-                        <img src="<?= !empty($reply['profile_image']) ? htmlspecialchars($reply['profile_image']) : 'assets/images/no_pfp.jpg' ?>"
-                            alt="Reply Creator" class="profile-image">
-                        <p class="username"><?= htmlspecialchars($reply['username']) ?></p>
-                        <p class="date-replied">Replied on<br> <?= format_date($reply['created_at']) ?></p>
-                    </div>
+                    <img src="<?= htmlspecialchars($reply['profile_image']) ?>" alt="Reply Creator" class="profile-image">
                     <div class="reply-content">
-                        <p class="mt-4"><?= nl2br(htmlspecialchars($reply['content'])) ?></p>
+                        <p class="username">
+                            <strong><?= htmlspecialchars($reply['username']) ?></strong>
+                            <?php if ($reply['username'] === $thread['username']): ?>
+                                <span class="author-label">(Author)</span>
+                            <?php endif; ?>
+                        </p>
+                        <p><?= nl2br(htmlspecialchars($reply['content'])) ?></p>
+                        <small class="date-replied">Replied on <?= format_date($reply['created_at']) ?></small>
                     </div>
                 </div>
             <?php endwhile; ?>
 
+            <!-- Post Reply Section -->
             <?php if (isset($_SESSION['username'])): ?>
-                <h5 class="mt-5">Post a Reply</h5>
-                <div class="post-reply-section">
+                <div class="post-reply-section mt-5">
+                    <h5>Post a Reply</h5>
                     <form method="post" action="">
                         <div class="form-group">
                             <label for="content">Reply Content</label>
@@ -337,6 +417,7 @@ function format_date($date)
                 <p><a href="login.php">Log in</a> to post a reply.</p>
             <?php endif; ?>
         </div>
+
 
         <script src="assets/js/jquery-3.6.0.min.js"></script>
         <script src="assets/js/popper.min.js"></script>

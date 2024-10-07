@@ -348,8 +348,7 @@ $timeSlots = ['Breakfast', 'Lunch', 'Snack', 'Snack', 'Snack', 'Dinner'];
 
 function getExercises($recommendedGoal, $exerciseType)
 {
-
-    include 'database.php';
+    include 'database.php'; // Ensure database connection is available
 
     // Define intensity based on recommended goal
     $intensity = '';
@@ -368,9 +367,16 @@ function getExercises($recommendedGoal, $exerciseType)
             break;
     }
 
-    // Query exercises based on recommended goal, intensity, and exercise type
-    $query = "SELECT * FROM exercises WHERE intensity = ? AND exercise_type = ?";
+    // Prepare the query to fetch exercises
+    $query = "SELECT name, duration, intensity, category, image_link, description FROM exercises WHERE intensity = ? AND exercise_type = ?";
     $statement = $mysqli->prepare($query);
+
+    // Check if the statement was prepared successfully
+    if (!$statement) {
+        die("Failed to prepare statement: " . $mysqli->error); // Output the error for debugging
+    }
+
+    // Bind parameters and execute the query
     $statement->bind_param('ss', $intensity, $exerciseType);
     $statement->execute();
     $result = $statement->get_result();
@@ -397,10 +403,10 @@ function getExercises($recommendedGoal, $exerciseType)
 
         return $exercisePlan;
     } else {
-        echo "Error retrieving exercises: " . $mysqli->error;
-        return [];
+        die("Error retrieving exercises: " . $mysqli->error); // Output the error for debugging
     }
 }
+
 
 $exerciseType = isset($_POST['exerciseType']) ? $_POST['exerciseType'] : 'Bodyweight';
 if (isset($intakeResults['goal'])) {
@@ -797,6 +803,7 @@ if (!function_exists('getArrow')) {
         return ''; // Default return if no goal is set
     }
 }
+
 
 $mysqli->close();
 ?>
@@ -1881,8 +1888,6 @@ $mysqli->close();
         }
     </script>
 
-
-
     <?php if ($showDietPlanningSection): ?>
         <div class="results-container" style="border: 1px solid #ddd; padding: 15px;">
             <div class="our_schedule_content" style="text-align: center;"> <!-- Center the content -->
@@ -1906,7 +1911,7 @@ $mysqli->close();
                     }
                     ?>
                     <p style="font-size: 20px; line-height: 1.5; margin: 0 auto; max-width: 800px;">
-                        <?php echo $goalDescription; ?>
+                        <strong><?php echo $goalDescription; ?></strong>
                     </p>
                 </div>
 
@@ -1920,7 +1925,7 @@ $mysqli->close();
                 $previousData = null; // To hold the previous row data
                 ?>
 
-                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;" id="progressTable">
                     <thead>
                         <tr>
                             <th
@@ -1986,63 +1991,15 @@ $mysqli->close();
                         <?php endforeach; ?>
                     </tbody>
                 </table>
-                <?php
-                $firstEntry = reset($mergedData); // Get the first data entry
-                $lastEntry = end($mergedData); // Get the last data entry
-        
-                // Calculate the difference in weight
-                $weightDifference = round($lastEntry['weight']) - round($firstEntry['weight']);
-                $startDate = date('M d, Y', strtotime($firstEntry['created_at']));
-                $endDate = date('M d, Y', strtotime($lastEntry['created_at']));
 
-                // Set the color and sign for weight change
-                $weightChangeSign = $weightDifference >= 0 ? "+" : "-";
-                $weightChangeValue = abs($weightDifference); // Use absolute value for positive and negative display
-        
-                $colorClass = ""; // Default color class
-                $message = "";
-
-                // Generate a message based on the recommended goal
-                if ($bodyFatResults['recommendedGoal'] === 'weight-loss') {
-                    if ($weightDifference < 0) {
-                        // Positive progress in weight loss (loss is good)
-                        $colorClass = "green";
-                        $message = "Great job! Since $startDate, you've lost <span class=\"$colorClass\">$weightChangeSign$weightChangeValue kg</span>. Keep up the fantastic progress!";
-                    } else {
-                        // Negative progress in weight loss (gain is bad)
-                        $colorClass = "red";
-                        $message = "It seems you've gained <span class=\"$colorClass\">$weightChangeSign$weightChangeValue kg</span> since $startDate. Stay motivated and keep going!";
-                    }
-                } elseif ($bodyFatResults['recommendedGoal'] === 'weight-gain') {
-                    if ($weightDifference > 0) {
-                        // Positive progress in weight gain (gain is good)
-                        $colorClass = "green";
-                        $message = "Awesome! Since $startDate, you've gained <span class=\"$colorClass\">$weightChangeSign$weightChangeValue kg</span>. Keep pushing!";
-                    } else {
-                        // Negative progress in weight gain (loss is bad)
-                        $colorClass = "red";
-                        $message = "It seems you've lost <span class=\"$colorClass\">$weightChangeSign$weightChangeValue kg</span> since $startDate. Stay strong!";
-                    }
-                } elseif ($bodyFatResults['recommendedGoal'] === 'maintenance') {
-                    if ($weightDifference === 0) {
-                        // Ideal progress in maintenance (no change is good)
-                        $colorClass = "green";
-                        $message = "Great job maintaining your weight since $startDate. Keep it steady!";
-                    } else {
-                        // Any change in maintenance is considered bad
-                        $colorClass = "red";
-                        $message = "Your weight has changed by <span class=\"$colorClass\">$weightChangeSign$weightChangeValue kg</span> since $startDate. <br> It's okay to regress sometimes, now let's get you back on track!";
-                    }
-                }
-                ?>
-
-                <!-- Display the message with colors based on the goal -->
-                <div class="congratulatory-message"
-                    style="margin-top: 20px; text-align: center; font-size: 24px; font-weight: bold;">
-                    <?php echo $message; ?>
+                <!-- Print Progress Button -->
+                <div style="text-align: center; margin-top: 30px;">
+                    <button onclick="printProgress();" class="btn-print"
+                        style="background-color: #007bff; color: white; padding: 10px 20px; font-size: 18px; border: none; cursor: pointer;">
+                        Print Progress
+                    </button>
                 </div>
 
-                <!-- Add some basic CSS styling for green and red -->
                 <style>
                     .green {
                         color: green;
@@ -2054,11 +2011,33 @@ $mysqli->close();
                         font-weight: bold;
                     }
                 </style>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 
+    <!-- JavaScript to print only chart and table -->
+    <script>
+        function printProgress() {
+            const chartCanvas = document.getElementById('bodyReportsChart');
+            const progressTable = document.getElementById('progressTable').outerHTML;
+            const goalName = '<?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>'; // Get the goal name
+
+            // Convert the canvas to an image
+            const chartImage = chartCanvas.toDataURL('image/png');
+
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write('<html><head><title>Print Progress</title>');
+            printWindow.document.write('<style>body { font-family: Arial, sans-serif; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 8px; text-align: center; } img { max-width: 100%; }</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write('<h2 style="text-align: center;">' + goalName + '</h2>'); // Add the goal name to the print window
+            printWindow.document.write('<img src="' + chartImage + '" alt="Progress Chart"><br>'); // Add the chart image to print
+            printWindow.document.write(progressTable); // Add the progress table to print
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        }
+    </script>
 
     <?php
     if (isset($intakeResults)) {
@@ -2456,7 +2435,7 @@ $mysqli->close();
     <!-- AUTO GENERATED (PREMIUM AND ELITE TIER) DIET PLAN -->
     <?php if ($showDietPlanningSection && isset($goal_name)): ?>
         <?php if ($plan === 'premium' || $plan === 'elite'): ?>
-            <section class="our_schedule_section diet-planning">
+            <section class="our_schedule_section diet-planning" id="dietPlanSection">
                 <div class="container">
                     <div class="row">
                         <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
@@ -2464,6 +2443,28 @@ $mysqli->close();
                                 <?php if (!empty($meal_plan)): ?>
                                     <h5 class="mt-5" style="font-size: 80px;">DIET PLAN</h5>
                                     <h2><u><?php echo strtoupper($goal_name); ?></h2></u>
+
+                                    <!-- Custom message based on the goal -->
+                                    <?php
+                                    $goalMessage = '';
+                                    switch ($goal_name) {
+                                        case 'maintenance':
+                                            $goalMessage = "The food curated for your diet plan is balanced with moderate calories and high in protein, designed to help you maintain your current body weight while optimizing your macronutrient intake.";
+                                            break;
+                                        case 'weight-loss':
+                                            $goalMessage = "Your diet plan focuses on calorie deficit meals, low in calories but rich in protein, to help you shed excess weight while preserving lean muscle mass.";
+                                            break;
+                                        case 'weight-gain':
+                                            $goalMessage = "This diet plan emphasizes calorie surplus, providing higher calorie meals rich in both protein and healthy fats to support weight gain and muscle building.";
+                                            break;
+                                        default:
+                                            $goalMessage = "Your diet plan is designed according to your specific fitness goals, ensuring a balance of macronutrients tailored to your needs.";
+                                            break;
+                                    }
+                                    ?>
+                                    <p style="font-size: 20px; margin-top: 20px;">
+                                        <strong><?php echo $goalMessage; ?></strong>
+                                    </p>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -2487,8 +2488,6 @@ $mysqli->close();
                                 </div>
                             </div>
                             <p style="font-size: 20px;">Click the food you have consumed to track your progress.</p>
-
-
                             <div id="total-<?php echo strtolower($day); ?>" class="large-counter-text mb-3" data-calories="0"
                                 data-protein="0">
                                 <?php
@@ -2497,9 +2496,8 @@ $mysqli->close();
                                 echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
                                 ?>
                             </div>
-                            <p><strong>Tip:</strong> You can eat the foods in any order, as long as you meet the
-                                recommended
-                                daily macronutrients.</p>
+                            <p><strong>Tip:</strong> You can eat the foods in any order, as long as you meet the recommended daily
+                                macronutrients.</p>
                             <div class="diet-horizontal-display">
                                 <table class="border border-black" id="mealPlanTable-<?php echo strtolower($day); ?>">
                                     <thead>
@@ -2532,10 +2530,8 @@ $mysqli->close();
                                                         <br><?php echo $foodItem['english_name']; ?><br>
                                                         <br><?php echo $foodItem['filipino_name']; ?><br><br>
                                                         <strong>Protein (g):</strong> <?php echo $foodItem['protein_g']; ?><br>
-                                                        <strong>Calories (kcal):</strong>
-                                                        <?php echo $foodItem['energy_kcal']; ?><br>
-                                                        <strong>Measure:</strong>
-                                                        <?php echo $foodItem['household_measure']; ?><br><br>
+                                                        <strong>Calories (kcal):</strong> <?php echo $foodItem['energy_kcal']; ?><br>
+                                                        <strong>Measure:</strong> <?php echo $foodItem['household_measure']; ?><br><br>
                                                     </td>
                                                     <?php $mealIndex++; ?>
                                                 <?php endfor; ?>
@@ -2549,29 +2545,113 @@ $mysqli->close();
                             </div>
                             <div id="total-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text"
                                 data-calories="0" data-protein="0">
+                                <button onclick="printSection('dietPlanSection')" class="btn btn-primary mt-3">Print Diet
+                                    Plan</button>
                                 <div class="note">
-                                    <b>Meal plan food suggestions are based on the Philippine Department of Science and
-                                        Technology,
+                                    <b>Meal plan food suggestions are based on the Philippine Department of Science and Technology,
                                         Food and Nutrition Research Institute, Food Exchange List</b>
                                 </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
-                </div>
             </section>
+
+            <!-- Print JavaScript -->
+            <script>
+                function printSection(sectionId) {
+                    var section = document.getElementById(sectionId);
+                    var printWindow = window.open('', '', 'height=500, width=800');
+
+                    // Clone the section to capture the current state
+                    var clonedSection = section.cloneNode(true);
+
+                    // Apply inline styles to preserve the color changes for the meal items
+                    clonedSection.querySelectorAll('.mealItem.consumed').forEach(function (item) {
+                        item.style.backgroundColor = 'green';
+                        item.style.color = 'white';
+                    });
+
+                    // Apply inline styles to preserve the color changes for the exercise items
+                    clonedSection.querySelectorAll('.exerciseItem.completed').forEach(function (item) {
+                        item.style.backgroundColor = 'green';
+                        item.style.color = 'white';
+                    });
+
+                    // Mark unselected cells with gray for meal and exercise items
+                    clonedSection.querySelectorAll('.mealItem:not(.consumed)').forEach(function (item) {
+                        item.style.backgroundColor = 'lightgray';
+                        item.style.color = 'black';
+                    });
+
+                    clonedSection.querySelectorAll('.exerciseItem:not(.completed)').forEach(function (item) {
+                        item.style.backgroundColor = 'lightgray';
+                        item.style.color = 'black';
+                    });
+
+                    // Add inline CSS for printing the dynamically changed styles
+                    var styles = `
+                                                                                                                                                <style>
+                                                                                                                                                    body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+                                                                                                                                                    table { width: 100%; border-collapse: collapse; }
+                                                                                                                                                    table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
+                                                                                                                                                    th { background-color: #f0f0f0; color: black; }
+                                                                                                                                                    .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
+                                                                                                                                                    .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
+                                                                                                                                                </style>
+                                                                                                                                            `;
+
+                    // Open the new window and write the cloned content into it
+                    printWindow.document.write('<html><head><title>Print Plan</title>');
+                    printWindow.document.write(styles); // Add the custom styles to ensure green stays
+                    printWindow.document.write('</head><body>');
+                    printWindow.document.write(clonedSection.innerHTML); // Write the cloned content with inline styles
+                    printWindow.document.write('</body></html>');
+                    printWindow.document.close();
+
+                    // Give it time for the content to render
+                    printWindow.focus();
+                    setTimeout(() => {
+                        printWindow.print();
+                    }, 500); // Small delay to ensure content renders before print dialog
+                }
+            </script>
 
             <!-- AUTO GENERATED (PREMIUM AND ELITE TIER) EXERCISE PLAN -->
             <?php if (isset($goal_name)): ?>
                 <?php if ($plan === 'premium' || $plan === 'elite'): ?>
-                    <section class="our_schedule_section exercise-planning">
+                    <section class="our_schedule_section exercise-planning" id="exercisePlanSection">
                         <div class="container">
                             <div class="row">
                                 <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                     <div class="our_schedule_content">
                                         <?php if (!empty($exercise_plan)): ?>
                                             <h5 style="font-size: 80px;">EXERCISE PLAN</h5>
-                                            <h2><u><?php echo strtoupper($goal_name); ?></h2></u>
+                                            <h2><u><?php echo strtoupper($goal_name); ?></u></h2>
+
+                                            <!-- Custom message based on goal intensity -->
+                                            <?php
+                                            $intensityMessage = '';
+                                            switch (strtolower($goal_name)) {
+                                                case 'maintenance':
+                                                    $intensityMessage = "This exercise plan consists of Moderate Intensity workouts. It’s perfect for maintaining your current fitness level with a balanced mix of reps, sets, and exercise durations.";
+                                                    break;
+                                                case 'weight-loss':
+                                                    $intensityMessage = "Your exercise plan is designed with Low Intensity workouts to help with gradual weight loss. Expect shorter sets and reps with plenty of rest time, tailored to support a calorie deficit.";
+                                                    break;
+                                                case 'weight-gain':
+                                                    $intensityMessage = "Get ready for a High Intensity workout plan! This includes more challenging exercises with higher reps and sets to help you gain muscle mass efficiently.";
+                                                    break;
+                                                default:
+                                                    $intensityMessage = "This exercise plan is customized to match your fitness goals, offering a balanced approach to achieve your desired results.";
+                                                    break;
+                                            }
+
+                                            // Display the intensity message
+                                            if (!empty($intensityMessage)) {
+                                                echo "<p style='font-size: 20px; margin-top: 20px; font-weight: bold;'>$intensityMessage</p>";
+                                            }
+                                            ?>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -2589,13 +2669,13 @@ $mysqli->close();
                                         <div class="row">
                                             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                                 <div class="our_schedule_content">
-                                                    <h2 class="mt-5"><?php echo $day; ?></h2>
+                                                    <h2 class="mt-5"><?php echo $day; ?>
+                                                    </h2>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <p style="font-size: 20px;">Track your progress by marking the exercises you've completed.
-                                    </p>
+                                    <p style="font-size: 20px;">Track your progress by marking the exercises you've completed.</p>
                                     <p><strong>Tip: Aim to do at least 5 exercises from all 3 categories in a day (Cardio, Strength,
                                             Core).</strong></p>
                                     <div class="diet-horizontal-display">
@@ -2618,16 +2698,18 @@ $mysqli->close();
                                                         <td><?php echo $timeSlot; ?></td>
                                                         <?php for ($i = 0; $i < 6; $i++): ?>
                                                             <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
-                                                            <td class="exerciseItem">
-                                                                <br><strong><?php echo $exerciseItem['name']; ?><br></strong><?php echo $exerciseItem['duration']; ?><br><br>
-                                                                <strong><?php echo $exerciseItem['intensity']; ?>
-                                                                    Intensity</strong><br><?php echo $exerciseItem['category']; ?><br><br>
+                                                            <td class="exerciseItem" data-image="<?php echo $exerciseItem['image_link']; ?>"
+                                                                data-description="<?php echo $exerciseItem['description']; ?>">
+                                                                <br><strong>
+                                                                    <?php echo $exerciseItem['name']; ?><br></strong>
+                                                                <?php echo $exerciseItem['duration']; ?><br><br>
+                                                                <strong><?php echo $exerciseItem['intensity']; ?> Intensity</strong><br>
+                                                                <?php echo $exerciseItem['category']; ?><br><br>
                                                             </td>
                                                             <?php $exerciseIndex++; ?>
                                                         <?php endfor; ?>
                                                     </tr>
                                                 <?php endforeach; ?>
-
                                             </tbody>
                                         </table>
                                     </div>
@@ -2637,13 +2719,15 @@ $mysqli->close();
                                     </div>
                                     <input type="hidden" name="day" value="<?php echo $day; ?>">
                                     <input type="hidden" name="exercise_plan" id="exercisePlanData-<?php echo strtolower($day); ?>">
+                                    <button onclick="printSection('exercisePlanSection')" class="btn btn-primary mt-3">Print Exercise
+                                        Plan</button>
                                 </div>
                             <?php endforeach; ?>
-                        </div>
                         </div>
                     </section>
                 <?php endif; ?>
             <?php endif; ?>
+
 
             <!-- QUOTE SECTION -->
             <section class="quote_section">
@@ -2651,11 +2735,17 @@ $mysqli->close();
                     <div class="row" data-aos="fade-right">
                         <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                             <div class="quote_content">
-                                <h2>“<?php echo htmlspecialchars($quote['quote']); ?>”</h2>
+                                <h2>“
+                                    <?php echo htmlspecialchars($quote['quote']); ?>”
+                                </h2>
                                 <div class="quote_content_wrapper">
                                     <div class="quote_wrapper">
-                                        <h6><?php echo htmlspecialchars($quote['author']); ?></h6>
-                                        <span><?php echo htmlspecialchars($quote['title']); ?></span>
+                                        <h6>
+                                            <?php echo htmlspecialchars($quote['author']); ?>
+                                        </h6>
+                                        <span>
+                                            <?php echo htmlspecialchars($quote['title']); ?>
+                                        </span>
                                         <?php if (!empty($quote['image_path'])): ?>
                                             <figure class="quote_image mb-0">
                                                 <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
@@ -2834,19 +2924,68 @@ $mysqli->close();
             attachExerciseEventListeners();
         });
 
-
         // Function to attach event listeners to exercise items
-        function attachExerciseEventListeners() {
-            const exerciseItems = document.querySelectorAll('.exerciseItem');
+        const exerciseItems = document.querySelectorAll('.exerciseItem');
 
-            exerciseItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    item.classList.toggle('completed');
-                    const day = item.closest('table').id.split('-')[1]; // Extract table ID
-                    updateExerciseCounter(day);
-                });
+        let tooltip = null;
+
+        exerciseItems.forEach(item => {
+            // Click event to toggle completion and log the exercise
+            item.addEventListener('click', () => {
+                if (tooltip) {
+                    tooltip.style.display = 'none'; // Ensure tooltip is hidden on click
+                }
+
+                item.classList.toggle('completed');
+                const day = item.closest('table').id.split('-')[1]; // Extract table ID
+                updateExerciseCounter(day);
             });
-        }
+
+            // Hover event to show tooltip with image and description
+            item.addEventListener('mouseenter', (e) => {
+                const imageUrl = item.getAttribute('data-image');
+                const description = item.getAttribute('data-description'); // Fetch description
+
+                if (imageUrl || description) {
+                    if (!tooltip) {
+                        tooltip = document.createElement('div');
+                        tooltip.className = 'exercise-tooltip';
+                        tooltip.style.position = 'absolute';
+                        tooltip.style.zIndex = '1000';
+                        document.body.appendChild(tooltip);
+                    }
+
+                    // Set the image and description inside the tooltip with modern styling
+                    tooltip.innerHTML = `
+                    <div style="background-color: white; padding: 15px; max-width: 400px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); border-radius: 15px;">
+                        <img src="${imageUrl}" alt="Exercise Image" style="width: 100%; max-width: 400px; height: auto; border-radius: 10px;">
+                        <p style="margin-top: 10px; font-size: 14px;">${description}</p>
+                    </div>
+                `;
+
+                    // Show tooltip and set initial position
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = `${e.pageX + 10}px`;
+                    tooltip.style.top = `${e.pageY + 10}px`;
+                }
+            });
+
+            // Move the tooltip as the mouse moves
+            item.addEventListener('mousemove', (e) => {
+                if (tooltip) {
+                    tooltip.style.left = e.pageX + 10 + 'px';
+                    tooltip.style.top = e.pageY + 10 + 'px';
+                }
+            });
+
+            // Hide the tooltip when the mouse leaves the item
+            item.addEventListener('mouseleave', () => {
+                if (tooltip) {
+                    tooltip.style.display = 'none';
+                }
+            });
+        });
+
 
         // Update the exercise counter for the specific day
         function updateExerciseCounter(day) {
@@ -2862,6 +3001,12 @@ $mysqli->close();
                 minimumToComplete.innerHTML = `${minimumExercises}`;
             }
         }
+
+        // Call the function to attach event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            attachExerciseEventListeners();
+        });
+
 
         document.addEventListener("DOMContentLoaded", function () {
             const ctx = document.getElementById('bodyReportsChart').getContext('2d');
