@@ -206,22 +206,6 @@ if ($gender === 'female') {
 $fatMass = ($bodyFatPercentage / 100) * $bmiWeight;
 $leanMass = $bmiWeight - $fatMass;
 
-// Calculate ideal body weight using different formulas
-$heightInInches = $bmiHeight / 2.54; // Convert height to inches
-$inchesOverFiveFeet = $heightInInches - 60;
-
-if ($gender === 'male') {
-    $hamwiIBW = 106 + (6 * $inchesOverFiveFeet);
-    $devineIBW = 50.0 + 2.3 * $inchesOverFiveFeet;
-    $robinsonIBW = 52.0 + 1.9 * $inchesOverFiveFeet;
-    $millerIBW = 56.2 + 1.41 * $inchesOverFiveFeet;
-} else {
-    $hamwiIBW = 100 + (5 * $inchesOverFiveFeet);
-    $devineIBW = 45.5 + 2.3 * $inchesOverFiveFeet;
-    $robinsonIBW = 49.0 + 1.7 * $inchesOverFiveFeet;
-    $millerIBW = 53.1 + 1.36 * $inchesOverFiveFeet;
-}
-
 // Function to calculate weight from BMI and height
 function getWeightFromBMI($bmi, $height)
 {
@@ -239,8 +223,6 @@ function getWeightFromBMI($bmi, $height)
     }
 }
 
-// Convert the weight from pounds to kilograms
-$hamwiIBW_kg = $hamwiIBW * 0.45359237;
 
 // Calculate healthy BMI range
 $lowerNormalRange = 18.5 * (($bmiHeight / 100) ** 2);
@@ -257,10 +239,6 @@ $bodyFatResults = [
     'bodyFatPercentage' => $bodyFatPercentage,
     'fatMass' => $fatMass,
     'leanMass' => $leanMass,
-    'hamwiIBW' => $hamwiIBW,
-    'devineIBW' => $devineIBW,
-    'robinsonIBW' => $robinsonIBW,
-    'millerIBW' => $millerIBW,
     'lowerNormalRange' => $lowerNormalRange,
     'upperNormalRange' => $upperNormalRange,
 ];
@@ -618,24 +596,15 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
     $generatedText = "";
 }
 
-// Fetch user info from transactions table
-$userTransactionsSql = "SELECT * FROM transactions WHERE username = ?";
+// Fetch the latest user transaction from transactions table, ordered by created_at descending
+$userTransactionsSql = "SELECT * FROM transactions WHERE username = ? ORDER BY created_at DESC LIMIT 1";
 $userTransactionsStmt = $mysqli->prepare($userTransactionsSql);
 $userTransactionsStmt->bind_param('s', $username);
 $userTransactionsStmt->execute();
 $userTransactionsResult = $userTransactionsStmt->get_result();
 
-$query = "SELECT * FROM quotes ORDER BY RAND() LIMIT 1";
-$result = $mysqli->query($query);
-
-// Check if the query was successful
-if ($result && $result->num_rows > 0) {
-    $quote = $result->fetch_assoc();
-} else {
-    $quote = null;
-}
 // Fetch user transaction status and plan
-$query = "SELECT status, plan FROM transactions WHERE username = ?";
+$query = "SELECT status, plan FROM transactions WHERE username = ? ORDER BY created_at DESC LIMIT 1";
 $stmt = $mysqli->prepare($query);
 if (!$stmt) {
     die('Prepare failed: ' . htmlspecialchars($mysqli->error));
@@ -648,15 +617,26 @@ $user = $result->fetch_assoc();
 $status = isset($user['status']) ? $user['status'] : null;
 $plan = isset($user['plan']) ? $user['plan'] : null;
 
-// Check if the status is not "Pending" or "Disapproved"
-$showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved' && $status !== null);
+// Check if the status is not "Pending" or "Disapproved" or "Expired"
+$showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved' && $status !== 'Expired' && $status !== null);
 
 // Show subscription status if status is not "Disapproved" or not null
-$showSubscriptionInfoSection = ($status !== 'Disapproved' && $status !== null);
+$showSubscriptionInfoSection = ($status !== 'Disapproved' || $status !== 'Expired' || $status !== null);
 
-// Show subscribe message if status is null or pending or disapproved or plan is null
-// Show subscribe message if status is null or pending or disapproved or plan is null
-$showSubscribeMessage = ($status === null && $status == 'Pending' && $status == 'Disapproved' && $plan === null);
+// Show subscribe message if status is null, disapproved, expired, or plan is null
+$showSubscribeMessage = ($status === null || $status == 'Disapproved' || $status == 'Expired' || $plan === null);
+
+
+
+$query = "SELECT * FROM quotes ORDER BY RAND() LIMIT 1";
+$result = $mysqli->query($query);
+
+// Check if the query was successful
+if ($result && $result->num_rows > 0) {
+    $quote = $result->fetch_assoc();
+} else {
+    $quote = null;
+}
 
 // Prepare and execute the SQL query to fetch gender from users_info table
 $stmt = $mysqli->prepare("SELECT gender FROM users_info WHERE username = ?");
@@ -1277,33 +1257,30 @@ $mysqli->close();
                 <tbody>
                     <?php
                     if ($userTransactionsResult && $userTransactionsResult->num_rows > 0) {
-                        // Output data of each row
-                        while ($row = $userTransactionsResult->fetch_assoc()) {
-                            // Handle undefined keys
-                            $id = isset($row["id"]) ? $row["id"] : "";
-                            $plan = isset($row["plan"]) ? $row["plan"] : "";
-                            $description = isset($row["description"]) ? $row["description"] : "";
-                            $price = isset($row["price"]) ? $row["price"] : "";
-                            $gcash_number = isset($row["gcash_number"]) ? $row["gcash_number"] : "";
-                            $reference_number = isset($row["reference_number"]) ? $row["reference_number"] : "";
-                            $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
-                            $date_end = isset($row["date_end"]) ? date("F j, Y | g:i A", strtotime($row["date_end"])) : "";
-                            $status = isset($row["status"]) ? $row["status"] : "";
+                        $row = $userTransactionsResult->fetch_assoc(); // Fetch the latest transaction
+                
+                        // Handle undefined keys
+                        $plan = isset($row["plan"]) ? $row["plan"] : "N/A";
+                        $description = isset($row["description"]) ? $row["description"] : "N/A";
+                        $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "N/A";
+                        $date_end = isset($row["date_end"]) ? date("F j, Y | g:i A", strtotime($row["date_end"])) : "N/A";
+                        $status = isset($row["status"]) ? $row["status"] : "N/A";
 
-                            // Add style attribute to center align the values
-                            echo "<tr>
+                        // Display the latest transaction
+                        echo "<tr>
                         <td style='text-align: center;'>" . htmlspecialchars($plan) . "</td>
                         <td style='text-align: center;'>" . htmlspecialchars($description) . "</td>
                         <td style='text-align: center;'>" . htmlspecialchars($created_at) . "</td>
                         <td style='text-align: center;'>" . htmlspecialchars($date_end) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($status) . "</td>";
-                        }
+                        <td style='text-align: center;'>" . htmlspecialchars($status) . "</td>
+                    </tr>";
                     }
                     ?>
                 </tbody>
             </table>
         </div>
     <?php endif; ?>
+
 
 
     <!DOCTYPE html>
@@ -1359,11 +1336,15 @@ $mysqli->close();
                             <?php endif; ?>
 
                             <label for="activityLevel">Lifestyle:</label>
-                            <select name="activityLevel" <?php echo isset($disableButton) && $disableButton ? 'disabled' : ''; ?> required>
+                            <select name="activityLevel" id="activityLevel" <?php echo isset($disableButton) && $disableButton ? 'disabled' : ''; ?> required>
                                 <option value="sedentary" <?php echo isset($activityLevel) && $activityLevel === 'sedentary' ? 'selected' : ''; ?>>
-                                    Sedentary - Little to no physical activity.</option>
+                                    Sedentary – Seated throughout the day with little to no regular physical
+                                    activity (e.g., desk job).
+                                </option>
                                 <option value="active" <?php echo isset($activityLevel) && $activityLevel === 'active' ? 'selected' : ''; ?>>
-                                    Active - Regular physical activity.</option>
+                                    Active – Regular physical activity or has a physically demanding job
+                                    (e.g., labor-intensive work, walking for extended periods).
+                                </option>
                             </select>
 
                             <!-- Show Calculate button if no data from DB is showing -->
@@ -1602,68 +1583,6 @@ $mysqli->close();
                         </div>
                     </div>
                 </section>
-
-                <!-- Ideal Weight Section -->
-                <section class="calculator-results">
-                    <div class="container">
-                        <div class="row">
-                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                <div class="results-form form-section">
-                                    <?php if (isset($intakeResults)): ?>
-                                        <!-- SESSION STUFF -->
-                                        <h2>Current Ideal Weight:</h2>
-                                        <p><strong>Hamwi (1964):</strong> <?php echo number_format($hamwiIBW_kg, 2); ?> kg
-                                            <br>
-                                            <em>The Hamwi method calculates ideal body weight based on height. It is widely
-                                                used for weight management and setting dietary goals.</em>
-                                        </p>
-                                        <p><strong>Devine (1974):</strong> <?php echo number_format($devineIBW, 2); ?> kg
-                                            <br>
-                                            <em>The Devine formula was originally developed to calculate ideal body weight
-                                                for drug dosage purposes, especially in clinical settings.</em>
-                                        </p>
-                                        <p><strong>Robinson (1983):</strong> <?php echo number_format($robinsonIBW, 2); ?>
-                                            kg <br>
-                                            <em>The Robinson formula adjusts ideal body weight based on both height and
-                                                weight, offering a more refined approach than earlier methods.</em>
-                                        </p>
-                                        <p><strong>Miller (1983):</strong> <?php echo number_format($millerIBW, 2); ?> kg
-                                            <br>
-                                            <em>The Miller formula offers another perspective on ideal weight, slightly
-                                                adjusting the figures used by the other formulas to better fit modern
-                                                populations.</em>
-                                        </p>
-                                    <?php elseif (isset($bodyFatResults)): ?>
-                                        <!-- DATABASE STUFF -->
-                                        <h2>Ideal Weight:</h2>
-                                        <p><strong>Hamwi (1964):</strong>
-                                            <?php echo number_format($bodyFatResults['hamwiIBW_kg'], 2); ?> kg <br>
-                                            <em>The Hamwi method calculates ideal body weight based on height. It is widely
-                                                used for weight management and setting dietary goals.</em>
-                                        </p>
-                                        <p><strong>Devine (1974):</strong>
-                                            <?php echo number_format($bodyFatResults['devineIBW'], 2); ?> kg <br>
-                                            <em>The Devine formula was originally developed to calculate ideal body weight
-                                                for drug dosage purposes, especially in clinical settings.</em>
-                                        </p>
-                                        <p><strong>Robinson (1983):</strong>
-                                            <?php echo number_format($bodyFatResults['robinsonIBW'], 2); ?> kg <br>
-                                            <em>The Robinson formula adjusts ideal body weight based on both height and
-                                                weight, offering a more refined approach than earlier methods.</em>
-                                        </p>
-                                        <p><strong>Miller (1983):</strong>
-                                            <?php echo number_format($bodyFatResults['millerIBW'], 2); ?> kg <br>
-                                            <em>The Miller formula offers another perspective on ideal weight, slightly
-                                                adjusting the figures used by the other formulas to better fit modern
-                                                populations.</em>
-                                        </p>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
 
                 <!-- Caloric and Protein Intake Results Section -->
                 <section class="calculator-results">
@@ -2591,15 +2510,15 @@ $mysqli->close();
 
                     // Add inline CSS for printing the dynamically changed styles
                     var styles = `
-                                                                                                                                                <style>
-                                                                                                                                                    body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
-                                                                                                                                                    table { width: 100%; border-collapse: collapse; }
-                                                                                                                                                    table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
-                                                                                                                                                    th { background-color: #f0f0f0; color: black; }
-                                                                                                                                                    .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
-                                                                                                                                                    .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
-                                                                                                                                                </style>
-                                                                                                                                            `;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <style>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    table { width: 100%; border-collapse: collapse; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    th { background-color: #f0f0f0; color: black; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </style>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            `;
 
                     // Open the new window and write the cloned content into it
                     printWindow.document.write('<html><head><title>Print Plan</title>');
@@ -3237,69 +3156,66 @@ $mysqli->close();
         document.addEventListener("DOMContentLoaded", function () {
             const infoSection = document.getElementById('infographicSection');
             const infoContent = document.getElementById('infoContent');
-            const infoImage = document.getElementById('infoImage');  // New image element for the infographic
+            const infoImage = document.getElementById('infoImage');
 
             const tooltips = {
                 bmiWeight: {
                     text: "Weight: Enter your current weight in kilograms. This will be used to calculate your BMI and body fat percentage. Weight is a key factor in determining your overall health and fitness level.",
-                    image: "https://www.wikihow.com/images/thumb/3/3b/Weigh-Yourself-Step-1.jpg/v4-460px-Weigh-Yourself-Step-1.jpg.webp"  // Add image URL if needed
+                    image: "https://www.wikihow.com/images/thumb/3/3b/Weigh-Yourself-Step-1.jpg/v4-460px-Weigh-Yourself-Step-1.jpg.webp"
                 },
                 bmiHeight: {
-                    text: "Height: Enter your height in centimeters. It’s essential for calculating your BMI. Taller individuals with the same weight as shorter individuals will have different BMIs.",
-                    image: "https://www.wikihow.com/images/thumb/9/97/Measure-Your-Height-by-Yourself-Step-12-Version-3.jpg/aid1624233-v4-728px-Measure-Your-Height-by-Yourself-Step-12-Version-3.jpg.webp"  // Add image URL if needed
+                    text: "Height: Enter your height in centimeters. It’s essential for calculating your BMI.",
+                    image: "https://www.wikihow.com/images/thumb/9/97/Measure-Your-Height-by-Yourself-Step-12-Version-3.jpg/aid1624233-v4-728px-Measure-Your-Height-by-Yourself-Step-12-Version-3.jpg.webp"
                 },
                 age: {
-                    text: "Age: Enter your age. Age is important as it affects your metabolism and how your body stores fat. Body fat percentage tends to increase as you age.",
-                    image: "https://www.wikihow.com/images/thumb/2/25/Calculate-Body-Fat-With-a-Tape-Measure-Step-5-Version-3.jpg/v4-460px-Calculate-Body-Fat-With-a-Tape-Measure-Step-5-Version-3.jpg.webp"  // Add image URL if needed
+                    text: "Age: Enter your age. It affects your metabolism and how your body stores fat.",
+                    image: "https://www.wikihow.com/images/thumb/2/25/Calculate-Body-Fat-With-a-Tape-Measure-Step-5-Version-3.jpg/v4-460px-Calculate-Body-Fat-With-a-Tape-Measure-Step-5-Version-3.jpg.webp"
                 },
                 waist: {
-                    text: "Waist: Measure the circumference of your waist in centimeters, typically at the narrowest point. This is used to estimate visceral fat, a key indicator of health risks.",
+                    text: "Waist: Measure the circumference of your waist at the narrowest point.",
                     image: "https://www.wikihow.com/images/thumb/6/60/Measure-Your-Waist-Step-3-Version-3.jpg/aid1375483-v4-728px-Measure-Your-Waist-Step-3-Version-3.jpg.webp"
                 },
                 neck: {
-                    text: "Neck: Measure the circumference of your neck in centimeters at its narrowest point. Neck circumference helps estimate body fat distribution, especially in men.",
-                    image: "https://www.wikihow.com/images/thumb/2/2a/Calculate-Body-Fat-With-a-Tape-Measure-Step-6-Version-3.jpg/v4-460px-Calculate-Body-Fat-With-a-Tape-Measure-Step-6-Version-3.jpg.webp"  // Add image URL if needed
+                    text: "Neck: Measure the circumference of your neck at its narrowest point.",
+                    image: "https://www.wikihow.com/images/thumb/2/2a/Calculate-Body-Fat-With-a-Tape-Measure-Step-6-Version-3.jpg/v4-460px-Calculate-Body-Fat-With-a-Tape-Measure-Step-6-Version-3.jpg.webp"
                 },
                 hip: {
-                    text: "Hip: For females, measure the widest part of your hips. This measurement helps assess body fat distribution, which is different between men and women.",
-                    image: "https://www.wikihow.com/images/thumb/f/f7/Measure-Hips-Step-5-Version-5.jpg/aid2669718-v4-728px-Measure-Hips-Step-5-Version-5.jpg.webp"  // Add image URL if needed
+                    text: "Hip: For females, measure the widest part of your hips.",
+                    image: "https://www.wikihow.com/images/thumb/f/f7/Measure-Hips-Step-5-Version-5.jpg/aid2669718-v4-728px-Measure-Hips-Step-5-Version-5.jpg.webp"
                 },
                 thigh: {
-                    text: "Thigh: Measure the circumference of your thigh at its widest part. It helps in calculating body fat percentage and assessing lower body fat distribution.",
-                    image: "https://www.wikihow.com/images/thumb/5/51/Take-Measurements-%28For-Women%29-Step-23-Version-5.jpg/v4-460px-Take-Measurements-%28For-Women%29-Step-23-Version-5.jpg.webp"  // Add image URL if needed
+                    text: "Thigh: Measure the circumference of your thigh at its widest part.",
+                    image: "https://www.wikihow.com/images/thumb/5/51/Take-Measurements-%28For-Women%29-Step-23-Version-5.jpg/v4-460px-Take-Measurements-%28For-Women%29-Step-23-Version-5.jpg.webp"
                 },
                 activityLevel: {
-                    text: "Lifestyle: Select your level of physical activity. It’s important for calculating your daily caloric needs based on your metabolism and activity.",
-                    image: ""  // Add image URL if needed
+                    text: "Lifestyle: Sedentary means sitting most of the day (e.g., desk job), while Active refers to regular physical activity or a physically demanding job (e.g., labor-intensive work, walking for extended periods).",
+                    image: "https://www.shutterstock.com/image-photo/engineering-teamwork-planning-blueprint-office-600nw-2264233877.jpg"
                 }
             };
 
-            // Add focus event listener to each input field
+            // Add event listeners to all input and select fields
             document.querySelectorAll('input, select').forEach(input => {
                 input.addEventListener('focus', (e) => {
                     const fieldName = e.target.id;
                     const tooltip = tooltips[fieldName] || { text: "Click an input field to see its details.", image: "" };
 
-                    // Update content and image
                     infoContent.textContent = tooltip.text;
                     if (tooltip.image) {
                         infoImage.src = tooltip.image;
-                        infoImage.style.display = 'block';  // Show image if it exists
+                        infoImage.style.display = 'block';
                     } else {
-                        infoImage.style.display = 'none';  // Hide image if there's no link
+                        infoImage.style.display = 'none';
                     }
 
-                    // Make the infographic section visible with sliding animation
                     infoSection.classList.add('active');
                 });
 
                 input.addEventListener('blur', () => {
-                    // Optionally, you could hide the infographic again on blur
+                    // Optionally hide the infographic on blur
                     // infoSection.classList.remove('active');
                 });
             });
         });
-
 
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
