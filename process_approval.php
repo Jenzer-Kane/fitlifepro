@@ -30,7 +30,54 @@ function sendEmail($to, $plan, $price, $description)
         // Email content
         $mail->isHTML(true);
         $mail->Subject = 'Subscription Confirmation';
-        $mail->Body = 'Thank you for subscribing to our service! Your subscription details: Plan: ' . $plan . ', Price: ' . $price . ', Description: ' . $description;
+
+        // Email body with styles
+        $mail->Body = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; }
+                .message-content { 
+                    border: 1px solid #ddd; 
+                    padding: 20px; 
+                    background-color: #f9f9f9; 
+                }
+                .message-header {
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #007bff;
+                }
+                .message-body {
+                    margin-top: 10px;
+                    font-size: 16px;
+                }
+                .message-footer {
+                    margin-top: 20px;
+                    font-size: 14px;
+                    color: gray;
+                }
+            </style>
+        </head>
+        <body>
+            <div class='message-content'>
+                <div class='message-header'>FitLife Pro - Subscription Confirmation</div>
+                <div class='message-body'>
+                    Dear valued user,<br><br>
+                    We are pleased to inform you that your subscription has been approved. Below are your subscription details:
+                    <br><br>
+                    <strong>Plan:</strong> $plan<br>
+                    <strong>Price:</strong> $price<br>
+                    <strong>Description:</strong> $description<br><br>
+                    Thank you for choosing FitLifePro! We are excited to support you in your fitness journey.
+                </div>
+                <div class='message-footer'>
+                    This is an automated message from FitLifePro. Please do not reply to this email.<br>
+                    Best regards,<br>FitLifePro Team
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
 
         // Attach a file based on the subscription tier
         $attachmentPath = '';
@@ -45,8 +92,7 @@ function sendEmail($to, $plan, $price, $description)
                 $attachmentPath = './src/ELITETIER.pdf';
                 break;
             default:
-                // Handle the case when the plan is not recognized
-                return false;
+                return false; // Handle unrecognized plan
         }
 
         $mail->addAttachment($attachmentPath, $plan . '_TIER.pdf');
@@ -118,13 +164,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reference_number'], $
         }
     } elseif (isset($_POST['disapprove'])) {
         // Perform disapproval logic here
-        // For example, update the database to mark the transaction as disapproved
-
         // Update status in the database to "Disapproved"
         $updateStatusQuery = "UPDATE transactions SET status = 'Disapproved' WHERE reference_number = '$reference_number'";
         if ($mysqli->query($updateStatusQuery) === TRUE) {
             // Status updated successfully
-            // Redirect back to admin_subscription_approval.php
             header("Location: admin_subscription_approval.php");
             exit();
         } else {
@@ -132,11 +175,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reference_number'], $
             echo 'Error updating status: ' . $mysqli->error;
         }
     } else {
-        // No action specified
         echo 'Invalid request.';
     }
 } else {
-    // Form data not complete or invalid request method
     echo 'Invalid request.';
 }
 ?>
