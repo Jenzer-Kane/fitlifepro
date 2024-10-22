@@ -31,33 +31,31 @@ $thigh = null;
 // Function to calculate BMI
 function calculateBMI($weight, $height)
 {
-    // Check if height is provided and not zero
     if ($height !== null && $height != 0) {
-        // BMI Formula: BMI = weight (kg) / (height (m) * height (m))
         $heightInMeters = $height / 100; // Convert height to meters
         return $weight / ($heightInMeters * $heightInMeters);
     } else {
-        // Return some default value or handle it as per your application logic
-        return 0;
+        return 0; // Return 0 or handle error logic
     }
 }
 
 // Process user input and insert into the database
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Assume you have variables like $age, $waist, $neck, $gender, $hip, and $thigh from user input
+    // Capture user input
     $age = $_POST["age"];
     $waist = $_POST["waist"];
     $neck = $_POST["neck"];
     $hip = isset($_POST["hip"]) ? $_POST["hip"] : '';
     $thigh = isset($_POST["thigh"]) ? $_POST["thigh"] : '';
     $activityLevel = $_POST["activityLevel"];
-    $bmiWeight = $_POST["bmiWeight"]; // Updated variable name
-    $bmiHeight = $_POST["bmiHeight"]; // Updated variable name
-    $username = $_SESSION['username']; // Assuming the username is stored in the session
+    $bmiWeight = $_POST["bmiWeight"];
+    $bmiHeight = $_POST["bmiHeight"];
+    $fitnessLevel = $_POST["fitnessLevel"]; // Capture the fitness level input
+    $username = $_SESSION['username']; // Assume username is stored in the session
 
-    // Insert user input into database
-    $sql = "INSERT INTO users_info (username, age, waist, neck, hip, thigh, activityLevel, bmiWeight, bmiHeight) 
-            VALUES ('$username', '$age', '$waist', '$neck', '$hip', '$thigh', '$activityLevel', '$bmiWeight', '$bmiHeight')";
+    // Insert user input into the database
+    $sql = "INSERT INTO users_info (username, age, waist, neck, hip, thigh, activityLevel, bmiWeight, bmiHeight, fitnessLevel) 
+            VALUES ('$username', '$age', '$waist', '$neck', '$hip', '$thigh', '$activityLevel', '$bmiWeight', '$bmiHeight', '$fitnessLevel')";
 
     if ($mysqli->query($sql) === TRUE) {
         echo '<div class="alert success-alert">Profile updated successfully.</div>';
@@ -65,6 +63,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         echo '<div class="alert error-alert">Error: ' . $sql . '<br>' . $mysqli->error . '</div>';
     }
 }
+
 
 
 // Initialize results arrays
@@ -324,29 +323,50 @@ $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Su
 $timeSlots = ['Breakfast', 'Lunch', 'Snack', 'Snack', 'Snack', 'Dinner'];
 
 
-function getExercises($recommendedGoal, $exerciseType)
+function getExercises($recommendedGoal, $exerciseType, $fitnessLevel)
 {
     include 'database.php'; // Ensure database connection is available
 
-    // Define intensity based on recommended goal
+    // Determine intensity based on fitness level and goal
     $intensity = '';
-    switch ($recommendedGoal) {
-        case 'maintenance':
-            $intensity = 'Moderate'; // Moderate or high intensity for maintenance
+
+    // First determine the intensity based on fitnessLevel
+    switch ($fitnessLevel) {
+        case 'beginner':
+            $intensity = 'Low';
             break;
-        case 'weight-loss':
-            $intensity = 'Low'; // Low intensity for weight loss
+        case 'intermediate':
+            $intensity = 'Moderate';
             break;
-        case 'weight-gain':
-            $intensity = 'Low'; // Low intensity for weight gain
+        case 'advanced':
+            $intensity = 'High';
             break;
         default:
-            $intensity = ''; // No specific intensity
+            $intensity = 'Moderate'; // Default to Moderate if no fitness level is selected
             break;
     }
 
-    // Prepare the query to fetch exercises
-    $query = "SELECT name, duration, intensity, category, image_link, description FROM exercises WHERE intensity = ? AND exercise_type = ?";
+    // Refine intensity further based on the goal, if needed
+    if ($recommendedGoal === 'weight-loss' && $fitnessLevel !== 'beginner') {
+        $intensity = 'Low';
+    } elseif ($recommendedGoal === 'maintenance' && $fitnessLevel !== 'advanced') {
+        $intensity = 'Moderate';
+    } elseif ($recommendedGoal === 'weight-gain' && $fitnessLevel === 'advanced') {
+        $intensity = 'High';
+    }
+
+    // Advanced fitness level overrides exerciseType, fetch from all exercise types with 'High' intensity
+    if ($fitnessLevel === 'advanced') {
+        $query = "SELECT name, duration, intensity, category, exercise_type, image_link, description 
+                  FROM exercises 
+                  WHERE intensity = 'High'"; // No need to filter exerciseType for advanced users
+    } else {
+        // Regular users fetch based on intensity and exerciseType
+        $query = "SELECT name, duration, intensity, category, exercise_type, image_link, description 
+                  FROM exercises 
+                  WHERE intensity = ? AND exercise_type = ?";
+    }
+
     $statement = $mysqli->prepare($query);
 
     // Check if the statement was prepared successfully
@@ -354,8 +374,11 @@ function getExercises($recommendedGoal, $exerciseType)
         die("Failed to prepare statement: " . $mysqli->error); // Output the error for debugging
     }
 
-    // Bind parameters and execute the query
-    $statement->bind_param('ss', $intensity, $exerciseType);
+    // Bind parameters and execute the query for regular users
+    if ($fitnessLevel !== 'advanced') {
+        $statement->bind_param('ss', $intensity, $exerciseType);
+    }
+
     $statement->execute();
     $result = $statement->get_result();
 
@@ -385,14 +408,16 @@ function getExercises($recommendedGoal, $exerciseType)
     }
 }
 
-
 $exerciseType = isset($_POST['exerciseType']) ? $_POST['exerciseType'] : 'Bodyweight';
+$fitnessLevel = isset($_POST['fitnessLevel']) ? $_POST['fitnessLevel'] : 'beginner'; // Default to intermediate if not set
+
 if (isset($intakeResults['goal'])) {
-    $exercise_plan = getExercises($intakeResults['goal'], $exerciseType);
+    $exercise_plan = getExercises($intakeResults['goal'], $exerciseType, $fitnessLevel);
 } else {
     // Handle the case when $intakeResults['goal'] is not set
     $exercise_plan = [];
 }
+
 
 $exercisetimeSlots = ['Any', '-', '-', '-', '-'];
 
@@ -712,7 +737,8 @@ $exercise_plan = array(); // Initialize as an empty array to avoid undefined var
 $exerciseType = isset($_POST['exerciseType']) ? $_POST['exerciseType'] : 'Bodyweight';
 
 if (isset($goal_name)) {
-    $exercise_plan = getExercises($goal_name, $exerciseType); // Pass only the recommended goal
+    $exercise_plan = getExercises($goal_name, $exerciseType, $fitnessLevel); // Pass all three arguments
+
 }
 
 // Assuming the logged-in user's username is stored in the session
@@ -1047,7 +1073,7 @@ $mysqli->close();
             border-radius: 8px;
             background-color: #fff;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            height: 55%;
+            height: 60%;
             text-align: left;
             margin-top: 30px;
         }
@@ -1130,17 +1156,6 @@ $mysqli->close();
             position: relative;
         }
 
-        .quote_image img {
-            border-radius: 50%;
-            overflow: hidden;
-            /* Ensure the image stays within the circular boundary */
-            width: 100px;
-            /* Set the desired width */
-            height: 100px;
-            /* Set the desired height */
-            object-fit: cover;
-            /* Maintain the aspect ratio and cover the container */
-        }
 
         .exercise-planning {
             margin: 0 auto;
@@ -1167,6 +1182,18 @@ $mysqli->close();
             font-size: 1.2em;
             /* Adjust as needed */
             font-weight: bold;
+        }
+
+        .quote_image img {
+            border-radius: 50%;
+            overflow: hidden;
+            /* Ensure the image stays within the circular boundary */
+            width: 100px;
+            /* Set the desired width */
+            height: 100px;
+            /* Set the desired height */
+            object-fit: cover;
+            /* Maintain the aspect ratio and cover the container */
         }
     </style>
 
@@ -1446,15 +1473,20 @@ $mysqli->close();
                             <label for="activityLevel">Lifestyle:</label>
                             <select name="activityLevel" id="activityLevel" <?php echo isset($disableButton) && $disableButton ? 'disabled' : ''; ?> required>
                                 <option value="sedentary" <?php echo isset($activityLevel) && $activityLevel === 'sedentary' ? 'selected' : ''; ?>>
-                                    Sedentary – Seated throughout the day with little to no regular physical
-                                    activity
-                                    (e.g., desk job).
+                                    Sedentary
                                 </option>
                                 <option value="active" <?php echo isset($activityLevel) && $activityLevel === 'active' ? 'selected' : ''; ?>>
-                                    Active – Regular physical activity or has a physically demanding job (e.g.,
-                                    labor-intensive work, walking for extended periods).
+                                    Active
                                 </option>
                             </select>
+
+                            <label for="fitnessLevel">Fitness Level:</label>
+                            <select name="fitnessLevel" id="fitnessLevel" <?php echo isset($disableButton) && $disableButton ? 'disabled' : ''; ?> required>
+                                <option value="beginner" <?php echo isset($fitnessLevel) && $fitnessLevel === 'beginner' ? 'selected' : ''; ?>>Beginner</option>
+                                <option value="intermediate" <?php echo isset($fitnessLevel) && $fitnessLevel === 'intermediate' ? 'selected' : ''; ?>>Intermediate</option>
+                                <option value="advanced" <?php echo isset($fitnessLevel) && $fitnessLevel === 'advanced' ? 'selected' : ''; ?>>Advanced</option>
+                            </select>
+
 
                             <!-- Show Calculate button if no data from DB is showing -->
                             <?php if (!isset($bodyFatResults) && !isset($intakeResults)): ?>
@@ -2520,7 +2552,8 @@ $mysqli->close();
                                     <!-- Custom message based on the goal -->
                                     <?php
                                     $goalMessage = '';
-                                    switch ($goal_name) {
+                                    $goal = strtolower($goal_name); // Convert to lowercase for the switch
+                                    switch ($goal) {
                                         case 'maintenance':
                                             $goalMessage = "The food curated for your diet plan is balanced with moderate calories and high in protein, designed to help you maintain your current body weight while optimizing your macronutrient intake.";
                                             break;
@@ -2664,15 +2697,15 @@ $mysqli->close();
 
                     // Add inline CSS for printing the dynamically changed styles
                     var styles = `
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <style>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    table { width: 100%; border-collapse: collapse; }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    th { background-color: #f0f0f0; color: black; }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </style>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <style>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            table { width: 100%; border-collapse: collapse; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            th { background-color: #f0f0f0; color: black; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </style>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    `;
 
                     // Open the new window and write the cloned content into it
                     printWindow.document.write('<html><head><title>Print Plan</title>');
@@ -2700,23 +2733,23 @@ $mysqli->close();
                                     <div class="our_schedule_content">
                                         <?php if (!empty($exercise_plan)): ?>
                                             <h5 style="font-size: 80px;">EXERCISE PLAN</h5>
-                                            <h2><u><?php echo strtoupper($goal_name); ?></u></h2>
+                                            <h2><u><?php echo strtoupper($fitnessLevel); ?> FITNESS LEVEL</u></h2>
 
-                                            <!-- Custom message based on goal intensity -->
+                                            <!-- Custom message based on fitness level -->
                                             <?php
                                             $intensityMessage = '';
-                                            switch (strtolower($goal_name)) {
-                                                case 'maintenance':
-                                                    $intensityMessage = "This exercise plan consists of Moderate Intensity workouts. It’s perfect for maintaining your current fitness level with a balanced mix of reps, sets, and exercise durations.";
+                                            switch (strtolower($fitnessLevel)) { // Using fitnessLevel instead of goal_name
+                                                case 'beginner':
+                                                    $intensityMessage = "This exercise plan consists of Low Intensity workouts. It’s perfect for beginners looking to ease into a regular workout routine with low-impact exercises.";
                                                     break;
-                                                case 'weight-loss':
-                                                    $intensityMessage = "Your exercise plan is designed with Low Intensity workouts to help with gradual weight loss. Expect shorter sets and reps with plenty of rest time, tailored to support a calorie deficit.";
+                                                case 'intermediate':
+                                                    $intensityMessage = "Your exercise plan is designed with Moderate Intensity workouts. Expect a balanced mix of cardio and strength exercises to improve your fitness level and endurance.";
                                                     break;
-                                                case 'weight-gain':
-                                                    $intensityMessage = "Get ready for a High Intensity workout plan! This includes more challenging exercises with higher reps and sets to help you gain muscle mass efficiently.";
+                                                case 'advanced':
+                                                    $intensityMessage = "Get ready for High Intensity workouts! This plan includes more challenging exercises, designed for advanced fitness enthusiasts aiming to push their limits and maximize results.";
                                                     break;
                                                 default:
-                                                    $intensityMessage = "This exercise plan is customized to match your fitness goals, offering a balanced approach to achieve your desired results.";
+                                                    $intensityMessage = "This exercise plan is customized to match your fitness goals, offering a balanced approach to help you achieve your desired results.";
                                                     break;
                                             }
 
@@ -2860,6 +2893,74 @@ $mysqli->close();
                 }
             }
         });
+        // INPUT DETAILS SLIDER + INFOGRAPHICS
+        document.addEventListener("DOMContentLoaded", function () {
+            const infoSection = document.getElementById('infographicSection');
+            const infoContent = document.getElementById('infoContent');
+            const infoImage = document.getElementById('infoImage');
+
+            const tooltips = {
+                bmiWeight: {
+                    text: "<strong>Weight:</strong> Enter your current weight in kilograms. Weight is a key factor in determining your overall health and fitness level. <br> <br>This will be used to calculate your BMI and body fat percentage. ",
+                    image: "https://www.wikihow.com/images/thumb/3/3b/Weigh-Yourself-Step-1.jpg/v4-460px-Weigh-Yourself-Step-1.jpg.webp"
+                },
+                bmiHeight: {
+                    text: "<strong>Height:</strong> Enter your height in centimeters. Combined with height, it is essential for calculating your BMI.",
+                    image: "https://www.wikihow.com/images/thumb/9/97/Measure-Your-Height-by-Yourself-Step-12-Version-3.jpg/aid1624233-v4-728px-Measure-Your-Height-by-Yourself-Step-12-Version-3.jpg.webp"
+                },
+                age: {
+                    text: "<strong>Age:</strong> Combined with weight and height, will help determine how your body stores fat and estimate amount.",
+                    image: "https://www.wikihow.com/images/thumb/2/25/Calculate-Body-Fat-With-a-Tape-Measure-Step-5-Version-3.jpg/v4-460px-Calculate-Body-Fat-With-a-Tape-Measure-Step-5-Version-3.jpg.webp"
+                },
+                waist: {
+                    text: "<strong>Waist:</strong> Measure the circumference of your waist at the narrowest point. <br><br>This will be used to help determine bodyfat percentage (US Navy Method).",
+                    image: "https://www.wikihow.com/images/thumb/6/60/Measure-Your-Waist-Step-3-Version-3.jpg/aid1375483-v4-728px-Measure-Your-Waist-Step-3-Version-3.jpg.webp"
+                },
+                neck: {
+                    text: "<strong>Neck:</strong> Measure the circumference of your neck at its narrowest point. <br><br>This will be used to help determine bodyfat percentage (US Navy Method).",
+                    image: "https://www.wikihow.com/images/thumb/2/2a/Calculate-Body-Fat-With-a-Tape-Measure-Step-6-Version-3.jpg/v4-460px-Calculate-Body-Fat-With-a-Tape-Measure-Step-6-Version-3.jpg.webp"
+                },
+                hip: {
+                    text: "<strong>Hip:</strong> For females, measure the widest part of your hips. <br><br>This will be used to help determine bodyfat percentage (US Navy Method).",
+                    image: "https://www.wikihow.com/images/thumb/f/f7/Measure-Hips-Step-5-Version-5.jpg/aid2669718-v4-728px-Measure-Hips-Step-5-Version-5.jpg.webp"
+                },
+                thigh: {
+                    text: "<strong>Thigh:</strong> Measure the circumference of your thigh at its widest part. <br><br>This will be used to help determine bodyfat percentage (US Navy Method).",
+                    image: "https://www.wikihow.com/images/thumb/5/51/Take-Measurements-%28For-Women%29-Step-23-Version-5.jpg/v4-460px-Take-Measurements-%28For-Women%29-Step-23-Version-5.jpg.webp"
+                },
+                activityLevel: {
+                    text: "<strong>Lifestyle: <br><br>Sedentary</strong>  involves minimal movement throughout the day, typically involving sitting for long periods (e.g., desk job). <br><strong><br>Active</strong> means engaging in regular physical activity, whether through a demanding job or consistent movement like walking or standing.",
+                    image: "https://www.shutterstock.com/image-photo/engineering-teamwork-planning-blueprint-office-600nw-2264233877.jpg"
+                },
+                fitnessLevel: {
+                    text: "<strong>Fitness Level:</strong> <br><br><strong>Beginner</strong> - You are just starting your fitness journey or returning after a long break. <br><br><strong>Intermediate</strong> - You exercise regularly with moderate intensity and have a consistent workout routine. <br><br><strong>Advanced</strong> - You have high fitness experience, perform frequent, high-intensity workouts, and maintain an intense training schedule.",
+                    image: "https://elements-resized.envatousercontent.com/envato-shoebox/56c8/1f24-a7ab-4dbc-ba8a-a71a92179c86/108_.00_05_42_09.Still178--low_res-scale-1_40x.jpg?w=1600&cf_fit=scale-down&mark-alpha=18&mark=https%3A%2F%2Felements-assets.envato.com%2Fstatic%2Fwatermark4.png&q=85&format=auto&s=992d98767864e39631da28d8d9b7aced26518afc31b939ceceae4a2637257dd5"
+                }
+            };
+
+            // Add event listeners to all input and select fields
+            document.querySelectorAll('input, select').forEach(input => {
+                input.addEventListener('focus', (e) => {
+                    const fieldName = e.target.id;
+                    const tooltip = tooltips[fieldName] || { text: "Click an input field to see its details.", image: "" };
+
+                    infoContent.innerHTML = tooltip.text; // Set innerHTML to render <br> tags
+                    if (tooltip.image) {
+                        infoImage.src = tooltip.image;
+                        infoImage.style.display = 'block';
+                    } else {
+                        infoImage.style.display = 'none';
+                    }
+
+                    infoSection.classList.add('active');
+                });
+
+                input.addEventListener('blur', () => {
+                    // Optionally hide the infographic on blur
+                    // infoSection.classList.remove('active');
+                });
+            });
+        });
 
         // Function to attach event listeners to meal items
         function attachEventListeners() {
@@ -2887,8 +2988,7 @@ $mysqli->close();
                     const proteinColor = currentProtein >= maxProtein ? 'lightgreen' : 'white';
 
                     // Update tooltip content with current totals and max values
-                    tooltip.innerHTML = `
-            <strong style="color: white;"><u>Total Consumed:</u></strong><br>
+                    tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
             <span style="color:${calorieColor};">Calories: ${currentCalories} / ${maxCalories}</span><br>
             <span style="color:${proteinColor};">Protein: ${currentProtein} g / ${maxProtein} g</span>
             `;
@@ -3032,7 +3132,7 @@ $mysqli->close();
                     tooltip.innerHTML = `
                     <div style="background-color: white; padding: 15px; max-width: 400px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); border-radius: 15px;">
                         <img src="${imageUrl}" alt="Exercise Image" style="width: 100%; max-width: 400px; height: auto; border-radius: 10px;">
-                        <p style="margin-top: 10px; font-size: 14px;">${description}</p>
+                        <p style="margin-top: 10px; font-size: 18px;">${description}</p>
                     </div>
                 `;
 
@@ -3307,69 +3407,7 @@ $mysqli->close();
                 }
             });
         });
-        document.addEventListener("DOMContentLoaded", function () {
-            const infoSection = document.getElementById('infographicSection');
-            const infoContent = document.getElementById('infoContent');
-            const infoImage = document.getElementById('infoImage');
 
-            const tooltips = {
-                bmiWeight: {
-                    text: "<strong>Weight:</strong> Enter your current weight in kilograms. <br>This will be used to calculate your BMI and body fat percentage. <br>Weight is a key factor in determining your overall health and fitness level.",
-                    image: "https://www.wikihow.com/images/thumb/3/3b/Weigh-Yourself-Step-1.jpg/v4-460px-Weigh-Yourself-Step-1.jpg.webp"
-                },
-                bmiHeight: {
-                    text: "<strong>Height:</strong> Enter your height in centimeters. Combined with height, it is essential for calculating your BMI.",
-                    image: "https://www.wikihow.com/images/thumb/9/97/Measure-Your-Height-by-Yourself-Step-12-Version-3.jpg/aid1624233-v4-728px-Measure-Your-Height-by-Yourself-Step-12-Version-3.jpg.webp"
-                },
-                age: {
-                    text: "<strong>Age:</strong> Combined with weight and height, will help determine how your body stores fat and estimate amount.",
-                    image: "https://www.wikihow.com/images/thumb/2/25/Calculate-Body-Fat-With-a-Tape-Measure-Step-5-Version-3.jpg/v4-460px-Calculate-Body-Fat-With-a-Tape-Measure-Step-5-Version-3.jpg.webp"
-                },
-                waist: {
-                    text: "<strong>Waist:</strong> Measure the circumference of your waist at the narrowest point. <br>This will be used to help determine bodyfat percentage (US Navy Method).",
-                    image: "https://www.wikihow.com/images/thumb/6/60/Measure-Your-Waist-Step-3-Version-3.jpg/aid1375483-v4-728px-Measure-Your-Waist-Step-3-Version-3.jpg.webp"
-                },
-                neck: {
-                    text: "<strong>Neck:</strong> Measure the circumference of your neck at its narrowest point. <br>This will be used to help determine bodyfat percentage (US Navy Method).",
-                    image: "https://www.wikihow.com/images/thumb/2/2a/Calculate-Body-Fat-With-a-Tape-Measure-Step-6-Version-3.jpg/v4-460px-Calculate-Body-Fat-With-a-Tape-Measure-Step-6-Version-3.jpg.webp"
-                },
-                hip: {
-                    text: "<strong>Hip:</strong> For females, measure the widest part of your hips. <br>This will be used to help determine bodyfat percentage (US Navy Method).",
-                    image: "https://www.wikihow.com/images/thumb/f/f7/Measure-Hips-Step-5-Version-5.jpg/aid2669718-v4-728px-Measure-Hips-Step-5-Version-5.jpg.webp"
-                },
-                thigh: {
-                    text: "<strong>Thigh:</strong> Measure the circumference of your thigh at its widest part. <br>This will be used to help determine bodyfat percentage (US Navy Method).",
-                    image: "https://www.wikihow.com/images/thumb/5/51/Take-Measurements-%28For-Women%29-Step-23-Version-5.jpg/v4-460px-Take-Measurements-%28For-Women%29-Step-23-Version-5.jpg.webp"
-                },
-                activityLevel: {
-                    text: "<strong>Lifestyle:</strong> Sedentary means sitting most of the day (e.g., desk job), while Active refers to regular physical activity or a physically demanding job (e.g., labor-intensive work, walking for extended periods).",
-                    image: "https://www.shutterstock.com/image-photo/engineering-teamwork-planning-blueprint-office-600nw-2264233877.jpg"
-                }
-            };
-
-            // Add event listeners to all input and select fields
-            document.querySelectorAll('input, select').forEach(input => {
-                input.addEventListener('focus', (e) => {
-                    const fieldName = e.target.id;
-                    const tooltip = tooltips[fieldName] || { text: "Click an input field to see its details.", image: "" };
-
-                    infoContent.innerHTML = tooltip.text; // Set innerHTML to render <br> tags
-                    if (tooltip.image) {
-                        infoImage.src = tooltip.image;
-                        infoImage.style.display = 'block';
-                    } else {
-                        infoImage.style.display = 'none';
-                    }
-
-                    infoSection.classList.add('active');
-                });
-
-                input.addEventListener('blur', () => {
-                    // Optionally hide the infographic on blur
-                    // infoSection.classList.remove('active');
-                });
-            });
-        });
 
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
