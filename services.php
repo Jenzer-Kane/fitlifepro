@@ -276,7 +276,7 @@ $mysqli->close();
         <span class="popup-close" onclick="closePopup()">&times;</span>
         <div class="popup-content">
             <h2>Try our free BMI calculator!</h2>
-            <h4>Learn about your BMI, Body Fat Percentage, Ideal Weight and more!</h4>
+            <h4>Learn about your BMI, Body Fat Percentage and more!</h4>
             <h2>Register Now to access!</h2>
             <div class="popup-button-container">
                 <a href="./register.html" class="popup-button">Register</a>
@@ -310,7 +310,7 @@ $mysqli->close();
                             </div>
                         </div>
                         <div class="pricing_tables_box_lower_portion">
-                            <h5>ESSENTIAL TIER</h5>
+                            <h5 style="color: lightblue;">ESSENTIAL TIER</h5>
                             <ul class="list-unstyled">
                                 <li>
                                     <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Meal Plan
@@ -343,7 +343,7 @@ $mysqli->close();
                             </div>
                         </div>
                         <div class="pricing_tables_box_lower_portion">
-                            <h5>PREMIUM TIER</h5>
+                            <h5 style="color: lightcoral">PREMIUM TIER</h5>
                             <ul class="list-unstyled">
                                 <li>
                                     <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Meal Plan
@@ -378,7 +378,7 @@ $mysqli->close();
                             </div>
                         </div>
                         <div class="pricing_tables_box_lower_portion">
-                            <h5>ELITE TIER</h5>
+                            <h5 style="color: #9370DB">ELITE TIER</h5>
                             <ul class="list-unstyled">
                                 <li>
                                     <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Meal Plan
@@ -921,264 +921,76 @@ $mysqli->close();
             <img src="./assets/images/footer_right_icon.png" alt="" class="img-fluid">
         </figure>
     </section>
-    <!-- BLOG SECTION POPUP -->
-    <div id="blog-model-1" class="modal fade blog-model-con" tabindex="-1" style="display: none;" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
-                            aria-hidden="true"><i class="fa-solid fa-x"></i></span></button>
-                </div>
-                <div class="modal-body">
-                    <div class="blog-box-item mb-0">
-                        <div class="blog-img">
-                            <figure class="mb-0">
-                                <img src="./assets/images/our_news_1.png" alt="blog-img" class="img-fluid">
-                            </figure>
-                        </div>
-                        <div class="blog-content pl-0 pr-0">
-                            <div class="blog-auteher-title">
-                                <span>By Elina Parker</span>
-                                <span class="float-lg-right">Oct 13, 2022</span>
-                            </div>
-                            <div class="social_icons">
-                                <ul class="list-unstyled">
-                                    <li><a href="#"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a></li>
-                                    <li><a href="#"><i class="fa-brands fa-twitter" aria-hidden="true"></i></a></li>
-                                    <li><a href="#"><i class="fa-brands fa-instagram mr-0" aria-hidden="true"></i></a>
-                                    </li>
-                                </ul>
-                            </div>
-                            <h5>QUIS AUTEM VEA EUM IURE REPREHENDERIT</h5>
-                            <p>
-                                Duis aute irure dolor in reprehenderi in voluptate velit esse cillum dolore eu fugiat
-                                nulla pariatur.
-                                in reprehenderit in voluptateesse occaecat cuida at non proident, sunt in culpa qui
-                                officia deserun.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam tempor
-                                eros a tellus auctor, nec suscipit nunc dignissim. Ut suscipit gravida augue sed
-                                elementum. Sed sed luctus nisl. Donec scelerisque nisi in sodales mattis. Vestibulum
-                                suscipit odio ac enim blandit sollicitudin. Aliquam ultrices sem quis urna placerat
-                                interdum. Etiam rutrum, quam sagittis tristique mollis, libero arcu scelerisque erat,
-                                eget tincidunt eros diam quis nunc.
-                            </p>
-                            <h5 class="contact">CONTACT US</h5>
-                            <h2>SEND US A MESSAGE & JOIN OUR TEAM</h2>
-                            <form class="contact-form blog-model-form">
-                                <div class="row">
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="text" name="name" id="fname" class="form-placeholder-color"
-                                                placeholder="Name">
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="tel" name="phone" id="phonenumber"
-                                                class="form-placeholder-color form_style" placeholder="Phone">
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="email" name="email" id="emailaddress"
-                                                class="form-placeholder-color" placeholder="Email">
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="text" name="sub" id="subject"
-                                                class="form-placeholder-color form_style" placeholder="Subject">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-lg-12">
-                                        <div class=" form-group mb-0">
-                                            <textarea rows="3" name="msg" id="message" class="form-placeholder-color"
-                                                placeholder="Message"></textarea>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button type="submit" name="btnsubmit" id="sendbtn">Send now<i
-                                        class="fa-solid fa-play"></i></button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div id="blog-model-2" class="modal fade blog-model-con" tabindex="-1" style="display: none;" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
-                            aria-hidden="true"><i class="fa-solid fa-x"></i></span></button>
-                </div>
-                <div class="modal-body">
-                    <div class="blog-box-item mb-0">
-                        <div class="blog-img">
-                            <figure class="mb-0">
-                                <img src="./assets/images/our_news_2.png" alt="blog-img" class="img-fluid">
-                            </figure>
-                        </div>
-                        <div class="blog-content pl-0 pr-0">
-                            <div class="blog-auteher-title">
-                                <span>By Elina Parker</span>
-                                <span class="float-lg-right">Oct 13, 2022</span>
-                            </div>
-                            <div class="social_icons">
-                                <ul class="list-unstyled">
-                                    <li><a href="#"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a></li>
-                                    <li><a href="#"><i class="fa-brands fa-twitter" aria-hidden="true"></i></a></li>
-                                    <li><a href="#"><i class="fa-brands fa-instagram mr-0" aria-hidden="true"></i></a>
-                                    </li>
-                                </ul>
-                            </div>
-                            <h5>REPREHENDERIT IN VOUTA VELIT ESSE CILLUM</h5>
-                            <p>
-                                Duis aute irure dolor in reprehenderi in voluptate velit esse cillum dolore eu fugiat
-                                nulla pariatur.
-                                in reprehenderit in voluptateesse occaecat cuida at non proident, sunt in culpa qui
-                                officia deserun.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam tempor
-                                eros a tellus auctor, nec suscipit nunc dignissim. Ut suscipit gravida augue sed
-                                elementum. Sed sed luctus nisl. Donec scelerisque nisi in sodales mattis. Vestibulum
-                                suscipit odio ac enim blandit sollicitudin. Aliquam ultrices sem quis urna placerat
-                                interdum. Etiam rutrum, quam sagittis tristique mollis, libero arcu scelerisque erat,
-                                eget tincidunt eros diam quis nunc.
-                            </p>
-                            <h5 class="contact">CONTACT US</h5>
-                            <h2>SEND US A MESSAGE & JOIN OUR TEAM</h2>
-                            <form class="contact-form blog-model-form">
-                                <div class="row">
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="text" name="name" id="blog_sec_fname"
-                                                class="form-placeholder-color" placeholder="Name">
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="tel" name="phone" id="blog_sec_phonenumber"
-                                                class="form-placeholder-color form_style" placeholder="Phone">
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="email" name="email" id="blog_sec_emailaddress"
-                                                class="form-placeholder-color" placeholder="Email">
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="text" name="sub" id="blog_sec_subject"
-                                                class="form-placeholder-color form_style" placeholder="Subject">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-lg-12">
-                                        <div class=" form-group mb-0">
-                                            <textarea rows="3" name="msg" id="blog_sec_message"
-                                                class="form-placeholder-color" placeholder="Message"></textarea>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button type="submit" name="btnsubmit" id="blog_sec_sendbtn">Send now<i
-                                        class="fa-solid fa-play"></i></button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div id="blog-model-3" class="modal fade blog-model-con" tabindex="-1" style="display: none;" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
-                            aria-hidden="true"><i class="fa-solid fa-x"></i></span></button>
-                </div>
-                <div class="modal-body">
-                    <div class="blog-box-item mb-0">
-                        <div class="blog-img">
-                            <figure class="mb-0">
-                                <img src="./assets/images/our_news_3.png" alt="blog-img" class="img-fluid">
-                            </figure>
-                        </div>
-                        <div class="blog-content pl-0 pr-0">
-                            <div class="blog-auteher-title">
-                                <span>By Elina Parker</span>
-                                <span class="float-lg-right">Oct 13, 2022</span>
-                            </div>
-                            <div class="social_icons">
-                                <ul class="list-unstyled">
-                                    <li><a href="#"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a></li>
-                                    <li><a href="#"><i class="fa-brands fa-twitter" aria-hidden="true"></i></a></li>
-                                    <li><a href="#"><i class="fa-brands fa-instagram mr-0" aria-hidden="true"></i></a>
-                                    </li>
-                                </ul>
-                            </div>
-                            <h5>SOLUTA NOBIS OSE ALIGEN OPTIO CUMUE</h5>
-                            <p>
-                                Duis aute irure dolor in reprehenderi in voluptate velit esse cillum dolore eu fugiat
-                                nulla pariatur.
-                                in reprehenderit in voluptateesse occaecat cuida at non proident, sunt in culpa qui
-                                officia deserun.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam tempor
-                                eros a tellus auctor, nec suscipit nunc dignissim. Ut suscipit gravida augue sed
-                                elementum. Sed sed luctus nisl. Donec scelerisque nisi in sodales mattis. Vestibulum
-                                suscipit odio ac enim blandit sollicitudin. Aliquam ultrices sem quis urna placerat
-                                interdum. Etiam rutrum, quam sagittis tristique mollis, libero arcu scelerisque erat,
-                                eget tincidunt eros diam quis nunc.
-                            </p>
-                            <h5 class="contact">CONTACT US</h5>
-                            <h2>SEND US A MESSAGE & JOIN OUR TEAM</h2>
-                            <form class="contact-form blog-model-form">
-                                <div class="row">
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="text" name="name" id="blog_third_fname"
-                                                class="form-placeholder-color" placeholder="Name">
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="tel" name="phone" id="blog_third_phonenumber"
-                                                class="form-placeholder-color form_style" placeholder="Phone">
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="email" name="email" id="blog_third_emailaddress"
-                                                class="form-placeholder-color" placeholder="Email">
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-6 col-md-6 col-sm-6">
-                                        <div class="form-group mb-0">
-                                            <input type="text" name="sub" id="blog_third_subject"
-                                                class="form-placeholder-color form_style" placeholder="Subject">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-lg-12">
-                                        <div class=" form-group mb-0">
-                                            <textarea rows="3" name="msg" id="blog_third_message"
-                                                class="form-placeholder-color" placeholder="Message"></textarea>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button type="submit" name="btnsubmit" id="blog_third_sendbtn">Send now<i
-                                        class="fa-solid fa-play"></i></button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tooltip = document.createElement('div');
+            tooltip.style.position = 'absolute';
+            tooltip.style.display = 'none';
+            tooltip.style.padding = '12px 18px';
+            tooltip.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+            tooltip.style.color = '#333';
+            tooltip.style.border = '1px solid #ddd';
+            tooltip.style.borderRadius = '8px';
+            tooltip.style.fontSize = '15px';
+            tooltip.style.boxShadow = '0px 8px 16px rgba(0, 0, 0, 0.1)';
+            tooltip.style.maxWidth = '280px';
+            tooltip.style.zIndex = '1000';
+            tooltip.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            tooltip.style.opacity = '0';
+            tooltip.style.transform = 'translateY(10px)';
+            document.body.appendChild(tooltip);
+
+            const tierDescriptions = {
+                'ESSENTIAL TIER': 'The Essential Tier is perfect for those starting their fitness journey. Get a recommended meal plan, track your progress, and engage with others in the forums to build a healthier lifestyle.',
+                'PREMIUM TIER': 'The Premium Tier elevates your fitness routine with recommended exercises, meal plans, progress tracking, and forum access, designed for those seeking noticeable improvements.',
+                'ELITE TIER': 'The Elite Tier offers exclusive bodybuilding routines, advanced nutritional guidance, and 24/7 support. Push your limits and achieve extraordinary results with our top-tier offering.'
+            };
+
+            const tierColors = {
+                'ESSENTIAL TIER': 'lightblue',
+                'PREMIUM TIER': 'lightcoral',
+                'ELITE TIER': '#9370DB'
+            };
+
+            const tierBoxes = document.querySelectorAll('.pricing_tables_box_content');
+
+            tierBoxes.forEach(box => {
+                const tierName = box.querySelector('h5').innerText.trim().toUpperCase(); // Get the tier name in uppercase
+
+                // Show tooltip on mouse enter
+                box.addEventListener('mouseenter', (e) => {
+                    const description = tierDescriptions[tierName] || 'Subscription details not available.';
+                    const titleColor = tierColors[tierName] || '#333'; // Default to black if no color is found
+                    tooltip.innerHTML = `<strong style="font-size: 16px; color: ${titleColor};">${tierName}:</strong> <br><span style="font-size: 14px;">${description}</span>`;
+                    tooltip.style.display = 'block';
+                    tooltip.style.opacity = '1';
+                    tooltip.style.transform = 'translateY(0)';
+
+                    // Position tooltip
+                    const rect = box.getBoundingClientRect();
+                    tooltip.style.left = `${rect.left + window.pageXOffset + 20}px`;
+                    tooltip.style.top = `${rect.top + window.pageYOffset - 10}px`;
+                });
+
+                // Hide tooltip on mouse leave
+                box.addEventListener('mouseleave', () => {
+                    tooltip.style.opacity = '0';
+                    tooltip.style.transform = 'translateY(10px)';
+                    setTimeout(() => {
+                        tooltip.style.display = 'none';
+                    }, 300); // Wait for the transition to complete
+                });
+
+                // Update tooltip position on mouse move
+                box.addEventListener('mousemove', (e) => {
+                    tooltip.style.left = `${e.pageX + 20}px`;
+                    tooltip.style.top = `${e.pageY - 10}px`;
+                });
+            });
+        });
+
+
         let hasScrolled = false;
         let popupTimer;
 

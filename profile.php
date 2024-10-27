@@ -1146,6 +1146,15 @@ $mysqli->close();
             text-align: center;
         }
 
+        .mealItem {
+            cursor: pointer;
+        }
+
+        .mealItem.consumed {
+            background-color: green;
+            color: white;
+        }
+
         .note {
             font-size: 1.0em;
             text-align: center;
@@ -1177,6 +1186,16 @@ $mysqli->close();
             max-width: 100%;
             /* Adjust as needed */
             text-align: center;
+        }
+
+
+        .exerciseItem {
+            cursor: pointer;
+        }
+
+        .exerciseItem.completed {
+            background-color: green;
+            color: white;
         }
 
         .blurred {
@@ -2536,6 +2555,61 @@ $mysqli->close();
         <?php endif; ?>
     <?php endif; ?>
 
+    <script>
+        function printSection(sectionId) {
+            var section = document.getElementById(sectionId);
+
+            // Clone the section to capture the current state
+            var clonedSection = section.cloneNode(true);
+
+            // Apply inline styles to preserve the color changes for the consumed (green) items
+            clonedSection.querySelectorAll('.mealItem.consumed').forEach(function (item) {
+                item.style.backgroundColor = 'green';
+                item.style.color = 'white';
+            });
+
+            // Apply inline styles to make unconsumed (unselected) items yellow
+            clonedSection.querySelectorAll('.mealItem').forEach(function (item) {
+                if (!item.classList.contains('consumed')) {
+                    item.style.backgroundColor = 'yellow';
+                    item.style.color = 'black';
+                }
+            });
+
+            // Create a new document for printing
+            var printWindow = window.open('', '', 'height=500, width=800');
+            printWindow.document.write('<html><head><title>Print Diet Plan</title>');
+
+            // Add inline CSS for printing the dynamically changed styles
+            var styles = `
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+                table { width: 100%; border-collapse: collapse; }
+                table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
+                th { background-color: #f0f0f0; color: black; }
+                .mealItem { border: 1px solid black; padding: 10px; cursor: pointer; }
+                .mealItem.consumed { background-color: green !important; color: white !important; }
+                .mealItem { background-color: yellow !important; color: black !important; }
+            </style>
+        `;
+
+            printWindow.document.write(styles);
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(clonedSection.innerHTML); // Write the cloned content with inline styles
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+
+            // Automatically open the print dialog for the print window (single print window)
+            printWindow.focus();
+            printWindow.onload = function () {
+                printWindow.print();
+                printWindow.onafterprint = function () {
+                    printWindow.close(); // Close the window after printing
+                };
+            };
+        }
+    </script>
+
 
     <!-- AUTO GENERATED (PREMIUM AND ELITE TIER) DIET PLAN -->
     <?php if ($showDietPlanningSection && isset($goal_name)): ?>
@@ -2696,18 +2770,18 @@ $mysqli->close();
 
                     // Add inline CSS for printing the dynamically changed styles
                     var styles = `
-                                    <style>
-                                        body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
-                                        table { width: 100%; border-collapse: collapse; }
-                                        table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
-                                        th { background-color: #f0f0f0; color: black; }
-                                        .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
-                                        .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
-                                        .exerciseItem.completed { background-color: green; color: white; }
-                                        .exerciseItem:not(.completed) { background-color: yellow; color: black; }
-                                        .exerciseItem.blurred { background-color: lightgray; color: black; }
-                                    </style>
-                                `;
+                                                                                                                                                                    <style>
+                                                                                                                                                                        body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+                                                                                                                                                                        table { width: 100%; border-collapse: collapse; }
+                                                                                                                                                                        table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
+                                                                                                                                                                        th { background-color: #f0f0f0; color: black; }
+                                                                                                                                                                        .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
+                                                                                                                                                                        .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
+                                                                                                                                                                        .exerciseItem.completed { background-color: green; color: white; }
+                                                                                                                                                                        .exerciseItem:not(.completed) { background-color: yellow; color: black; }
+                                                                                                                                                                        .exerciseItem.blurred { background-color: lightgray; color: black; }
+                                                                                                                                                                    </style>
+                                                                                                                                                                `;
 
                     printWindow.document.write(styles);
                     printWindow.document.write('</head><body>');
@@ -3026,19 +3100,18 @@ $mysqli->close();
                     const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
                     const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
 
-                    // Get max values specifically from the span elements for calories and protein
+                    // Get max values for calories and protein
                     const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
                     const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
 
-                    // Determine colors based on whether the maximum is reached
+                    // Determine colors for tooltip
                     const calorieColor = currentCalories >= maxCalories ? 'lightgreen' : 'white';
                     const proteinColor = currentProtein >= maxProtein ? 'lightgreen' : 'white';
 
-                    // Update tooltip content with current totals and max values
+                    // Update tooltip content with totals
                     tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
-            <span style="color:${calorieColor};">Calories: ${currentCalories} / ${maxCalories}</span><br>
-            <span style="color:${proteinColor};">Protein: ${currentProtein} g / ${maxProtein} g</span>
-            `;
+                <span style="color:${calorieColor};">Calories: ${currentCalories} / ${maxCalories}</span><br>
+                <span style="color:${proteinColor};">Protein: ${currentProtein} g / ${maxProtein} g</span>`;
 
                     // Show tooltip
                     tooltip.style.display = 'block';
@@ -3066,23 +3139,25 @@ $mysqli->close();
                     const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
                     const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
 
-                    // Get max values specifically from the span elements for calories and protein
+                    // Get max values for calories and protein
                     const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
                     const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
 
-                    // Prevent clicking if calorie intake is max (protein can exceed max)
+                    // Prevent further consumption if max calorie intake is reached
                     if (currentCalories >= maxCalories && !item.classList.contains('consumed')) {
                         alert('You have reached the maximum calorie intake for the day.');
                         return;
                     }
 
-                    // Disable unclicking (if it's already consumed, do nothing but allow tooltip)
+                    // Prevent un-clicking an already consumed item
                     if (item.classList.contains('consumed')) {
                         return;
                     }
 
-                    // Mark the item as consumed
+                    // Mark the item as consumed and apply inline styles for printing
                     item.classList.add('consumed');
+                    item.style.backgroundColor = 'green'; // Inline style for print
+                    item.style.color = 'white'; // Inline style for print
 
                     // Update daily totals
                     totalElement.setAttribute('data-calories', currentCalories + calories);
@@ -3092,7 +3167,7 @@ $mysqli->close();
                     const calorieElement = document.getElementById(`calories-${day}`);
                     const proteinElement = document.getElementById(`protein-${day}`);
 
-                    // Set colors for counter text (outside tooltip) based on max value reached
+                    // Update the display of calories and protein
                     const newCalorieValue = parseFloat(totalElement.getAttribute('data-calories'));
                     calorieElement.innerText = newCalorieValue;
                     calorieElement.style.color = newCalorieValue >= maxCalories ? 'lightgreen' : 'black';
@@ -3101,36 +3176,15 @@ $mysqli->close();
                     proteinElement.innerText = newProteinValue;
                     proteinElement.style.color = newProteinValue >= maxProtein ? 'lightgreen' : 'black';
 
-                    // Set both current and max values to lightgreen if max is reached
-                    const maxCalorieSpan = document.querySelector(`#calories-${day}`).nextSibling;
-                    maxCalorieSpan.textContent = ` / ${maxCalories}`;
-                    if (newCalorieValue >= maxCalories) {
-                        calorieElement.style.color = 'lightgreen';
-                        maxCalorieSpan.style.color = 'lightgreen';
-                    } else {
-                        maxCalorieSpan.style.color = 'black';
-                    }
-
-                    const maxProteinSpan = document.querySelector(`#protein-${day}`).nextSibling;
-                    maxProteinSpan.textContent = ` / ${maxProtein}`;
-                    if (newProteinValue >= maxProtein) {
-                        proteinElement.style.color = 'lightgreen';
-                        maxProteinSpan.style.color = 'lightgreen';
-                    } else {
-                        maxProteinSpan.style.color = 'black';
-                    }
-
-                    // Update tooltip content with running totals for calories and protein
+                    // Update the tooltip content with running totals for calories and protein
                     const calorieColor = newCalorieValue >= maxCalories ? 'lightgreen' : 'white';
                     const proteinColor = newProteinValue >= maxProtein ? 'lightgreen' : 'white';
 
-                    tooltip.innerHTML = `
-            <strong style="color: white;"><u>Total Consumed:</u></strong><br>
-            <span style="color:${calorieColor};">Calories: ${newCalorieValue} / ${maxCalories}</span><br>
-            <span style="color:${proteinColor};">Protein: ${newProteinValue} g / ${maxProtein} g</span>
-            `;
+                    tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
+                <span style="color:${calorieColor};">Calories: ${newCalorieValue} / ${maxCalories}</span><br>
+                <span style="color:${proteinColor};">Protein: ${newProteinValue} g / ${maxProtein} g</span>`;
 
-                    // Only show an alert if the calorie intake reaches the maximum
+                    // Alert if calorie intake reaches the maximum
                     if (newCalorieValue >= maxCalories) {
                         alert('You have reached the maximum calorie intake for the day.');
                     }
@@ -3531,23 +3585,20 @@ $mysqli->close();
 
 
 
-<style>
-    .mealItem {
-        cursor: pointer;
-    }
 
-    .mealItem.consumed {
-        background-color: green;
-        color: white;
-    }
 
-    .exerciseItem {
-        cursor: pointer;
-    }
 
-    .exerciseItem.completed {
-        background-color: green;
-        color: white;
-    }
+<script src="assets/js/jquery-3.6.0.min.js"></script>
+<script src="assets/js/popper.min.js"></script>
+<script src="assets/js/video-popup.js"></script>
+<script src="assets/js/bootstrap.min.js"></script>
+<script src="assets/js/custom.js"></script>
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script src="assets/js/owl.carousel.js"></script>
+<script src="assets/js/carousel.js"></script>
+<script src="assets/js/video-section.js"></script>
+<script src="assets/js/counter.js"></script>
+<script src="assets/js/animation.js"></script>
+</body>
 
-    </script>< !-- Latest compiled JavaScript --><script src="assets/js/jquery-3.6.0.min.js"></script><script src="assets/js/popper.min.js"></script><script src="assets/js/video-popup.js"></script><script src="assets/js/bootstrap.min.js"></script><script src="assets/js/custom.js"></script><script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script><script src="assets/js/owl.carousel.js"></script><script src="assets/js/carousel.js"></script><script src="assets/js/video-section.js"></script><script src="assets/js/counter.js"></script><script src="assets/js/animation.js"></script></body></html>
+</html>
