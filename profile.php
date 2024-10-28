@@ -966,7 +966,7 @@ $mysqli->close();
         }
 
         .status-expired {
-            color: orange;
+            color: gray;
             font-weight: bold;
         }
 
@@ -2770,18 +2770,18 @@ $mysqli->close();
 
                     // Add inline CSS for printing the dynamically changed styles
                     var styles = `
-                                                                                                                                                                    <style>
-                                                                                                                                                                        body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
-                                                                                                                                                                        table { width: 100%; border-collapse: collapse; }
-                                                                                                                                                                        table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
-                                                                                                                                                                        th { background-color: #f0f0f0; color: black; }
-                                                                                                                                                                        .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
-                                                                                                                                                                        .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
-                                                                                                                                                                        .exerciseItem.completed { background-color: green; color: white; }
-                                                                                                                                                                        .exerciseItem:not(.completed) { background-color: yellow; color: black; }
-                                                                                                                                                                        .exerciseItem.blurred { background-color: lightgray; color: black; }
-                                                                                                                                                                    </style>
-                                                                                                                                                                `;
+                                                                                                                                                                            <style>
+                                                                                                                                                                                body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+                                                                                                                                                                                table { width: 100%; border-collapse: collapse; }
+                                                                                                                                                                                table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
+                                                                                                                                                                                th { background-color: #f0f0f0; color: black; }
+                                                                                                                                                                                .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
+                                                                                                                                                                                .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
+                                                                                                                                                                                .exerciseItem.completed { background-color: green; color: white; }
+                                                                                                                                                                                .exerciseItem:not(.completed) { background-color: yellow; color: black; }
+                                                                                                                                                                                .exerciseItem.blurred { background-color: lightgray; color: black; }
+                                                                                                                                                                            </style>
+                                                                                                                                                                        `;
 
                     printWindow.document.write(styles);
                     printWindow.document.write('</head><body>');

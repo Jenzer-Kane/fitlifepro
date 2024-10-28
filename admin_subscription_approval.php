@@ -1,8 +1,9 @@
 <?php
 session_start();
 
-// Include database connection
+// Include database connection and logger
 include 'database.php';
+include 'logger.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
@@ -10,9 +11,33 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     exit();
 }
 
+// Log page view for Transactions section
+logAdminActivity($mysqli, $_SESSION['admin'], "Viewed Transactions List");
+
 // Retrieve data from the transactions table
-$sql = "SELECT * FROM transactions";
+$sql = "SELECT * FROM transactions ORDER BY username, created_at DESC";
 $result = $mysqli->query($sql);
+
+// Function to mask email for privacy
+function maskEmail($email)
+{
+    $parts = explode("@", $email);
+    $namePart = substr($parts[0], 0, 2) . str_repeat("*", strlen($parts[0]) - 2);
+    return $namePart . "@" . $parts[1];
+}
+
+// Function to mask GCash number for privacy
+function maskGCashNumber($gcashNumber)
+{
+    if (strlen($gcashNumber) <= 1) {
+        return $gcashNumber; // Return as is if the number is too short
+    }
+
+    // Mask all but the last 4 digits
+    return str_repeat("*", strlen($gcashNumber) - 4) . substr($gcashNumber, -4);
+}
+
+
 ?>
 
 <!-- HTML content for admin dashboard -->
@@ -92,6 +117,101 @@ $result = $mysqli->query($sql);
             width: 100%;
             /* Adjust this value to set the width of the table */
         }
+
+
+        .search-container input {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .search-container input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+        }
+
+
+        /* Minimalist Button Styling */
+        .status-btns .btn-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .status-btns .btn-status:hover {
+            opacity: 0.85;
+        }
+
+        .status-btns .btn-status:focus {
+            outline: none;
+            box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+        }
+
+        .btn-info {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-dark {
+            background-color: #343a40;
+            color: white;
+        }
+
+        .btn-status {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .approved-text {
+            color: green;
+            font-weight: bold;
+        }
+
+        .disapproved-text {
+            color: red;
+            font-weight: bold;
+        }
+
+        .pending-text {
+            color: blue;
+            font-weight: bold;
+        }
+
+        .expired-text {
+            color: gray;
+            font-weight: bold;
+        }
+
+        .reveal-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .reveal-btn {
+            font-size: 14px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -137,16 +257,11 @@ $result = $mysqli->query($sql);
                                 </li>
                                 <li class="nav-item">
                                     <?php
-
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
-                                        // If admin is logged in, display "Admin" instead of username
-                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Admin</a></li>';
-
+                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">' . ($_SESSION['superadmin'] ? 'Superadmin' : 'Admin') . '</a></li>';
                                     } elseif (isset($_SESSION['username'])) {
-                                        // If user is logged in, show name and logout button
                                         echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
                                     } else {
-                                        // If user is not logged in, show login and register buttons
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./login.html">Login</a></li>';
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
                                     }
@@ -166,6 +281,23 @@ $result = $mysqli->query($sql);
     <div class="container-fluid"> <!-- Changed from container to container-fluid -->
         <h2>Transactions</h2>
         <h5>Existing Transactions. Click Transaction ID for more details.</h5>
+
+        <!-- Search bar for filtering transactions -->
+        <div class="search-container mb-3">
+            <input type="text" id="transactionSearch" placeholder="Search transactions..."
+                oninput="filterTransactions()" class="form-control">
+        </div>
+
+
+        <!-- Status Filter Buttons -->
+        <div class="status-btns mb-3">
+            <button onclick="filterByStatus('All')" class="btn-status">All</button>
+            <button onclick="filterByStatus('Pending')" class="btn-status btn-info">Pending</button>
+            <button onclick="filterByStatus('Approved')" class="btn-status btn-success">Approved</button>
+            <button onclick="filterByStatus('Disapproved')" class="btn-status btn-danger">Disapproved</button>
+            <button onclick="filterByStatus('Expired')" class="btn-status btn-dark">Expired</button>
+        </div>
+
         <?php
         // Display success message if present in the URL
         $message = isset($_GET['message']) ? $_GET['message'] : '';
@@ -173,8 +305,7 @@ $result = $mysqli->query($sql);
             echo '<div class="alert alert-success text-center" role="alert">' . htmlspecialchars($message) . '</div>';
         }
         ?>
-        <table class="table table-bordered table-striped" style="width: 100%;">
-            <!-- Added style="width: 100%;" to ensure table takes up whole width -->
+        <table id="transactionTable" class="table table-bordered table-striped" style="width: 100%;">
             <thead>
                 <tr>
                     <th>Transaction ID</th>
@@ -195,63 +326,73 @@ $result = $mysqli->query($sql);
             </thead>
             <tbody>
                 <?php
-                if ($result && $result->num_rows > 0) {
-                    // Output data of each row
-                    while ($row = $result->fetch_assoc()) {
-                        // Handle undefined keys
-                        $id = isset($row["id"]) ? $row["id"] : "";
-                        $username = isset($row["username"]) ? $row["username"] : "";
-                        $transaction_id = isset($row["transaction_id"]) ? $row["transaction_id"] : "";
-                        $firstname = isset($row["firstname"]) ? $row["firstname"] : "";
-                        $lastname = isset($row["lastname"]) ? $row["lastname"] : "";
-                        $user_email = isset($row["user_email"]) ? $row["user_email"] : "";
-                        $plan = isset($row["plan"]) ? $row["plan"] : "";
-                        $description = isset($row["description"]) ? $row["description"] : "";
-                        $price = isset($row["price"]) ? $row["price"] : "";
-                        $gcash_number = isset($row["gcash_number"]) ? $row["gcash_number"] : "";
-                        $reference_number = isset($row["reference_number"]) ? $row["reference_number"] : "";
-                        $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
-                        $date_end = isset($row["date_end"]) ? date("F j, Y | g:i A", strtotime($row["date_end"])) : "";
-                        $status = isset($row["status"]) ? $row["status"] : "";
+                $currentUsername = null;
+                while ($row = $result->fetch_assoc()) {
+                    $transaction_id = $row["transaction_id"] ?? '';
+                    $username = $row["username"] ?? '';
+                    $firstname = $row["firstname"] ?? '';
+                    $lastname = $row["lastname"] ?? '';
+                    $user_email = $row["user_email"] ?? '';
+                    $displayEmail = ($_SESSION['superadmin'] ?? false) ? $user_email : maskEmail($user_email);
+                    $plan = $row["plan"] ?? '';
+                    $description = $row["description"] ?? '';
+                    $price = $row["price"] ?? '';
+                    $gcash_number = $row["gcash_number"] ?? '';
+                    $displayGCash = ($_SESSION['superadmin'] ?? false) ? $gcash_number : maskGCashNumber($gcash_number);
+                    $reference_number = $row["reference_number"] ?? '';
+                    $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : '';
+                    $date_end = isset($row["date_end"]) ? date("F j, Y | g:i A", strtotime($row["date_end"])) : '';
+                    $status = $row["status"] ?? '';
+                    $statusClass = strtolower($status) . '-text';
 
-                        // Add style attribute to center align the values
-                        echo "<tr>
-<td style='text-align: center;'><a href='view_user.php?username=" . urlencode($username) . "'>" . htmlspecialchars($transaction_id) . "</a></td>
-                            <td style='text-align: center;'>" . $username . "</td>
-                            <td style='text-align: center;'>" . $firstname . "</td>
-                            <td style='text-align: center;'>" . $lastname . "</td>
-                            <td style='text-align: center;'>" . $user_email . "</td>
-                            <td style='text-align: center;'>" . $plan . "</td>
-                            <td style='text-align: center;'>" . $description . "</td>
-                            <td style='text-align: center;'>" . $price . "</td>
-                            <td style='text-align: center;'>" . $gcash_number . "</td>
-                            <td style='text-align: center;'>" . $reference_number . "</td>
-                            <td style='text-align: center;'>" . $created_at . "</td>
-                            <td style='text-align: center;'>" . $date_end . "</td>
-                            <td style='text-align: center;'>" . $status . "</td>
-                            <td style='text-align: center;'>";
-
-                        if ($status === 'Pending') {
-                            echo "
-                                <form id='emailForm$id' action='process_approval.php' method='post'>
-                                    <input type='hidden' name='reference_number' value='$reference_number'>
-                                    <input type='hidden' name='email' id='email_$id'>
-                                    <input type='hidden' name='plan' id='plan_$id'>
-                                    <input type='hidden' name='description' id='description_$id' value='$description'>
-                                    <input type='hidden' name='price' id='price_$id'>
-                                    <input type='hidden' name='status' id='status_$id' value='Pending'>
-                                    <button type='submit' name='approve' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Approved\", \"$status\")' class='btn btn-success'>Approve</button>
-                                    <button type='submit' name='disapprove' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Disapproved\", \"$status\")' class='btn btn-danger'>Disapprove</button>
-
-                                </form>
-                            ";
+                    if ($username !== $currentUsername) {
+                        if ($currentUsername !== null) {
+                            echo "<tr><td colspan='14' style='background-color: #f8f9fa;'></td></tr>";
                         }
-
-                        echo "</td></tr>";
+                        $currentUsername = $username;
                     }
-                } else {
-                    // Display a message if no data is found
-                    echo "<tr><td colspan='10' style='text-align: center;'>No transactions found.</td></tr>";
+
+                    echo "<tr class='transaction-row' data-status='$status'>
+                        <td style='text-align: center;'><a href='view_user.php?username=" . urlencode($username) . "'>" . htmlspecialchars($transaction_id) . "</a></td>
+                        <td style='text-align: center;'>" . htmlspecialchars($username) . "</td>
+                        <td style='text-align: center;'>" . htmlspecialchars($firstname) . "</td>
+                        <td style='text-align: center;'>" . htmlspecialchars($lastname) . "</td>
+                        <td style='text-align: center;'>
+                            <span class='reveal-container'>
+                                <span id='emailMasked$transaction_id'>" . htmlspecialchars($displayEmail) . "</span>
+                                <span id='emailUnmasked$transaction_id' style='display: none;'>" . htmlspecialchars($user_email) . "</span>
+                                <i class='fas fa-eye reveal-btn' onclick='toggleVisibility(\"email\", \"$transaction_id\")' style='color: black;'></i>
+                            </span>
+                        </td>
+                        <td style='text-align: center;'>" . htmlspecialchars($plan) . "</td>
+                        <td style='text-align: center;'>" . htmlspecialchars($description) . "</td>
+                        <td style='text-align: center;'>" . htmlspecialchars($price) . "</td>
+                        <td style='text-align: center;'>
+                            <span class='reveal-container'>
+                                <span id='gcashMasked$transaction_id'>" . htmlspecialchars($displayGCash) . "</span>
+                                <span id='gcashUnmasked$transaction_id' style='display: none;'>" . htmlspecialchars($gcash_number) . "</span>
+                                <i class='fas fa-eye reveal-btn' onclick='toggleVisibility(\"gcash\", \"$transaction_id\")' style='color: black;'></i>
+                            </span>
+                        </td>
+                        <td style='text-align: center;'>" . htmlspecialchars($reference_number) . "</td>
+                        <td style='text-align: center; white-space: nowrap;'>" . htmlspecialchars($created_at) . "</td>
+                        <td style='text-align: center; white-space: nowrap;'>" . htmlspecialchars($date_end) . "</td>
+                        <td style='text-align: center; white-space: nowrap;' class='$statusClass'>" . htmlspecialchars($status) . "</td>
+                        <td style='text-align: center;'>";
+
+                    if ($status === 'Pending') {
+                        echo "<form id='emailForm$transaction_id' action='process_approval.php' method='post'>
+                            <input type='hidden' name='reference_number' value='$reference_number'>
+                            <input type='hidden' name='email' id='email_$transaction_id'>
+                            <input type='hidden' name='plan' id='plan_$transaction_id'>
+                            <input type='hidden' name='description' id='description_$transaction_id' value='$description'>
+                            <input type='hidden' name='price' id='price_$transaction_id'>
+                            <input type='hidden' name='status' id='status_$transaction_id' value='Pending'>
+                            <button type='submit' name='approve' onclick='populateFields($transaction_id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Approved\", \"$status\")' class='btn btn-success'>Approve</button>
+                            <button type='submit' name='disapprove' onclick='populateFields($transaction_id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Disapproved\", \"$status\")' class='btn btn-danger'>Disapprove</button>
+                        </form>";
+                    }
+                    echo "</td></tr>";
                 }
                 ?>
             </tbody>
@@ -259,6 +400,56 @@ $result = $mysqli->query($sql);
     </div>
 
     <script>
+
+        function filterTransactions() {
+            const searchTerm = document.getElementById("transactionSearch").value.toLowerCase();
+            const rows = document.querySelectorAll("#transactionTable tbody tr");
+
+            rows.forEach(row => {
+                let rowContainsSearchTerm = false;
+
+                row.querySelectorAll("td").forEach(cell => {
+                    if (cell.innerText.toLowerCase().includes(searchTerm)) {
+                        rowContainsSearchTerm = true;
+                    }
+                });
+
+                // Show the row if it contains the search term in any cell; otherwise, hide it
+                row.style.display = rowContainsSearchTerm ? "" : "none";
+            });
+        }
+
+
+        function filterByStatus(status) {
+            const rows = document.querySelectorAll('.transaction-row');
+            rows.forEach(row => {
+                const rowStatus = row.getAttribute('data-status');
+                if (status === 'All' || rowStatus === status) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // JavaScript function to hide / unhide fields 
+        function toggleVisibility(type, id) {
+            let masked = document.getElementById(type + "Masked" + id);
+            let unmasked = document.getElementById(type + "Unmasked" + id);
+            let icon = masked.nextElementSibling;
+
+            if (unmasked.style.display === "none") {
+                unmasked.style.display = "inline";
+                masked.style.display = "none";
+                icon.style.color = "#007bff";  // Change to blue when revealed
+                icon.classList.replace("fa-eye", "fa-eye-slash");
+            } else {
+                unmasked.style.display = "none";
+                masked.style.display = "inline";
+                icon.style.color = "black";  // Change back to black when hidden
+                icon.classList.replace("fa-eye-slash", "fa-eye");
+            }
+        }
         // JavaScript function to populate fields and submit the form
         function populateFields(id, email, plan, price, description, status) {
             var form = document.getElementById('emailForm' + id);
@@ -289,6 +480,14 @@ $result = $mysqli->query($sql);
         function handleApprovalSuccess() {
             alert('Transaction approved. Subscription Confirmation Email sent successfully!'); // Customize this alert message
             location.reload(); // Reload the page to reflect the updated status
+        }
+
+        // AJAX function to log admin activity for approval/disapproval
+        function logAdminActivityAJAX(id, action) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'log_approval.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.send(`transaction_id=${id}&action=${action}`);
         }
     </script>
 

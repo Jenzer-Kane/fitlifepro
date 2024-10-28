@@ -1,13 +1,19 @@
 <?php
 session_start();
 
-// Include database connection
+// Include database connection and logger
 include 'database.php';
+include 'logger.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: admin_login.php");
     exit();
+}
+
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -20,6 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($stmt->execute()) {
         $_SESSION['message'] = "Forum created successfully";
+
+        // Log the action
+        logAdminActivity($mysqli, $_SESSION['admin'], "Created Forum: '$forumName' with Description: '$forumDescription'");
     } else {
         $_SESSION['message'] = "Error creating forum: " . $stmt->error;
     }

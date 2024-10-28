@@ -2,11 +2,17 @@
 session_start();
 
 include 'database.php';
+include 'logger.php'; // Include the logger
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: admin_login.php");
     exit();
+}
+
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
 }
 
 $conn = new mysqli('localhost', 'root', '', 'fitlifepro_register');
@@ -231,6 +237,96 @@ $conn->close();
             /* Enable horizontal scrolling if the table is wider than the viewport */
         }
 
+        /* Minimalist Search Bar Styling */
+        .search-container input {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .search-container input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+        }
+
+        /* Styling for filter checkboxes and container */
+        .filter-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #e3e6e8;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        /* Styling for each filter group */
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .filter-group h6 {
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .filter-group label {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #555;
+            cursor: pointer;
+            padding: 4px 0;
+            transition: color 0.2s ease;
+        }
+
+        .filter-group label:hover {
+            color: #007bff;
+        }
+
+        /* Checkbox styling */
+        .filter-group input[type="checkbox"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            margin-right: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .filter-group input[type="checkbox"]:checked {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .filter-group input[type="checkbox"]:checked::before {
+            content: "✔";
+            display: block;
+            color: #fff;
+            font-size: 12px;
+            line-height: 1;
+            text-align: center;
+            position: relative;
+            left: 1px;
+            top: -1px;
+        }
+
+
+
+
         .tab-content {
             display: none;
         }
@@ -310,14 +406,10 @@ $conn->close();
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
-                                        // If admin is logged in, display "Admin" instead of username
-                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Admin</a></li>';
-
+                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">' . ($_SESSION['superadmin'] ? 'Superadmin' : 'Admin') . '</a></li>';
                                     } elseif (isset($_SESSION['username'])) {
-                                        // If user is logged in, show name and logout button
                                         echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
                                     } else {
-                                        // If user is not logged in, show login and register buttons
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./login.html">Login</a></li>';
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
                                     }
@@ -393,15 +485,61 @@ $conn->close();
                     <input type="text" name="duration" id="duration" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="image_link">Image</label>
-                    <input type="text" name="image_link" id="image_link" class="form-control" required>
+                    <label for="image_link">Image (Link)</label>
+                    <textarea name="image_link" id="image_link" class="form-control" required></textarea>
                 </div>
                 <button type="submit" name="save_exercise" class="btn btn-primary">Save Exercise</button>
             </form>
 
             <h2 class="mt-4">Existing Exercises</h2>
+
+            <!-- Search Bar -->
+            <div class="search-container mb-3">
+                <input type="text" id="exerciseSearch" placeholder="Search exercises..." oninput="filterTable()"
+                    class="form-control">
+            </div>
+
+            <!-- Filter Section with Checkboxes -->
+            <div class="filter-section">
+                <h5>Filter by:</h5>
+
+                <div class="filter-group">
+                    <h5>Intensity</h5>
+                    <label><input type="checkbox" class="filter-checkbox" value="Low" data-filter="intensity">
+                        Low</label>
+                    <label><input type="checkbox" class="filter-checkbox" value="Moderate" data-filter="intensity">
+                        Moderate</label>
+                    <label><input type="checkbox" class="filter-checkbox" value="High" data-filter="intensity">
+                        High</label>
+                </div>
+
+                <div class="filter-group">
+                    <h5>Exercise Type</h5>
+                    <label><input type="checkbox" class="filter-checkbox" value="Bodyweight"
+                            data-filter="exercise_type"> Bodyweight</label>
+                    <label><input type="checkbox" class="filter-checkbox" value="Freeweights"
+                            data-filter="exercise_type"> Freeweights</label>
+                    <label><input type="checkbox" class="filter-checkbox" value="Weightlifting"
+                            data-filter="exercise_type"> Weightlifting</label>
+                </div>
+
+                <div class="filter-group">
+                    <h5>Category</h5>
+                    <label><input type="checkbox" class="filter-checkbox" value="Core" data-filter="category">
+                        Core</label>
+                    <label><input type="checkbox" class="filter-checkbox" value="Strength" data-filter="category">
+                        Strength</label>
+                    <label><input type="checkbox" class="filter-checkbox" value="Cardio" data-filter="category">
+                        Cardio</label>
+                    <label><input type="checkbox" class="filter-checkbox" value="Plyometrics" data-filter="category">
+                        Plyometrics</label>
+                </div>
+            </div>
+
+
+
             <div class="table-responsive">
-                <table class="table table-bordered">
+                <table class="table table-bordered" id="exerciseTable">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -416,7 +554,9 @@ $conn->close();
                     </thead>
                     <tbody>
                         <?php foreach ($exercises as $exercise): ?>
-                            <tr>
+                            <tr data-intensity="<?= htmlspecialchars($exercise['intensity']) ?>"
+                                data-exercise-type="<?= htmlspecialchars($exercise['exercise_type']) ?>"
+                                data-category="<?= htmlspecialchars($exercise['category']) ?>">
                                 <td><?= htmlspecialchars($exercise['name']) ?></td>
                                 <td><?= htmlspecialchars($exercise['description']) ?></td>
                                 <td><?= htmlspecialchars($exercise['intensity']) ?></td>
@@ -424,7 +564,6 @@ $conn->close();
                                 <td><?= htmlspecialchars($exercise['category']) ?></td>
                                 <td><?= htmlspecialchars($exercise['duration']) ?></td>
                                 <td>
-                                    <!-- Display the actual image if the link is available -->
                                     <?php if (!empty($exercise['image_link'])): ?>
                                         <img src="<?= htmlspecialchars($exercise['image_link']) ?>" alt="Exercise Image"
                                             style="max-width: 100px; height: auto;">
@@ -435,8 +574,6 @@ $conn->close();
                                 <td>
                                     <button class="btn btn-info"
                                         onclick="editExercise(<?= htmlspecialchars(json_encode($exercise)) ?>)">Edit</button>
-
-                                    <!-- Wrap delete action in a form -->
                                     <form action="admin_content.php" method="POST" style="display:inline;">
                                         <input type="hidden" name="id" value="<?= $exercise['id'] ?>">
                                         <button type="submit" name="delete_exercise" class="btn btn-danger btn-sm"
@@ -496,7 +633,25 @@ $conn->close();
                 <button type="submit" name="save_meat_info" class="btn btn-primary">Save Meat Info</button>
             </form>
 
-            <h2 class="mt-4">Meat Information</h2>
+
+
+            <h2 class="mt-4">Existing Meat Information</h2>
+            <div class="search-container">
+                <input type="text" id="meatSearch" placeholder="Search meats..." oninput="filterMeats()">
+            </div>
+            <div class="filter-section">
+                <h5>Filter by:</h5>
+
+                <div class="filter-group">
+                    <h5>Fat Volume</h5>
+                    <label><input type="checkbox" class="filter-checkbox" value="Low Fat Meat"
+                            data-filter="food_exchange_group"> Low Fat Meat</label>
+                    <label><input type="checkbox" class="filter-checkbox" value="Medium Fat Meat"
+                            data-filter="food_exchange_group"> Medium Fat Meat</label>
+                    <label><input type="checkbox" class="filter-checkbox" value="High Fat Meat"
+                            data-filter="food_exchange_group"> High Fat Meat</label>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table table-bordered">
                     <thead>
@@ -512,9 +667,9 @@ $conn->close();
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="meatTable">
                         <?php foreach ($meat_info as $info): ?>
-                            <tr>
+                            <tr data-group="<?= htmlspecialchars($info['food_exchange_group']) ?>">
                                 <td><?= htmlspecialchars($info['food_exchange_group']) ?></td>
                                 <td><?= htmlspecialchars($info['filipino_name']) ?></td>
                                 <td><?= htmlspecialchars($info['english_name']) ?></td>
@@ -587,9 +742,13 @@ $conn->close();
                 </div>
                 <button type="submit" name="save_fruits_info" class="btn btn-primary">Save Fruits Info</button>
             </form>
-            <h2 class="mt-4">Fruits Information</h2>
+            <h2 class="mt-4">Existing Fruits Information</h2>
+            <div class="search-container mb-3">
+                <input type="text" id="fruitSearch" placeholder="Search fruits..."
+                    oninput="filterTable('fruitSearch', 'fruitTable')">
+            </div>
             <div class="table-responsive">
-                <table class="table table-bordered">
+                <table class="table table-bordered" id="fruitTable">
                     <thead>
                         <tr>
                             <th>Food Exchange Group</th>
@@ -675,9 +834,13 @@ $conn->close();
                 </div>
                 <button type="submit" name="save_milk_info" class="btn btn-primary">Save Milk Info</button>
             </form>
-            <h2 class="mt-4">Milk Information</h2>
+            <h2 class="mt-4">Existing Milk Information</h2>
+            <div class="search-container mb-3">
+                <input type="text" id="milkSearch" placeholder="Search milk products..."
+                    oninput="filterTable('milkSearch', 'milkTable')">
+            </div>
             <div class="table-responsive">
-                <table class="table table-bordered">
+                <table class="table table-bordered" id="milkTable">
                     <thead>
                         <tr>
                             <th>Food Exchange Group</th>
@@ -714,7 +877,6 @@ $conn->close();
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
-
                 </table>
             </div>
         </div>
@@ -763,9 +925,13 @@ $conn->close();
                 <button type="submit" name="save_rice_bread_info" class="btn btn-primary">Save Rice and Bread
                     Info</button>
             </form>
-            <h2 class="mt-4">Rice and Bread Information</h2>
+            <h2 class="mt-4">Existing Rice and Bread Information</h2>
+            <div class="search-container mb-3">
+                <input type="text" id="riceBreadSearch" placeholder="Search rice and bread..."
+                    oninput="filterTable('riceBreadSearch', 'riceBreadTable')">
+            </div>
             <div class="table-responsive">
-                <table class="table table-bordered">
+                <table class="table table-bordered" id="riceBreadTable">
                     <thead>
                         <tr>
                             <th>Food Exchange Group</th>
@@ -834,8 +1000,12 @@ $conn->close();
 
 
             <h2 class="mt-4">Existing Quotes</h2>
+            <div class="search-container mb-3">
+                <input type="text" id="quoteSearch" placeholder="Search quotes..."
+                    oninput="filterTable('quoteSearch', 'quoteTable')">
+            </div>
             <div class="table-responsive">
-                <table class="table table-bordered">
+                <table class="table table-bordered" id="quoteTable">
                     <thead>
                         <tr>
                             <th>Author</th>
@@ -861,7 +1031,6 @@ $conn->close();
                                             onclick="return confirm('Are you sure you want to delete this entry?');">Delete</button>
                                     </form>
                                 </td>
-
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -909,6 +1078,71 @@ $conn->close();
             document.getElementById('active_section').value = sectionId;
         }
 
+        // FUNCTION TO FILTER EXERCISES
+        function filterTable() {
+            const searchTerm = document.getElementById("exerciseSearch").value.toLowerCase();
+            const rows = document.querySelectorAll("#exerciseTable tbody tr");
+            const selectedFilters = {};
+
+            // Gather selected checkboxes by category
+            document.querySelectorAll('.filter-checkbox:checked').forEach(checkbox => {
+                const filterType = checkbox.getAttribute('data-filter');
+                const filterValue = checkbox.value;
+
+                if (!selectedFilters[filterType]) {
+                    selectedFilters[filterType] = [];
+                }
+                selectedFilters[filterType].push(filterValue);
+            });
+
+            rows.forEach(row => {
+                const intensity = row.getAttribute("data-intensity");
+                const exerciseType = row.getAttribute("data-exercise-type");
+                const category = row.getAttribute("data-category");
+                const rowText = row.textContent.toLowerCase();
+
+                // Check if row matches search term
+                const matchesSearchTerm = rowText.includes(searchTerm);
+
+                // Check if row matches selected filters for each category
+                const matchesIntensity = !selectedFilters.intensity || selectedFilters.intensity.includes(intensity);
+                const matchesExerciseType = !selectedFilters.exercise_type || selectedFilters.exercise_type.includes(exerciseType);
+                const matchesCategory = !selectedFilters.category || selectedFilters.category.includes(category);
+
+                // Show row if it matches search term and all selected filters; hide otherwise
+                row.style.display = (matchesSearchTerm && matchesIntensity && matchesExerciseType && matchesCategory) ? "" : "none";
+            });
+        }
+
+        // Apply filterTable on checkbox change
+        document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', filterTable);
+        });
+
+        // FUNCTION TO FILTER MEATS BASED ON CHECKBOXES AND SEARCH
+        function filterMeats() {
+            const searchTerm = document.getElementById("meatSearch").value.toLowerCase();
+            const selectedGroups = Array.from(document.querySelectorAll('.filter-checkbox:checked'))
+                .map(checkbox => checkbox.value);
+
+            document.querySelectorAll('#meatTable tr').forEach(row => {
+                const group = row.getAttribute('data-group');
+                const rowText = row.textContent.toLowerCase();
+
+                // Row is displayed only if it matches both the search term and selected checkboxes
+                const matchesSearch = rowText.includes(searchTerm);
+                const matchesFilter = selectedGroups.length === 0 || selectedGroups.includes(group);
+
+                row.style.display = matchesSearch && matchesFilter ? '' : 'none';
+            });
+        }
+
+        // Attach the filterMeats function to checkbox change events
+        document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', filterMeats);
+        });
+
+
         // Function to display session message in the corresponding tab
         function displaySessionMessage(sectionId) {
             var message = "<?php echo isset($_SESSION['message']) ? $_SESSION['message'] : '' ?>";
@@ -949,6 +1183,7 @@ $conn->close();
             document.getElementById('exercise_type').value = exercise.exercise_type;
             document.getElementById('duration').value = exercise.duration;
             document.getElementById('intensity').value = exercise.intensity;
+            document.getElementById('image_link').value = exercise.image_link;
         }
 
         function editQuote(quote) {

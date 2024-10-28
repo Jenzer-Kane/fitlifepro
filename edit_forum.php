@@ -1,13 +1,19 @@
 <?php
 session_start();
 
-// Include database connection
+// Include database connection and logger
 include 'database.php';
+include 'logger.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: admin_login.php");
     exit();
+}
+
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
 }
 
 if (isset($_GET['id'])) {
@@ -20,13 +26,15 @@ if (isset($_GET['id'])) {
     $result = $stmt->get_result();
     $forum = $result->fetch_assoc();
     $stmt->close();
+
+    // Log viewing the forum edit page
+    logAdminActivity($mysqli, $_SESSION['admin'], "Viewed Edit Page for Forum ID: $forumId, Forum Name: " . $forum['name']);
 } else {
     $_SESSION['message'] = "Invalid request";
     header("Location: admin_forum.php");
     exit();
 }
 ?>
-
 <!-- HTML content for editing a forum -->
 <html>
 
@@ -183,31 +191,30 @@ if (isset($_GET['id'])) {
             <tr>
                 <th>Current Forum Name</th>
                 <th>Current Description</th>
-
             </tr>
             <tr>
                 <td><?= htmlspecialchars($forum['name']) ?></td>
                 <td><?= htmlspecialchars($forum['description']) ?></td>
             </tr>
         </table>
-        <form action="update_forum.php" method="post">
+        <form action="update_forum.php" method="post"
+            onsubmit="logAdminActivity('<?= $_SESSION['admin'] ?>', 'Attempted to Edit Forum ID: <?= $forum['id'] ?>');">
             <input type="hidden" name="forum_id" value="<?= htmlspecialchars($forum['id']) ?>">
             <div class="form-group mt-5">
-                <h5>
-                    <label for="forum_name">New Forum Name:</label>
-                </h5>
+                <h5><label for="forum_name">New Forum Name:</label></h5>
                 <input type="text" class="form-control" id="forum_name" name="forum_name"
                     value="<?= htmlspecialchars($forum['name']) ?>" required>
             </div>
             <div class="form-group">
-                <h5>
-                    <label for="forum_description">New Forum Description:</label>
-                </h5>
+                <h5><label for="forum_description">New Forum Description:</label></h5>
                 <textarea class="form-control" id="forum_description" name="forum_description" rows="3"
                     required><?= htmlspecialchars($forum['description']) ?></textarea>
             </div>
-            <button type="submit" class="btn btn-primary">Update Forum</button>
+            <button type="submit" class="btn btn-primary"
+                onclick="logAdminActivity('<?= $_SESSION['admin'] ?>', 'Editted Forum ID: <?= $forum['id'] ?>')">Apply
+                Changes</button>
         </form>
+
     </div>
     <!-- Add your existing scripts here -->
 

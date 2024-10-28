@@ -7,6 +7,11 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     exit();
 }
 
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
+}
+
 $conn = new mysqli('localhost', 'root', '', 'fitlifepro_register');
 
 if ($conn->connect_error) {

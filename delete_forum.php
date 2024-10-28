@@ -1,8 +1,9 @@
 <?php
 session_start();
 
-// Include database connection
+// Include database connection and logger
 include 'database.php';
+include 'logger.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
@@ -10,8 +11,21 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     exit();
 }
 
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
+}
+
 if (isset($_GET['id'])) {
     $forumId = $_GET['id'];
+
+    // Retrieve forum name before deletion for logging
+    $stmt = $mysqli->prepare("SELECT name FROM forums WHERE id = ?");
+    $stmt->bind_param('i', $forumId);
+    $stmt->execute();
+    $stmt->bind_result($forumName);
+    $stmt->fetch();
+    $stmt->close();
 
     // Prepare and execute the SQL statement
     $stmt = $mysqli->prepare("DELETE FROM forums WHERE id = ?");
@@ -19,6 +33,9 @@ if (isset($_GET['id'])) {
 
     if ($stmt->execute()) {
         $_SESSION['message'] = "Forum deleted successfully";
+
+        // Log the action
+        logAdminActivity($mysqli, $_SESSION['admin'], "Deleted Forum: '$forumName'");
     } else {
         $_SESSION['message'] = "Error deleting forum: " . $stmt->error;
     }

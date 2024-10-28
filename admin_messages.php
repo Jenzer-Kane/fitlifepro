@@ -10,6 +10,11 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     exit();
 }
 
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
+}
+
 // Retrieve data from the contact_form table, including username from the registration table
 $sql = "
     SELECT cf.*, u.username 
@@ -17,6 +22,15 @@ $sql = "
     LEFT JOIN registration u ON cf.email = u.email
 ";
 $result = $mysqli->query($sql);
+
+// Function to mask email for privacy
+function maskEmail($email)
+{
+    $parts = explode("@", $email);
+    $namePart = substr($parts[0], 0, 2) . str_repeat("*", max(strlen($parts[0]) - 2, 0));
+    return $namePart . "@" . $parts[1];
+}
+
 ?>
 
 <!-- HTML content for admin dashboard -->
@@ -143,13 +157,10 @@ $result = $mysqli->query($sql);
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
-                                        // If admin is logged in, display "Admin" instead of username
-                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Admin</a></li>';
+                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">' . ($_SESSION['superadmin'] ? 'Superadmin' : 'Admin') . '</a></li>';
                                     } elseif (isset($_SESSION['username'])) {
-                                        // If user is logged in, show name and logout button
                                         echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
                                     } else {
-                                        // If user is not logged in, show login and register buttons
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./login.html">Login</a></li>';
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
                                     }
@@ -180,36 +191,63 @@ $result = $mysqli->query($sql);
                     <th>Date Received</th>
                 </tr>
             </thead>
+
             <tbody>
                 <?php
                 if ($result && $result->num_rows > 0) {
                     while ($row = $result->fetch_assoc()) {
-                        $email = isset($row["email"]) ? $row["email"] : "";
-                        $username = isset($row["username"]) ? $row["username"] : "";
-                        $name = isset($row["name"]) ? $row["name"] : "";
-                        $subject = isset($row["subject"]) ? $row["subject"] : "";
-                        $message = isset($row["message"]) ? $row["message"] : "";
+                        $email = $row["email"] ?? "";
+                        $maskedEmail = maskEmail($email);  // Mask the email for privacy
+                        $username = $row["username"] ?? "";
+                        $name = $row["name"] ?? "";
+                        $subject = $row["subject"] ?? "";
+                        $message = $row["message"] ?? "";
                         $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
 
-                        // Add a link to the username
                         echo "<tr>
-                            <td style='text-align: center;'><a href='view_user.php?username=" . urlencode($username) . "'>" . $email . "</a></td>
-                            <td style='text-align: center;'>" . $username . "</td>
-                            <td style='text-align: center;'>" . $name . "</td>
-                            <td style='text-align: center;'>" . $subject . "</td>
-                            <td style='text-align: center;'>" . $message . "</td>
-                            <td style='text-align: center;'>" . $created_at . "</td>
-                        </tr>";
+                <td style='text-align: center;'>
+                    <span id='emailMasked{$username}'>{$maskedEmail}</span>
+                    <span id='emailUnmasked{$username}' style='display: none;'>{$email}</span>
+                    <i class='fas fa-eye' onclick='toggleVisibility(\"{$username}\")' style='cursor: pointer; color: #007bff;'></i>
+                </td>
+                <td style='text-align: center;'><a href='view_user.php?username=$username'>$username</a></td>
+                <td style='text-align: center;'>{$name}</td>
+                <td style='text-align: center;'>{$subject}</td>
+                <td style='text-align: center;'>{$message}</td>
+                <td style='text-align: center;'>{$created_at}</td>
+            </tr>";
                     }
                 } else {
-                    echo "<tr><td colspan='7' style='text-align: center;'>No inquiries found.</td></tr>";
+                    echo "<tr><td colspan='6' style='text-align: center;'>No inquiries found.</td></tr>";
                 }
                 ?>
             </tbody>
+
         </table>
     </div>
 
 </html>
+<script>
+
+    function toggleVisibility(username) {
+        const masked = document.getElementById(`emailMasked${username}`);
+        const unmasked = document.getElementById(`emailUnmasked${username}`);
+        const icon = masked.nextElementSibling;
+
+        if (unmasked.style.display === "none") {
+            unmasked.style.display = "inline";
+            masked.style.display = "none";
+            icon.style.color = "#007bff";  // Change to blue when revealed
+            icon.classList.replace("fa-eye", "fa-eye-slash");
+        } else {
+            unmasked.style.display = "none";
+            masked.style.display = "inline";
+            icon.style.color = "black";  // Change back to black when hidden
+            icon.classList.replace("fa-eye-slash", "fa-eye");
+        }
+    }
+</script>
+
 
 <?php
 // Close the database connection

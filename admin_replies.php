@@ -1,10 +1,19 @@
 <?php
 session_start();
 
+// Include database connection and logger
+include 'database.php';
+include 'logger.php';
+
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: admin_login.php");
     exit();
+}
+
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
 }
 
 $conn = new mysqli('localhost', 'root', '', 'fitlifepro_register');
@@ -27,6 +36,9 @@ if ($thread_id) {
         $thread_row = $thread_result->fetch_assoc();
         $thread_title = $thread_row['title'];
         $forum_name = $thread_row['forum_name'];
+
+        // Log the action
+        logAdminActivity($conn, $_SESSION['admin'], "Viewed Replies for Thread: $thread_title in Forum: $forum_name");
     }
     $thread_stmt->close();
 
@@ -108,6 +120,23 @@ function format_date($date)
             color: #007bff;
         }
 
+        /* Minimalist Search Bar Styling */
+        .search-container input {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .search-container input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+        }
+
         .team_member_box_content2 img {
             border-radius: 50%;
             overflow: hidden;
@@ -170,13 +199,10 @@ function format_date($date)
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
-                                        // If admin is logged in, display "Admin" instead of username
-                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Admin</a></li>';
+                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">' . ($_SESSION['superadmin'] ? 'Superadmin' : 'Admin') . '</a></li>';
                                     } elseif (isset($_SESSION['username'])) {
-                                        // If user is logged in, show name and logout button
                                         echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
                                     } else {
-                                        // If user is not logged in, show login and register buttons
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./login.html">Login</a></li>';
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
                                     }
@@ -202,7 +228,13 @@ function format_date($date)
             unset($_SESSION['message']);
         }
         ?>
-        <table class="table table-bordered table-striped">
+
+        <!-- Search bar for filtering replies -->
+        <div class="search-container mb-3">
+            <input type="text" id="replySearch" placeholder="Search replies..." oninput="filterReplies()">
+        </div>
+
+        <table class="table table-bordered table-striped" id="replyTable">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -217,21 +249,33 @@ function format_date($date)
                     <tr>
                         <td><?= $row['id'] ?></td>
                         <td><?= htmlspecialchars($row['content']) ?></td>
-                        <td>
-                            <a href="view_user.php?username=<?= urlencode($row['username']) ?>">
-                                <?= htmlspecialchars($row['username']) ?>
-                            </a>
+                        <td><a
+                                href="view_user.php?username=<?= urlencode($row['username']) ?>"><?= htmlspecialchars($row['username']) ?></a>
                         </td>
                         <td><?= format_date($row['created_at']) ?></td>
-                        <td>
-                            <a href="delete_reply.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"
-                                onclick="return confirm('Are you sure you want to delete this reply?');">Delete</a>
-                        </td>
+                        <td><a href="delete_reply.php?id=<?= $row['id'] ?>&thread_id=<?= $thread_id ?>"
+                                class="btn btn-danger btn-sm"
+                                onclick="return confirm('Are you sure you want to delete this reply?');">Delete</a></td>
                     </tr>
                 <?php endwhile; ?>
             </tbody>
         </table>
     </div>
+
+    <script>
+        function filterReplies() {
+            const searchTerm = document.getElementById("replySearch").value.toLowerCase();
+            const rows = document.querySelectorAll("#replyTable tbody tr");
+
+            rows.forEach(row => {
+                const rowContainsSearchTerm = Array.from(row.cells).some(cell =>
+                    cell.textContent.toLowerCase().includes(searchTerm)
+                );
+                row.style.display = rowContainsSearchTerm ? "" : "none";
+            });
+        }
+    </script>
+
     <script src="assets/js/jquery-3.6.0.min.js"></script>
     <script src="assets/js/popper.min.js"></script>
     <script src="assets/js/video-popup.js"></script>

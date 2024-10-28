@@ -3,6 +3,7 @@ session_start();
 
 // Include database connection
 include 'database.php';
+include 'logger.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
@@ -10,8 +11,33 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     exit();
 }
 
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
+}
+
 // Get the username from the URL
 $username = isset($_GET['username']) ? $_GET['username'] : '';
+
+// Log the admin's action for viewing this user's details
+logAdminActivity($mysqli, $_SESSION['admin'], "Viewed Member Details for $username");
+
+function maskEmail($email)
+{
+    $parts = explode("@", $email);
+    $namePart = substr($parts[0], 0, 2) . str_repeat("*", strlen($parts[0]) - 2);
+    return $namePart . "@" . $parts[1];
+}
+
+function maskGCashNumber($gcashNumber)
+{
+    if (strlen($gcashNumber) <= 1) {
+        return $gcashNumber; // Return as is if the number is too short
+    }
+
+    // Mask all but the last 4 digits
+    return str_repeat("*", strlen($gcashNumber) - 4) . substr($gcashNumber, -4);
+}
 
 // Fetch user info from users_info table
 $userInfoSql = "SELECT * FROM users_info WHERE username = ?";
@@ -193,6 +219,38 @@ function format_date($date)
             .table-responsive {
                 width: 100%;
             }
+
+            .approved-text {
+                color: green;
+                font-weight: bold;
+            }
+
+            .disapproved-text {
+                color: red;
+                font-weight: bold;
+            }
+
+            .pending-text {
+                color: blue;
+                font-weight: bold;
+            }
+
+            .expired-text {
+                color: gray;
+                font-weight: bold;
+            }
+
+            .reveal-container {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .reveal-btn {
+                font-size: 14px;
+                cursor: pointer;
+                color: black;
+            }
         </style>
     </head>
 
@@ -237,7 +295,7 @@ function format_date($date)
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
-                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Admin</a></li>';
+                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">' . ($_SESSION['superadmin'] ? 'Superadmin' : 'Admin') . '</a></li>';
                                     } elseif (isset($_SESSION['username'])) {
                                         echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
                                     } else {
@@ -274,7 +332,17 @@ function format_date($date)
                 <tbody>
                     <tr>
                         <td style='text-align: center;'><?php echo htmlspecialchars($userInfo['username']); ?></td>
-                        <td style='text-align: center;'><?php echo htmlspecialchars($userInfo['email']); ?></td>
+                        <td style='text-align: center;'>
+                            <span class='reveal-container'>
+                                <span
+                                    id='emailMasked<?php echo htmlspecialchars($userInfo["username"]); ?>'><?php echo htmlspecialchars(maskEmail($userInfo['email'])); ?></span>
+                                <span id='emailUnmasked<?php echo htmlspecialchars($userInfo["username"]); ?>'
+                                    style='display: none;'><?php echo htmlspecialchars($userInfo['email']); ?></span>
+                                <i class='fas fa-eye reveal-btn'
+                                    onclick='toggleVisibility("email", "<?php echo htmlspecialchars($userInfo["username"]); ?>")'
+                                    style='color: black;'></i>
+                            </span>
+                        </td>
                         <td style='text-align: center;'><?php echo htmlspecialchars($userInfo['firstname']); ?></td>
                         <td style='text-align: center;'><?php echo htmlspecialchars($userInfo['lastname']); ?></td>
                         <td style='text-align: center;'><?php echo htmlspecialchars($userInfo['gender']); ?></td>
@@ -289,9 +357,9 @@ function format_date($date)
         <?php endif; ?>
 
 
+
         <h2>Transactions</h2>
         <?php
-        // Display success message if present in the URL
         $message = isset($_GET['message']) ? $_GET['message'] : '';
         if (!empty($message)) {
             echo '<div class="alert alert-success text-center" role="alert">' . htmlspecialchars($message) . '</div>';
@@ -319,60 +387,79 @@ function format_date($date)
             <tbody>
                 <?php
                 if ($userTransactionsResult && $userTransactionsResult->num_rows > 0) {
-                    // Output data of each row
                     while ($row = $userTransactionsResult->fetch_assoc()) {
-                        // Handle undefined keys
-                        $id = isset($row["id"]) ? $row["id"] : "";
-                        $username = isset($row["username"]) ? $row["username"] : "";
-                        $transaction_id = isset($row["transaction_id"]) ? $row["transaction_id"] : "";
-                        $firstname = isset($row["firstname"]) ? $row["firstname"] : "";
-                        $lastname = isset($row["lastname"]) ? $row["lastname"] : "";
-                        $user_email = isset($row["user_email"]) ? $row["user_email"] : "";
-                        $plan = isset($row["plan"]) ? $row["plan"] : "";
-                        $description = isset($row["description"]) ? $row["description"] : "";
-                        $price = isset($row["price"]) ? $row["price"] : "";
-                        $gcash_number = isset($row["gcash_number"]) ? $row["gcash_number"] : "";
-                        $reference_number = isset($row["reference_number"]) ? $row["reference_number"] : "";
+                        $id = $row["id"] ?? "";
+                        $username = $row["username"] ?? "";
+                        $transaction_id = $row["transaction_id"] ?? "";
+                        $firstname = $row["firstname"] ?? "";
+                        $lastname = $row["lastname"] ?? "";
+                        $user_email = $row["user_email"] ?? "";
+                        $plan = $row["plan"] ?? "";
+                        $description = $row["description"] ?? "";
+                        $price = $row["price"] ?? "";
+                        $gcash_number = $row["gcash_number"] ?? "";
+                        $reference_number = $row["reference_number"] ?? "";
                         $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
                         $date_end = isset($row["date_end"]) ? date("F j, Y | g:i A", strtotime($row["date_end"])) : "";
-                        $status = isset($row["status"]) ? $row["status"] : "";
+                        $status = $row["status"] ?? "";
 
-                        // Add style attribute to center align the values
+                        // Set CSS classes for status display
+                        $statusClass = '';
+                        if ($status === 'Approved') {
+                            $statusClass = 'approved-text';
+                        } elseif ($status === 'Disapproved') {
+                            $statusClass = 'disapproved-text';
+                        } elseif ($status === 'Pending') {
+                            $statusClass = 'pending-text';
+                        } elseif ($status === 'Expired') {
+                            $statusClass = 'expired-text';
+                        }
+
                         echo "<tr>
-                        <td style='text-align: center;'>" . htmlspecialchars($transaction_id) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($username) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($firstname) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($lastname) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($user_email) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($plan) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($description) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($price) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($gcash_number) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($reference_number) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($created_at) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($date_end) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($status) . "</td>
-                        <td style='text-align: center;'>";
+        <td style='text-align: center;'>" . htmlspecialchars($transaction_id) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($username) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($firstname) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($lastname) . "</td>
+        <td style='text-align: center;'>
+            <span class='reveal-container'>
+                <span id='emailMasked$id'>" . htmlspecialchars(maskEmail($user_email)) . "</span>
+                <span id='emailUnmasked$id' style='display: none;'>" . htmlspecialchars($user_email) . "</span>
+                <i class='fas fa-eye reveal-btn' onclick='toggleVisibility(\"email\", \"$id\")' style='color: black;'></i>
+            </span>
+        </td>
+        <td style='text-align: center;'>" . htmlspecialchars($plan) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($description) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($price) . "</td>
+        <td style='text-align: center;'>
+            <span class='reveal-container'>
+                <span id='gcashMasked$id'>" . htmlspecialchars(maskGCashNumber($gcash_number)) . "</span>
+                <span id='gcashUnmasked$id' style='display: none;'>" . htmlspecialchars($gcash_number) . "</span>
+                <i class='fas fa-eye reveal-btn' onclick='toggleVisibility(\"gcash\", \"$id\")' style='color: black;'></i>
+            </span>
+        </td>
+        <td style='text-align: center;'>" . htmlspecialchars($reference_number) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($created_at) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($date_end) . "</td>
+        <td style='text-align: center;' class='$statusClass'>" . htmlspecialchars($status) . "</td>
+        <td style='text-align: center;'>";
 
                         if ($status === 'Pending') {
                             echo "
-                            <form id='emailForm$id' action='process_approval.php' method='post'>
-                                <input type='hidden' name='reference_number' value='$reference_number'>
-                                <input type='hidden' name='email' id='email_$id'>
-                                <input type='hidden' name='plan' id='plan_$id'>
-                                <input type='hidden' name='description' id='description_$id' value='$description'>
-                                <input type='hidden' name='price' id='price_$id'>
-                                <input type='hidden' name='status' id='status_$id' value='Pending'>
-                                <button type='submit' name='approve' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Approved\", \"$status\")' class='btn btn-success'>Approve</button>
-                                <button type='submit' name='disapprove' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Disapproved\", \"$status\")' class='btn btn-danger'>Disapprove</button>
-                            </form>
-                        ";
+            <form id='emailForm$id' action='process_approval.php' method='post'>
+                <input type='hidden' name='reference_number' value='$reference_number'>
+                <input type='hidden' name='email' id='email_$id'>
+                <input type='hidden' name='plan' id='plan_$id'>
+                <input type='hidden' name='description' id='description_$id' value='$description'>
+                <input type='hidden' name='price' id='price_$id'>
+                <input type='hidden' name='status' id='status_$id' value='Pending'>
+                <button type='submit' name='approve' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Approved\", \"$status\")' class='btn btn-success'>Approve</button>
+                <button type='submit' name='disapprove' onclick='populateFields($id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Disapproved\", \"$status\")' class='btn btn-danger'>Disapprove</button>
+            </form>";
                         }
 
                         echo "</td></tr>";
                     }
                 } else {
-                    // Display a message if no data is found
                     echo "<tr><td colspan='14' style='text-align: center;'>No transactions found.</td></tr>";
                 }
                 ?>
@@ -518,6 +605,25 @@ function format_date($date)
     </div>
 
     <script>
+        // JavaScript function to hide / unhide fields
+        function toggleVisibility(type, id) {
+            let masked = document.getElementById(type + "Masked" + id);
+            let unmasked = document.getElementById(type + "Unmasked" + id);
+            let icon = masked.nextElementSibling;
+
+            if (unmasked.style.display === "none") {
+                unmasked.style.display = "inline";
+                masked.style.display = "none";
+                icon.style.color = "#007bff";  // Change to blue when revealed
+                icon.classList.replace("fa-eye", "fa-eye-slash");
+            } else {
+                unmasked.style.display = "none";
+                masked.style.display = "inline";
+                icon.style.color = "black";  // Change back to black when hidden
+                icon.classList.replace("fa-eye-slash", "fa-eye");
+            }
+        }
+
         // JavaScript function to populate fields and submit the form
         function populateFields(id, email, plan, price, description, status) {
             var form = document.getElementById('emailForm' + id);

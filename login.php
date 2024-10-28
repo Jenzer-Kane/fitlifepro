@@ -8,14 +8,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = $_POST['email'];
         $password = $_POST['password'];
 
-        // Check if it's an admin login attempt
-        if ($email === '0000' && $password === 'admin') {
+        // Check if it's a superadmin login attempt
+        if ($email === 'superadmin' && $password === '0000') {
             $_SESSION['admin'] = true;
+            $_SESSION['superadmin'] = true; // Superadmin session variable
             header("Location: admin_dashboard.php");
             exit();
         }
 
-        // Database connection
+        // Check if it's a regular admin login attempt
+        if ($email === 'admin' && $password === '0000') {
+            $_SESSION['admin'] = true;
+            $_SESSION['superadmin'] = false; // Regular admin, not superadmin
+            header("Location: admin_dashboard.php");
+            exit();
+        }
+
+        // Database connection for regular user login
         $conn = new mysqli('localhost', 'root', '', 'fitlifepro_register');
         if ($conn->connect_error) {
             die('Connection Failed: ' . $conn->connect_error);
@@ -35,12 +44,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Password is correct and email is verified
                         $_SESSION['email'] = $email; // Store email in the session for future use
                         $_SESSION['username'] = $username; // Store username in the session for future use
+                        $_SESSION['admin'] = false;  // Not an admin
+                        $_SESSION['superadmin'] = false; // Not a superadmin
                         header("Location: verify_2fa.php"); // Redirect to the 2FA verification page
                         exit();
                     } else {
                         // Email not verified
                         echo '<div style="color:red; font-size:20px;">Your email is not verified. Please check your email for the verification code.</div>';
-                        // Optionally, redirect to verification page
                         header("Location: verify_email.html");
                         exit();
                     }

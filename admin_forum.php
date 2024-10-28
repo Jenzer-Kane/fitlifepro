@@ -1,14 +1,23 @@
 <?php
 session_start();
 
-// Include database connection
+// Include database connection and logger
 include 'database.php';
+include 'logger.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: admin_login.php");
     exit();
 }
+
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
+}
+
+// Log the admin viewing the forums page
+logAdminActivity($mysqli, $_SESSION['admin'], "Viewed Forum Management");
 
 // Retrieve all forums
 $sql = "SELECT * FROM forums";
@@ -20,8 +29,6 @@ function format_date($date)
 }
 ?>
 
-
-<!-- HTML content for admin dashboard -->
 <html>
 
 <head>
@@ -79,6 +86,23 @@ function format_date($date)
 
         .navbar-nav .nav-link:hover {
             color: #007bff;
+        }
+
+        /* Minimalist Search Bar Styling */
+        .search-container input {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .search-container input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
         }
 
         .team_member_box_content2 img {
@@ -143,13 +167,10 @@ function format_date($date)
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
-                                        // If admin is logged in, display "Admin" instead of username
-                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">Admin</a></li>';
+                                        echo '<li class="nav-item"><a class="nav-link" href="admin_dashboard.php">' . ($_SESSION['superadmin'] ? 'Superadmin' : 'Admin') . '</a></li>';
                                     } elseif (isset($_SESSION['username'])) {
-                                        // If user is logged in, show name and logout button
                                         echo '<li class="nav-item"><a class="nav-link" href="#">' . '<a href="profile.php">' . $_SESSION['username'] . '</a>' . '</a></li>';
                                     } else {
-                                        // If user is not logged in, show login and register buttons
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./login.html">Login</a></li>';
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
                                     }
@@ -176,9 +197,14 @@ function format_date($date)
         }
         ?>
 
+        <!-- Search bar for filtering forums -->
+        <div class="search-container mb-3">
+            <input type="text" id="forumSearch" placeholder="Search forums..." oninput="filterForums()">
+        </div>
+
         <!-- Display list of forums -->
         <h5>Existing Forums. Edit or Delete here.</h5>
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped" id="forumTable">
             <thead>
                 <tr>
                     <th>Forum Name</th>
@@ -218,6 +244,20 @@ function format_date($date)
             <button type="submit" class="btn btn-primary">Create Forum</button>
         </form>
     </div>
+
+    <script>
+        function filterForums() {
+            const searchTerm = document.getElementById("forumSearch").value.toLowerCase();
+            const rows = document.querySelectorAll("#forumTable tbody tr");
+
+            rows.forEach(row => {
+                const rowContainsSearchTerm = Array.from(row.cells).some(cell =>
+                    cell.textContent.toLowerCase().includes(searchTerm)
+                );
+                row.style.display = rowContainsSearchTerm ? "" : "none";
+            });
+        }
+    </script>
 
     <script src="assets/js/jquery-3.6.0.min.js"></script>
     <script src="assets/js/popper.min.js"></script>
