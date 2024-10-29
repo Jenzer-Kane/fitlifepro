@@ -27,10 +27,11 @@ if (isset($_GET['id']) && isset($_GET['thread_id'])) {
     $thread_id = $_GET['thread_id'];
 
     // Fetch reply content before deletion for logging
-    $stmt = $conn->prepare("SELECT content FROM replies WHERE id = ?");
+    // Fetch reply content and username before deletion for logging
+    $stmt = $conn->prepare("SELECT content, username FROM replies WHERE id = ?");
     $stmt->bind_param("i", $reply_id);
     $stmt->execute();
-    $stmt->bind_result($reply_content);
+    $stmt->bind_result($reply_content, $reply_author);
     $stmt->fetch();
     $stmt->close();
 
@@ -39,8 +40,8 @@ if (isset($_GET['id']) && isset($_GET['thread_id'])) {
     $delete_stmt->bind_param("i", $reply_id);
 
     if ($delete_stmt->execute()) {
-        // Log the successful deletion
-        logAdminActivity($conn, $_SESSION['admin'], "Deleted Reply ID: $reply_id for Thread ID: $thread_id. Content: '$reply_content'");
+        // Log the successful deletion, including the author of the reply
+        logAdminActivity($conn, $_SESSION['admin'], "Deleted Reply ID: $reply_id for Thread ID: $thread_id by User: '$reply_author'. Content: '$reply_content'");
         $_SESSION['message'] = "Reply deleted successfully.";
     } else {
         $_SESSION['message'] = "Failed to delete reply.";

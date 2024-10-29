@@ -44,22 +44,23 @@ $quotes = fetchTableData($conn, 'quotes');
 // Function to handle form submissions
 function handleFormSubmission($conn, $tableName, $fields, $redirectTab)
 {
+    global $mysqli; // Use the same mysqli connection for logging
     $id = isset($_POST['id']) ? $conn->real_escape_string($_POST['id']) : null;
     $fieldUpdates = [];
+    $logDetails = "";
 
     foreach ($fields as $field) {
         if ($field === 'image_path' && isset($_FILES['image_path']) && $_FILES['image_path']['error'] === UPLOAD_ERR_OK) {
             // Handle image upload
-            $uploadDir = './assets/images/'; // Directory where images will be saved
+            $uploadDir = './assets/images/';
             $uploadFile = $uploadDir . basename($_FILES['image_path']['name']);
             $fileType = strtolower(pathinfo($uploadFile, PATHINFO_EXTENSION));
             $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
 
-            // Validate file type
             if (in_array($fileType, $allowedTypes)) {
-                // Attempt to move uploaded file
                 if (move_uploaded_file($_FILES['image_path']['tmp_name'], $uploadFile)) {
-                    $fieldUpdates['image_path'] = basename($uploadFile); // Store the filename
+                    $fieldUpdates['image_path'] = basename($uploadFile);
+                    $logDetails .= "Image Path: " . basename($uploadFile) . "; ";
                 } else {
                     $_SESSION['message'] = 'Error uploading image: Unable to move uploaded file.';
                     header("Location: admin_content.php#$redirectTab");
@@ -71,7 +72,9 @@ function handleFormSubmission($conn, $tableName, $fields, $redirectTab)
                 exit();
             }
         } else {
-            $fieldUpdates[$field] = $conn->real_escape_string($_POST[$field]);
+            $value = $conn->real_escape_string($_POST[$field]);
+            $fieldUpdates[$field] = $value;
+            $logDetails .= ucfirst($field) . ": " . $value . "; ";
         }
     }
 
@@ -80,17 +83,20 @@ function handleFormSubmission($conn, $tableName, $fields, $redirectTab)
             return "$field = '{$fieldUpdates[$field]}'";
         }, array_keys($fieldUpdates)));
         $sql = "UPDATE $tableName SET $setClause WHERE id='$id'";
+        $action = "Updated in";
     } else {
         $columns = implode(", ", array_keys($fieldUpdates));
         $values = implode(", ", array_map(function ($value) {
             return "'$value'";
         }, array_values($fieldUpdates)));
         $sql = "INSERT INTO $tableName ($columns) VALUES ($values)";
+        $action = "Added to";
     }
 
     $formattedTableName = str_replace('_', ' ', $tableName);
     if ($conn->query($sql) === TRUE) {
         $_SESSION['message'] = $id ? ucfirst($formattedTableName) . " updated successfully!" : ucfirst($formattedTableName) . " added successfully!";
+        logAdminActivity($mysqli, $_SESSION['admin'], "$action $formattedTableName | $logDetails");
     } else {
         $_SESSION['message'] = "Error: " . $conn->error;
     }
@@ -103,22 +109,38 @@ function handleFormSubmission($conn, $tableName, $fields, $redirectTab)
 // Function to handle deletions
 function handleDeletion($conn, $tableName, $redirectTab)
 {
-    // Make sure to check for the ID in the POST request
+    global $mysqli; // Use the same mysqli connection for logging
+
     if (isset($_POST['id'])) {
         $id = $conn->real_escape_string($_POST['id']);
+
+        // Fetch the row before deletion for logging
+        $selectStmt = $conn->prepare("SELECT * FROM $tableName WHERE id = ?");
+        $selectStmt->bind_param('i', $id);
+        $selectStmt->execute();
+        $row = $selectStmt->get_result()->fetch_assoc();
+        $selectStmt->close();
+
+        $logDetails = "";
+        foreach ($row as $column => $value) {
+            $logDetails .= ucfirst($column) . ": " . $value . "; ";
+        }
+
         $sql = "DELETE FROM $tableName WHERE id='$id'";
         $formattedTableName = str_replace('_', ' ', $tableName);
 
         if ($conn->query($sql) === TRUE) {
             $_SESSION['message'] = ucfirst($formattedTableName) . " deleted successfully!";
+            logAdminActivity($mysqli, $_SESSION['admin'], "Deleted in $formattedTableName | ID: $id, Details: $logDetails");
         } else {
-            $_SESSION['message'] = "Error deleting " . $formattedTableName . ": " . $conn->error;
+            $_SESSION['message'] = "Error deleting $formattedTableName: " . $conn->error;
         }
 
         header("Location: admin_content.php#$redirectTab");
         exit();
     }
 }
+
 
 
 // Handle form submissions and deletions
@@ -637,7 +659,8 @@ $conn->close();
 
             <h2 class="mt-4">Existing Meat Information</h2>
             <div class="search-container">
-                <input type="text" id="meatSearch" placeholder="Search meats..." oninput="filterMeats()">
+                <input type="text" id="meatSearch" placeholder="Search meat products..." oninput="filterMeatTable()"
+                    class="form-control">
             </div>
             <div class="filter-section">
                 <h5>Filter by:</h5>
@@ -653,7 +676,7 @@ $conn->close();
                 </div>
             </div>
             <div class="table-responsive">
-                <table class="table table-bordered">
+                <table class="table table-bordered" id="meatTable">
                     <thead>
                         <tr>
                             <th>Food Exchange Group</th>
@@ -667,9 +690,9 @@ $conn->close();
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="meatTable">
+                    <tbody>
                         <?php foreach ($meat_info as $info): ?>
-                            <tr data-group="<?= htmlspecialchars($info['food_exchange_group']) ?>">
+                            <tr data-food-exchange-group="<?= htmlspecialchars($info['food_exchange_group']) ?>">
                                 <td><?= htmlspecialchars($info['food_exchange_group']) ?></td>
                                 <td><?= htmlspecialchars($info['filipino_name']) ?></td>
                                 <td><?= htmlspecialchars($info['english_name']) ?></td>
@@ -745,7 +768,7 @@ $conn->close();
             <h2 class="mt-4">Existing Fruits Information</h2>
             <div class="search-container mb-3">
                 <input type="text" id="fruitSearch" placeholder="Search fruits..."
-                    oninput="filterTable('fruitSearch', 'fruitTable')">
+                    oninput="filterOtherTable('fruitSearch', 'fruitTable')" class="form-control">
             </div>
             <div class="table-responsive">
                 <table class="table table-bordered" id="fruitTable">
@@ -837,7 +860,7 @@ $conn->close();
             <h2 class="mt-4">Existing Milk Information</h2>
             <div class="search-container mb-3">
                 <input type="text" id="milkSearch" placeholder="Search milk products..."
-                    oninput="filterTable('milkSearch', 'milkTable')">
+                    oninput="filterOtherTable('milkSearch', 'milkTable')" class="form-control">
             </div>
             <div class="table-responsive">
                 <table class="table table-bordered" id="milkTable">
@@ -928,7 +951,7 @@ $conn->close();
             <h2 class="mt-4">Existing Rice and Bread Information</h2>
             <div class="search-container mb-3">
                 <input type="text" id="riceBreadSearch" placeholder="Search rice and bread..."
-                    oninput="filterTable('riceBreadSearch', 'riceBreadTable')">
+                    oninput="filterOtherTable('riceBreadSearch', 'riceBreadTable')" class="form-control">
             </div>
             <div class="table-responsive">
                 <table class="table table-bordered" id="riceBreadTable">
@@ -1002,7 +1025,7 @@ $conn->close();
             <h2 class="mt-4">Existing Quotes</h2>
             <div class="search-container mb-3">
                 <input type="text" id="quoteSearch" placeholder="Search quotes..."
-                    oninput="filterTable('quoteSearch', 'quoteTable')">
+                    oninput="filterOtherTable('quoteSearch', 'quoteTable')" class="form-control">
             </div>
             <div class="table-responsive">
                 <table class="table table-bordered" id="quoteTable">
@@ -1134,8 +1157,8 @@ $conn->close();
             document.getElementById('image_link').value = exercise.image_link;
         }
 
-        // FUNCTION TO FILTER EXERCISES
-        function filterTable() {
+        // FUNCTION TO FILTER EXERCISES WITH CHECKBOXES AND SEARCH BAR
+        function filterExercises() {
             const searchTerm = document.getElementById("exerciseSearch").value.toLowerCase();
             const rows = document.querySelectorAll("#exerciseTable tbody tr");
             const selectedFilters = {};
@@ -1170,33 +1193,55 @@ $conn->close();
             });
         }
 
-        // Apply filterTable on checkbox change
+        // Attach filterExercises to checkbox and search input events for exercises
         document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', filterTable);
+            checkbox.addEventListener('change', filterExercises);
         });
+        document.getElementById("exerciseSearch").addEventListener('input', filterExercises);
 
-        // FUNCTION TO FILTER MEATS BASED ON CHECKBOXES AND SEARCH
-        function filterMeats() {
+
+        // FUNCTION TO FILTER MEAT TABLE BASED ON SEARCH TERM AND CHECKBOXES
+        function filterMeatTable() {
             const searchTerm = document.getElementById("meatSearch").value.toLowerCase();
-            const selectedGroups = Array.from(document.querySelectorAll('.filter-checkbox:checked'))
+            const rows = document.querySelectorAll("#meatTable tbody tr");
+
+            // Get selected checkboxes for "food_exchange_group" filter
+            const selectedGroups = Array.from(document.querySelectorAll('.filter-checkbox[data-filter="food_exchange_group"]:checked'))
                 .map(checkbox => checkbox.value);
 
-            document.querySelectorAll('#meatTable tr').forEach(row => {
-                const group = row.getAttribute('data-group');
+            rows.forEach(row => {
+                const foodExchangeGroup = row.getAttribute("data-food-exchange-group");
                 const rowText = row.textContent.toLowerCase();
 
-                // Row is displayed only if it matches both the search term and selected checkboxes
-                const matchesSearch = rowText.includes(searchTerm);
-                const matchesFilter = selectedGroups.length === 0 || selectedGroups.includes(group);
+                // Check if row matches search term
+                const matchesSearchTerm = rowText.includes(searchTerm);
 
-                row.style.display = matchesSearch && matchesFilter ? '' : 'none';
+                // Check if row matches selected filters in the "food_exchange_group" category
+                const matchesGroup = selectedGroups.length === 0 || selectedGroups.includes(foodExchangeGroup);
+
+                // Display row if it matches both the search term and selected filters
+                row.style.display = (matchesSearchTerm && matchesGroup) ? "" : "none";
             });
         }
 
-        // Attach the filterMeats function to checkbox change events
-        document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', filterMeats);
+        // Attach filterMeatTable to search input and checkbox change events
+        document.getElementById("meatSearch").addEventListener('input', filterMeatTable);
+        document.querySelectorAll('.filter-checkbox[data-filter="food_exchange_group"]').forEach(checkbox => {
+            checkbox.addEventListener('change', filterMeatTable);
         });
+
+
+
+        // GENERIC FUNCTION TO FILTER OTHER TABLES BY SEARCH TERM ONLY
+        function filterOtherTable(searchInputId, tableId) {
+            const searchTerm = document.getElementById(searchInputId).value.toLowerCase();
+            const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+
+            rows.forEach(row => {
+                const rowText = Array.from(row.cells).map(cell => cell.textContent.toLowerCase()).join(' ');
+                row.style.display = rowText.includes(searchTerm) ? '' : 'none';
+            });
+        }
 
 
         function editQuote(quote) {
