@@ -208,7 +208,7 @@ function maskEmail($email)
                 <td style='text-align: center;'>
                     <span id='emailMasked{$username}'>{$maskedEmail}</span>
                     <span id='emailUnmasked{$username}' style='display: none;'>{$email}</span>
-                    <i class='fas fa-eye' onclick='toggleVisibility(\"{$username}\")' style='cursor: pointer; color: #007bff;'></i>
+                    <i class='fas fa-eye' onclick='toggleVisibility(\"{$username}\")' style='cursor: pointer;'></i>
                 </td>
                 <td style='text-align: center;'><a href='view_user.php?username=$username'>$username</a></td>
                 <td style='text-align: center;'>{$name}</td>

@@ -271,7 +271,7 @@ function maskEmail($email)
                     while ($row = $result->fetch_assoc()) {
                         $username = $row["username"] ?? "";
                         $email = $row["email"] ?? "";
-                        $displayEmail = ($_SESSION['superadmin'] ?? false) ? $email : maskEmail($email);
+                        $displayEmail = maskEmail($email);
                         $firstname = $row["firstname"] ?? "";
                         $lastname = $row["lastname"] ?? "";
                         $gender = $row["gender"] ?? "";

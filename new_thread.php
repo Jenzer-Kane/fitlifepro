@@ -12,9 +12,6 @@ if ($conn->connect_error) {
     die('Connection Failed: ' . $conn->connect_error);
 }
 
-// Include logger for activity logging
-include 'logger.php';
-
 $forum_id = intval($_GET['forum_id']);
 
 // Retrieve forum information
@@ -43,8 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $stmt->bind_param("isss", $forum_id, $title, $username, $content);
     if ($stmt->execute()) {
-        // Log the creation of the new thread
-        logAdminActivity($conn, $username, "Created a new thread titled '{$title}' in forum ID: {$forum_id}");
 
         header("Location: forum.php?id=$forum_id");
         exit();
@@ -314,9 +309,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="./services.php">Services</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="./pricing.php">Pricing</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link" href="./collaborators.php">Collaborators</a>

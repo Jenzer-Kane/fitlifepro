@@ -449,11 +449,11 @@ $conn->close();
                 <input type="hidden" name="id" id="id">
                 <div class="form-group">
                     <label for="name">Exercise Name</label>
-                    <input type="text" name="name" id="name" class="form-control" required>
+                    <input type="text" name="name" id="name" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="description">Description</label>
-                    <textarea name="description" id="description" class="form-control" required></textarea>
+                    <textarea name="description" id="description" class="form-control no-numbers" required></textarea>
                 </div>
                 <div class="form-group">
                     <label for="intensity">Intensity</label>
@@ -599,16 +599,16 @@ $conn->close();
                 <input type="hidden" name="id" id="meat_info_id">
                 <div class="form-group">
                     <label for="food_exchange_group">Food Exchange Group</label>
-                    <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control"
-                        required>
+                    <input type="text" name="food_exchange_group" id="food_exchange_group"
+                        class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="filipino_name">Filipino Name</label>
-                    <input type="text" name="filipino_name" id="filipino_name" class="form-control" required>
+                    <input type="text" name="filipino_name" id="filipino_name" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="english_name">English Name</label>
-                    <input type="text" name="english_name" id="english_name" class="form-control" required>
+                    <input type="text" name="english_name" id="english_name" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="carbohydrate_g">Carbohydrate (g)</label>
@@ -705,16 +705,16 @@ $conn->close();
                 <input type="hidden" name="id" id="fruits_info_id">
                 <div class="form-group">
                     <label for="food_exchange_group">Food Exchange Group</label>
-                    <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control"
-                        required>
+                    <input type="text" name="food_exchange_group" id="food_exchange_group"
+                        class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="filipino_name">Filipino Name</label>
-                    <input type="text" name="filipino_name" id="filipino_name" class="form-control" required>
+                    <input type="text" name="filipino_name" id="filipino_name" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="english_name">English Name</label>
-                    <input type="text" name="english_name" id="english_name" class="form-control" required>
+                    <input type="text" name="english_name" id="english_name" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="carbohydrate_g">Carbohydrate (g)</label>
@@ -801,16 +801,16 @@ $conn->close();
                 <input type="hidden" name="id" id="milk_info_id">
                 <div class="form-group">
                     <label for="food_exchange_group">Food Exchange Group</label>
-                    <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control"
-                        required>
+                    <input type="text" name="food_exchange_group" id="food_exchange_group"
+                        class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="filipino_name">Filipino Name</label>
-                    <input type="text" name="filipino_name" id="filipino_name" class="form-control" required>
+                    <input type="text" name="filipino_name" id="filipino_name" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="english_name">English Name</label>
-                    <input type="text" name="english_name" id="english_name" class="form-control" required>
+                    <input type="text" name="english_name" id="english_name" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="carbohydrate_g">Carbohydrate (g)</label>
@@ -891,16 +891,16 @@ $conn->close();
                 <input type="hidden" name="id" id="rice_bread_info_id">
                 <div class="form-group">
                     <label for="food_exchange_group">Food Exchange Group</label>
-                    <input type="text" name="food_exchange_group" id="food_exchange_group" class="form-control"
-                        required>
+                    <input type="text" name="food_exchange_group" id="food_exchange_group"
+                        class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="filipino_name">Filipino Name</label>
-                    <input type="text" name="filipino_name" id="filipino_name" class="form-control" required>
+                    <input type="text" name="filipino_name" id="filipino_name" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="english_name">English Name</label>
-                    <input type="text" name="english_name" id="english_name" class="form-control" required>
+                    <input type="text" name="english_name" id="english_name" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="carbohydrate_g">Carbohydrate (g)</label>
@@ -981,11 +981,11 @@ $conn->close();
                 <input type="hidden" name="id" id="quotes_id">
                 <div class="form-group">
                     <label for="author">Author</label>
-                    <input type="text" name="author" id="author" class="form-control" required>
+                    <input type="text" name="author" id="author" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="title">Title</label>
-                    <input type="text" name="title" id="title" class="form-control" required>
+                    <input type="text" name="title" id="title" class="form-control no-numbers" required>
                 </div>
                 <div class="form-group">
                     <label for="quote">Quote</label>
@@ -1078,6 +1078,62 @@ $conn->close();
             document.getElementById('active_section').value = sectionId;
         }
 
+        // Function to display session message in the corresponding tab
+        function displaySessionMessage(sectionId) {
+            var message = "<?php echo isset($_SESSION['message']) ? $_SESSION['message'] : '' ?>";
+            var messageElement = document.querySelector(`#${sectionId} .message-container`);
+
+            if (message && messageElement) {
+                messageElement.innerHTML = '<div class="alert alert-success">' + message + '</div>';
+                // Clear session message after displaying
+                <?php unset($_SESSION['message']); ?>;
+            }
+        }
+
+        // Activate the section from URL hash when the page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            activateSectionFromUrl();
+
+            // Display session message in the active tab
+            var activeSection = document.getElementById('active_section').value;
+            displaySessionMessage(activeSection);
+        });
+
+        // Function to retrieve and activate the last active section from URL hash
+        function activateSectionFromUrl() {
+            var sectionId = window.location.hash.substring(1);
+            if (sectionId) {
+                toggleSection(sectionId);
+            } else {
+                // Default to activate a specific tab if no hash found
+                toggleSection('exercises'); // Change this default based on your preference
+            }
+        }
+
+        // Function to prevent numbers from being entered into the edit input fields
+        function preventNumbers(event) {
+            event.target.value = event.target.value.replace(/[0-9]/g, '');
+        }
+
+        // Select all inputs with the "no-numbers" class
+        const noNumberInputs = document.querySelectorAll('.no-numbers');
+
+        // Add the event listener to each selected input
+        noNumberInputs.forEach(input => {
+            input.addEventListener('input', preventNumbers);
+        });
+
+        function editExercise(exercise) {
+            document.getElementById('id').value = exercise.id;
+            document.getElementById('name').value = exercise.name;
+            document.getElementById('category').value = exercise.category;
+            document.getElementById('description').value = exercise.description;
+            document.getElementById('exercise_type').value = exercise.exercise_type;
+            document.getElementById('duration').value = exercise.duration;
+            document.getElementById('intensity').value = exercise.intensity;
+            document.getElementById('image_link').value = exercise.image_link;
+        }
+
         // FUNCTION TO FILTER EXERCISES
         function filterTable() {
             const searchTerm = document.getElementById("exerciseSearch").value.toLowerCase();
@@ -1143,49 +1199,6 @@ $conn->close();
         });
 
 
-        // Function to display session message in the corresponding tab
-        function displaySessionMessage(sectionId) {
-            var message = "<?php echo isset($_SESSION['message']) ? $_SESSION['message'] : '' ?>";
-            var messageElement = document.querySelector(`#${sectionId} .message-container`);
-
-            if (message && messageElement) {
-                messageElement.innerHTML = '<div class="alert alert-success">' + message + '</div>';
-                // Clear session message after displaying
-                <?php unset($_SESSION['message']); ?>;
-            }
-        }
-
-        // Activate the section from URL hash when the page loads
-        document.addEventListener('DOMContentLoaded', function () {
-            activateSectionFromUrl();
-
-            // Display session message in the active tab
-            var activeSection = document.getElementById('active_section').value;
-            displaySessionMessage(activeSection);
-        });
-
-        // Function to retrieve and activate the last active section from URL hash
-        function activateSectionFromUrl() {
-            var sectionId = window.location.hash.substring(1);
-            if (sectionId) {
-                toggleSection(sectionId);
-            } else {
-                // Default to activate a specific tab if no hash found
-                toggleSection('exercises'); // Change this default based on your preference
-            }
-        }
-
-        function editExercise(exercise) {
-            document.getElementById('id').value = exercise.id;
-            document.getElementById('name').value = exercise.name;
-            document.getElementById('category').value = exercise.category;
-            document.getElementById('description').value = exercise.description;
-            document.getElementById('exercise_type').value = exercise.exercise_type;
-            document.getElementById('duration').value = exercise.duration;
-            document.getElementById('intensity').value = exercise.intensity;
-            document.getElementById('image_link').value = exercise.image_link;
-        }
-
         function editQuote(quote) {
             document.getElementById('id').value = quote.id;
             document.getElementById('author').value = quote.author;
@@ -1215,6 +1228,7 @@ $conn->close();
             form.querySelector('input[name="energy_kcal"]').value = info.energy_kcal;
             form.querySelector('input[name="household_measure"]').value = info.household_measure;
         }
+
     </script>
     <script src="assets/js/jquery-3.6.0.min.js"></script>
     <script src="assets/js/popper.min.js"></script>

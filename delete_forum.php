@@ -20,10 +20,10 @@ if (isset($_GET['id'])) {
     $forumId = $_GET['id'];
 
     // Retrieve forum name before deletion for logging
-    $stmt = $mysqli->prepare("SELECT name FROM forums WHERE id = ?");
+    $stmt = $mysqli->prepare("SELECT name, description FROM forums WHERE id = ?");
     $stmt->bind_param('i', $forumId);
     $stmt->execute();
-    $stmt->bind_result($forumName);
+    $stmt->bind_result($forumName, $forumDescription);
     $stmt->fetch();
     $stmt->close();
 
@@ -35,7 +35,7 @@ if (isset($_GET['id'])) {
         $_SESSION['message'] = "Forum deleted successfully";
 
         // Log the action
-        logAdminActivity($mysqli, $_SESSION['admin'], "Deleted Forum: '$forumName'");
+        logAdminActivity($mysqli, $_SESSION['admin'], "Deleted Forum: '$forumName' with Description: '$forumDescription'");
     } else {
         $_SESSION['message'] = "Error deleting forum: " . $stmt->error;
     }

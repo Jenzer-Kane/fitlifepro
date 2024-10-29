@@ -333,12 +333,12 @@ function maskGCashNumber($gcashNumber)
                     $firstname = $row["firstname"] ?? '';
                     $lastname = $row["lastname"] ?? '';
                     $user_email = $row["user_email"] ?? '';
-                    $displayEmail = ($_SESSION['superadmin'] ?? false) ? $user_email : maskEmail($user_email);
+                    $displayEmail = maskEmail($user_email);
                     $plan = $row["plan"] ?? '';
                     $description = $row["description"] ?? '';
                     $price = $row["price"] ?? '';
                     $gcash_number = $row["gcash_number"] ?? '';
-                    $displayGCash = ($_SESSION['superadmin'] ?? false) ? $gcash_number : maskGCashNumber($gcash_number);
+                    $displayGCash = maskGCashNumber($gcash_number);
                     $reference_number = $row["reference_number"] ?? '';
                     $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : '';
                     $date_end = isset($row["date_end"]) ? date("F j, Y | g:i A", strtotime($row["date_end"])) : '';
