@@ -154,6 +154,10 @@ function maskEmail($email)
                                 <li class="nav-item active">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
                                 </li>
+                                <!-- Add Admin Log link if Superadmin is logged in -->
+                                <?php if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true): ?>
+                                    <li class="nav-item"><a class="nav-link" href="./admin_log.php">Logs</a></li>
+                                <?php endif; ?>
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
@@ -165,7 +169,6 @@ function maskEmail($email)
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
                                     }
                                     ?>
-                                </li>
                                 <li class="nav-item">
                                     <a class="nav-link login_btn" href="logout.php">Logout</a>
                                 </li>
@@ -180,6 +183,13 @@ function maskEmail($email)
     <div class="container-fluid">
         <h2>Inquiries</h2>
         <h5>Existing Inquiries. Click User Email for more details.</h5>
+
+        <!-- Minimalist Search Bar -->
+        <div class="search-container mb-3">
+            <input type="text" id="inquirySearch" placeholder="Search inquiries..." oninput="filterInquiries()"
+                class="form-control" style="width: 100%; padding: 10px; border-radius: 20px; border: 1px solid #ccc;">
+        </div>
+
         <table class="table table-bordered table-striped" style="width: 100%;">
             <thead>
                 <tr>
@@ -192,7 +202,7 @@ function maskEmail($email)
                 </tr>
             </thead>
 
-            <tbody>
+            <tbody id="inquiryTable">
                 <?php
                 if ($result && $result->num_rows > 0) {
                     while ($row = $result->fetch_assoc()) {
@@ -205,17 +215,17 @@ function maskEmail($email)
                         $created_at = isset($row["created_at"]) ? date("F j, Y | g:i A", strtotime($row["created_at"])) : "";
 
                         echo "<tr>
-                <td style='text-align: center;'>
-                    <span id='emailMasked{$username}'>{$maskedEmail}</span>
-                    <span id='emailUnmasked{$username}' style='display: none;'>{$email}</span>
-                    <i class='fas fa-eye' onclick='toggleVisibility(\"{$username}\")' style='cursor: pointer;'></i>
-                </td>
-                <td style='text-align: center;'><a href='view_user.php?username=$username'>$username</a></td>
-                <td style='text-align: center;'>{$name}</td>
-                <td style='text-align: center;'>{$subject}</td>
-                <td style='text-align: center;'>{$message}</td>
-                <td style='text-align: center;'>{$created_at}</td>
-            </tr>";
+                        <td style='text-align: center;'>
+                            <span id='emailMasked{$username}'>{$maskedEmail}</span>
+                            <span id='emailUnmasked{$username}' style='display: none;'>{$email}</span>
+                            <i class='fas fa-eye' onclick='toggleVisibility(\"{$username}\")' style='cursor: pointer;'></i>
+                        </td>
+                        <td style='text-align: center;'><a href='view_user.php?username=$username'>$username</a></td>
+                        <td style='text-align: center;'>{$name}</td>
+                        <td style='text-align: center;'>{$subject}</td>
+                        <td style='text-align: center;'>{$message}</td>
+                        <td style='text-align: center;'>{$created_at}</td>
+                    </tr>";
                     }
                 } else {
                     echo "<tr><td colspan='6' style='text-align: center;'>No inquiries found.</td></tr>";
@@ -229,6 +239,18 @@ function maskEmail($email)
 </html>
 <script>
 
+    // Function to filter inquiries based on search input
+    function filterInquiries() {
+        const searchTerm = document.getElementById("inquirySearch").value.toLowerCase();
+        const rows = document.querySelectorAll("#inquiryTable tr");
+
+        rows.forEach(row => {
+            const rowText = Array.from(row.cells).map(cell => cell.textContent.toLowerCase()).join(" ");
+            row.style.display = rowText.includes(searchTerm) ? "" : "none";
+        });
+    }
+
+    // Toggle email visibility
     function toggleVisibility(username) {
         const masked = document.getElementById(`emailMasked${username}`);
         const unmasked = document.getElementById(`emailUnmasked${username}`);

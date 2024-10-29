@@ -164,6 +164,10 @@ function format_date($date)
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
                                 </li>
+                                <!-- Add Admin Log link if Superadmin is logged in -->
+                                <?php if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true): ?>
+                                    <li class="nav-item"><a class="nav-link" href="./admin_log.php">Logs</a></li>
+                                <?php endif; ?>
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
@@ -175,7 +179,6 @@ function format_date($date)
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
                                     }
                                     ?>
-                                </li>
                                 <li class="nav-item">
                                     <a class="nav-link login_btn" href="logout.php">Logout</a>
                                 </li>
@@ -197,13 +200,15 @@ function format_date($date)
         }
         ?>
 
-        <!-- Search bar for filtering forums -->
-        <div class="search-container mb-3">
-            <input type="text" id="forumSearch" placeholder="Search forums..." oninput="filterForums()">
-        </div>
+
 
         <!-- Display list of forums -->
         <h5>Existing Forums. Edit or Delete here.</h5>
+
+        <!-- Search bar for filtering forums -->
+        <div class="search-container">
+            <input type="text" id="forumSearch" placeholder="Search forums..." oninput="filterForums()">
+        </div>
         <table class="table table-bordered table-striped" id="forumTable">
             <thead>
                 <tr>

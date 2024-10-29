@@ -1,50 +1,25 @@
 <?php
 session_start();
 
-include 'logger.php';
+// Include database connection
+include 'database.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
+// Check if admin is logged in and is a superadmin
+if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true || !isset($_SESSION['superadmin']) || $_SESSION['superadmin'] !== true) {
     header("Location: admin_login.php");
     exit();
 }
 
-// Set session username as "Superadmin" if the user is a superadmin
-if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
-    $_SESSION['username'] = 'Superadmin';
-}
+// Fetch the admin activity log
+$sql = "SELECT * FROM admin_activity_log ORDER BY timestamp DESC";
+$result = $mysqli->query($sql);
 
-// Log page view for Transactions section
-logAdminActivity($mysqli, $_SESSION['admin'], "Viewed Threads and Replies Management");
-
-$conn = new mysqli('localhost', 'root', '', 'fitlifepro_register');
-
-if ($conn->connect_error) {
-    die('Connection Failed: ' . $conn->connect_error);
-}
-
-// Fetch all threads
-$sql = "SELECT t.id, t.title, t.content, t.username, t.created_at, f.name AS forum_name 
-        FROM threads t 
-        JOIN forums f ON t.forum_id = f.id";
-$result = $conn->query($sql);
-
-if (!$result) {
-    die('Query failed: ' . $conn->error);
-}
-function format_date($date)
-{
-    return date('F j, Y | g:i A', strtotime($date));
-}
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Forums | FITLIFE PRO ADMIN</title>
-    <!-- /SEO Ultimate -->
+    <title>Admin Activity Log | FITLIFE PRO ADMIN</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <meta charset="utf-8">
     <link rel="apple-touch-icon" sizes="57x57" href="./assets/images/favicon/apple-icon-57x57.png">
@@ -64,12 +39,9 @@ function format_date($date)
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
-    <!-- Latest compiled and minified CSS -->
     <link href="assets/bootstrap/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="./assets/js/bootstrap.min.js">
-    <!-- Font Awesome link -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-    <!-- StyleSheet link CSS -->
     <link href="assets/css/style.css" rel="stylesheet" type="text/css">
     <link href="assets/css/mediaqueries.css" rel="stylesheet" type="text/css">
     <link href="assets/css/owl.carousel.min.css" rel="stylesheet" type="text/css">
@@ -99,7 +71,19 @@ function format_date($date)
             color: #007bff;
         }
 
-        /* Minimalist Search Bar Styling */
+        .team_member_box_content2 img {
+            border-radius: 50%;
+            overflow: hidden;
+            width: 300px;
+            height: 300px;
+            object-fit: cover;
+        }
+
+        .table-responsive {
+            width: 100%;
+        }
+
+        /* Styling for the search bar */
         .search-container input {
             width: 100%;
             padding: 10px;
@@ -116,21 +100,63 @@ function format_date($date)
             box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
         }
 
-        .team_member_box_content2 img {
-            border-radius: 50%;
-            overflow: hidden;
-            /* Ensure the image stays within the circular boundary */
-            width: 300px;
-            /* Set the desired width */
-            height: 300px;
-            /* Set the desired height */
-            object-fit: cover;
-            /* Maintain the aspect ratio and cover the container */
+        /* Minimalist Button Styling */
+        .status-btns .btn-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            cursor: pointer;
         }
 
-        .table-responsive {
-            width: 100%;
-            /* Adjust this value to set the width of the table */
+        .status-btns .btn-status:hover {
+            opacity: 0.85;
+        }
+
+        .status-btns .btn-status:focus {
+            outline: none;
+            box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+        }
+
+        .btn-info {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-dark {
+            background-color: #343a40;
+            color: white;
+        }
+
+        .btn-status {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        /* Row color styles */
+        .added-row {
+            background-color: #d4edda !important;
+        }
+
+        .deleted-row {
+            background-color: #f8d7da !important;
+        }
+
+        .updated-row {
+            background-color: #d1ecf1 !important;
         }
     </style>
 </head>
@@ -140,13 +166,11 @@ function format_date($date)
         <header>
             <div class="container">
                 <div class="d-flex align-items-center justify-content-between">
-                    <!-- Logo outside the navbar -->
                     <a class="navbar-brand mb-0" href="./admin_dashboard.php">
                         <figure class="mb-0">
                             <img src="./assets/images/fitlife_pro_logo2.png" alt="" class="img-fluid">
                         </figure>
                     </a>
-                    <!-- Navbar -->
                     <nav class="navbar navbar-expand-lg navbar-light">
                         <button class="navbar-toggler collapsed" type="button" data-toggle="collapse"
                             data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
@@ -166,7 +190,7 @@ function format_date($date)
                                 <li class="nav-item">
                                     <a class="nav-link" href="./admin_forum.php">Forums</a>
                                 </li>
-                                <li class="nav-item active">
+                                <li class="nav-item">
                                     <a class="nav-link" href="./admin_threads.php">Threads</a>
                                 </li>
                                 <li class="nav-item">
@@ -177,7 +201,7 @@ function format_date($date)
                                 </li>
                                 <!-- Add Admin Log link if Superadmin is logged in -->
                                 <?php if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true): ?>
-                                    <li class="nav-item"><a class="nav-link" href="./admin_log.php">Logs</a></li>
+                                    <li class="nav-item active"><a class="nav-link" href="./admin_log.php">Logs</a></li>
                                 <?php endif; ?>
                                 <li class="nav-item">
                                     <?php
@@ -190,6 +214,7 @@ function format_date($date)
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
                                     }
                                     ?>
+                                </li>
                                 <li class="nav-item">
                                     <a class="nav-link login_btn" href="logout.php">Logout</a>
                                 </li>
@@ -200,89 +225,106 @@ function format_date($date)
             </div>
         </header>
     </div>
-    <div class="container">
-        <h2>Thread and Replies Management</h2>
-        <?php
-        if (isset($_SESSION['message'])) {
-            echo '<div class="alert alert-info">' . $_SESSION['message'] . '</div>';
-            unset($_SESSION['message']);
-        }
-        ?>
 
-        <h5>Existing Threads. Click to view Thread replies.</h5>
-        <!-- Search bar for filtering threads -->
-        <div class="search-container">
-            <input type="text" id="threadSearch" placeholder="Search threads..." oninput="filterThreads()">
+
+    <body>
+        <div class="container">
+            <h2>Admin Activity Log</h2>
+
+            <!-- Search bar and filter buttons -->
+            <div class="search-container mb-3">
+                <input type="text" id="logSearch" placeholder="Search activity logs..." oninput="filterLogs()">
+            </div>
+
+            <div class="status-btns mb-3">
+                <button onclick="filterByAction('All')" class="btn-status">All</button>
+                <button onclick="filterByAction('Added')" class="btn-status btn-success">Added</button>
+                <button onclick="filterByAction('Deleted')" class="btn-status btn-danger">Deleted</button>
+                <button onclick="filterByAction('Updated')" class="btn-status btn-info">Updated</button>
+            </div>
+
+            <div class="table-responsive" style="max-height: 1000px; overflow-y: auto; border: 1px solid #ccc;">
+                <table class="table table-bordered table-striped" id="logTable">
+                    <thead>
+                        <tr>
+                            <th>Admin Username</th>
+                            <th>Activity</th>
+                            <th>Date & Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        if ($result && $result->num_rows > 0) {
+                            while ($row = $result->fetch_assoc()) {
+                                $activity = htmlspecialchars($row['activity']);
+                                $rowClass = '';
+                                if (strpos($activity, 'Added') !== false) {
+                                    $rowClass = 'added-row';
+                                } elseif (strpos($activity, 'Deleted') !== false) {
+                                    $rowClass = 'deleted-row';
+                                } elseif (strpos($activity, 'Updated') !== false) {
+                                    $rowClass = 'updated-row';
+                                }
+
+                                echo "<tr class='{$rowClass}' data-action='{$rowClass}'>
+                                <td>" . htmlspecialchars($row['admin_username']) . "</td>
+                                <td>" . $activity . "</td>
+                                <td>" . date('F j, Y | g:i A', strtotime($row['timestamp'])) . "</td>
+                              </tr>";
+                            }
+                        } else {
+                            echo "<tr><td colspan='3' class='text-center'>No activity found.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+            <a href="admin_dashboard.php" class="btn btn-primary">Back to Dashboard</a>
         </div>
-        <table class="table table-bordered table-striped" id="threadTable">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Thread</th>
-                    <th>Forum Located</th>
-                    <th>Description</th>
-                    <th>Author</th>
-                    <th>Date Created</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while ($row = $result->fetch_assoc()): ?>
-                    <tr>
-                        <td><?= $row['id'] ?></td>
-                        <td style="white-space: nowrap;">
-                            <a href="admin_replies.php?thread_id=<?= $row['id'] ?>">
-                                <?= htmlspecialchars($row['title']) ?>
-                            </a>
-                        <td><?= htmlspecialchars($row['forum_name']) ?></td>
-                        </td>
-                        <td style="white-space: nowrap;"><?= htmlspecialchars($row['content']) ?></td>
 
-                        <td>
-                            <a href="view_user.php?username=<?= urlencode($row['username']) ?>">
-                                <?= htmlspecialchars($row['username']) ?>
-                            </a>
-                        </td>
-                        <td style="white-space: nowrap;"><?= format_date($row['created_at']) ?></td>
-                        <td>
-                            <a href="delete_thread.php?id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"
-                                onclick="return confirm('Are you sure you want to delete this thread?');">Delete</a>
-                        </td>
-                    </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
-    </div>
+        <script>
+            function filterLogs() {
+                const searchTerm = document.getElementById("logSearch").value.toLowerCase();
+                const rows = document.querySelectorAll("#logTable tbody tr");
 
-    <script>
-        function filterThreads() {
-            const searchTerm = document.getElementById("threadSearch").value.toLowerCase();
-            const rows = document.querySelectorAll("#threadTable tbody tr");
+                rows.forEach(row => {
+                    const rowText = Array.from(row.cells).map(cell => cell.textContent.toLowerCase()).join(" ");
+                    row.style.display = rowText.includes(searchTerm) ? "" : "none";
+                });
+            }
 
-            rows.forEach(row => {
-                const rowContainsSearchTerm = Array.from(row.cells).some(cell =>
-                    cell.textContent.toLowerCase().includes(searchTerm)
-                );
-                row.style.display = rowContainsSearchTerm ? "" : "none";
-            });
-        }
-    </script>
+            function filterByAction(action) {
+                const rows = document.querySelectorAll("#logTable tbody tr");
 
-    <script src="assets/js/jquery-3.6.0.min.js"></script>
-    <script src="assets/js/popper.min.js"></script>
-    <script src="assets/js/video-popup.js"></script>
-    <script src="assets/js/bootstrap.min.js"></script>
-    <script src="assets/js/custom.js"></script>
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script src="assets/js/owl.carousel.js"></script>
-    <script src="assets/js/carousel.js"></script>
-    <script src="assets/js/video-section.js"></script>
-    <script src="assets/js/counter.js"></script>
-    <script src="assets/js/animation.js"></script>
-</body>
+                rows.forEach(row => {
+                    const rowAction = row.getAttribute("data-action");
+                    if (action === 'All') {
+                        row.style.display = "";
+                    } else if ((action === 'Added' && rowAction === 'added-row') ||
+                        (action === 'Deleted' && rowAction === 'deleted-row') ||
+                        (action === 'Updated' && rowAction === 'updated-row')) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+            }
+        </script>
+        <script src="assets/js/jquery-3.6.0.min.js"></script>
+        <script src="assets/js/popper.min.js"></script>
+        <script src="assets/js/video-popup.js"></script>
+        <script src="assets/js/bootstrap.min.js"></script>
+        <script src="assets/js/custom.js"></script>
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script src="assets/js/owl.carousel.js"></script>
+        <script src="assets/js/carousel.js"></script>
+        <script src="assets/js/video-section.js"></script>
+        <script src="assets/js/counter.js"></script>
+        <script src="assets/js/animation.js"></script>
+    </body>
 
 </html>
 
 <?php
-$conn->close();
+$mysqli->close();
 ?>

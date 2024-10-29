@@ -255,6 +255,10 @@ function maskGCashNumber($gcashNumber)
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
                                 </li>
+                                <!-- Add Admin Log link if Superadmin is logged in -->
+                                <?php if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true): ?>
+                                    <li class="nav-item"><a class="nav-link" href="./admin_log.php">Logs</a></li>
+                                <?php endif; ?>
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
@@ -266,7 +270,6 @@ function maskGCashNumber($gcashNumber)
                                         echo '<li class="nav-item"><a class="nav-link login_btn" href="./register.html">Register</a></li>';
                                     }
                                     ?>
-                                </li>
                                 <li class="nav-item">
                                     <a class="nav-link login_btn" href="logout.php">Logout</a>
                                 </li>
@@ -283,7 +286,7 @@ function maskGCashNumber($gcashNumber)
         <h5>Existing Transactions. Click Transaction ID for more details.</h5>
 
         <!-- Search bar for filtering transactions -->
-        <div class="search-container mb-3">
+        <div class="search-container">
             <input type="text" id="transactionSearch" placeholder="Search transactions..."
                 oninput="filterTransactions()" class="form-control">
         </div>

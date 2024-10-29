@@ -215,6 +215,10 @@ function maskEmail($email)
                                 <li class="nav-item">
                                     <a class="nav-link contact_btn" href="./admin_messages.php">Inquiries</a>
                                 </li>
+                                <!-- Add Admin Log link if Superadmin is logged in -->
+                                <?php if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true): ?>
+                                    <li class="nav-item"><a class="nav-link" href="./admin_log.php">Logs</a></li>
+                                <?php endif; ?>
                                 <li class="nav-item">
                                     <?php
                                     if (isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
@@ -243,7 +247,7 @@ function maskEmail($email)
         <h5>Existing Members. Click Username for more details.</h5>
 
         <!-- Search bar for filtering members -->
-        <div class="search-container mb-3">
+        <div class="search-container">
             <input type="text" id="memberSearch" placeholder="Search members..." oninput="filterMembers()">
         </div>
 
