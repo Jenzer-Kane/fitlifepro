@@ -3,7 +3,8 @@ session_start();
 
 include 'database.php';
 
-$username = $_SESSION['username'];
+$username = isset($_SESSION['username']) ? $_SESSION['username'] : null;
+
 $stmt = $mysqli->prepare("SELECT profile_image, gender FROM registration WHERE username = ?");
 $stmt->bind_param("s", $username);
 $stmt->execute();
@@ -194,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Perform body fat calculation
-if ($gender === 'female') {
+if (isset($gender) && $gender === 'female') {
     $bodyFatPercentage = calculateBodyFatPercentageForWomen($waist, $neck, $hip, $bmiHeight);
 } else {
     $bodyFatPercentage = calculateBodyFatPercentageForMen($waist, $neck, $bmiHeight);
@@ -642,15 +643,14 @@ $user = $result->fetch_assoc();
 $status = isset($user['status']) ? $user['status'] : null;
 $plan = isset($user['plan']) ? $user['plan'] : null;
 
-// Check if the status is not "Pending" or "Disapproved" or "Expired"
-$showDietPlanningSection = ($status !== 'Pending' && $status !== 'Disapproved' && $status !== 'Expired' && $status !== null);
+// Only show diet and exercise planning sections if status is approved and active
+$showDietPlanningSection = ($status === 'Approved');
 
-// Show subscription status if status is not "Disapproved" or not null
+// Allow viewing the subscription status if the user had a previous subscription
 $showSubscriptionInfoSection = ($status !== 'Disapproved' || $status !== 'Expired' || $status !== null);
 
-// Show subscribe message if status is null, disapproved, expired, or plan is null
-$showSubscribeMessage = ($status === null || $status == 'Disapproved' || $status == 'Expired' || $plan === null);
-
+// Show a subscribe message if there is no current subscription or if it’s disapproved/expired
+$showSubscribeMessage = ($status === null || $status === 'Disapproved' || $status === 'Expired' || $plan === null);
 
 
 $query = "SELECT * FROM quotes ORDER BY RAND() LIMIT 1";
@@ -750,7 +750,7 @@ if (isset($goal_name)) {
 }
 
 // Assuming the logged-in user's username is stored in the session
-$loggedInUsername = $_SESSION['username'];
+$loggedInUsername = isset($_SESSION['username']) ? $_SESSION['username'] : null;
 
 // Query to get the latest created_at timestamp for the logged-in user
 $sql = "SELECT created_at FROM users_info WHERE username = ? ORDER BY created_at DESC LIMIT 1";
@@ -1366,7 +1366,9 @@ $mysqli->close();
                                 </form>
                             </div>
 
-                            <h1 data-aos="fade-up"><?php echo $_SESSION['username']; ?></h1>
+                            <h1 data-aos="fade-up">
+                                <?php echo isset($_SESSION['username']) ? $_SESSION['username'] : 'Log-in'; ?>
+                            </h1>
                             <div class="btn_wrapper">
                                 <span class="sub_home_span">Home </span>-<span class="sub_span"> Profile</span>
                             </div>
@@ -2028,12 +2030,28 @@ $mysqli->close();
             function printResults() {
                 var content = document.getElementById('resultsSection').innerHTML;
                 var myWindow = window.open('', '', 'width=800,height=600');
-                myWindow.document.write('<html><head><title>Print Results</title><style>button { display: none; }</style></head><body>');
+
+                // Construct the printable content with styles
+                myWindow.document.write('<html><head><title>Print Results</title>');
+
+                // Link external stylesheets here
+                myWindow.document.write('<link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css" type="text/css">');
+                myWindow.document.write('<link rel="stylesheet" href="assets/css/style.css" type="text/css">');
+                myWindow.document.write('<link rel="stylesheet" href="assets/css/mediaqueries.css" type="text/css">');
+
+                // Optional: Add inline styles for further customization
+                myWindow.document.write('<style>body { font-family: Arial, sans-serif; } .btn { display: none; }</style>');
+
+                // Close head and add the content in the body
+                myWindow.document.write('</head><body>');
                 myWindow.document.write(content);
                 myWindow.document.write('</body></html>');
+
+                // Finish writing, close the document, and trigger print
                 myWindow.document.close();
                 myWindow.print();
             }
+
         </script>
 
         <?php if ($showDietPlanningSection): ?>
@@ -2334,6 +2352,29 @@ $mysqli->close();
                                     <?php if (!empty($meal_plan)): ?>
                                         <h5 class="mt-5" style="font-size: 80px;">DIET PLAN</h5>
                                         <h2><u><?php echo strtoupper($goal_name); ?></h2></u>
+
+                                        <!-- Custom message based on the goal -->
+                                        <?php
+                                        $goalMessage = '';
+                                        $goal = strtolower($goal_name); // Convert to lowercase for the switch
+                                        switch ($goal) {
+                                            case 'maintenance':
+                                                $goalMessage = "The food curated for your diet plan is balanced with moderate calories and high in protein, designed to help you maintain your current body weight while optimizing your macronutrient intake.";
+                                                break;
+                                            case 'weight-loss':
+                                                $goalMessage = "Your diet plan focuses on calorie deficit meals, low in calories but rich in protein, to help you shed excess weight while preserving lean muscle mass.";
+                                                break;
+                                            case 'weight-gain':
+                                                $goalMessage = "This diet plan emphasizes calorie surplus, providing higher calorie meals rich in both protein and healthy fats to support weight gain and muscle building.";
+                                                break;
+                                            default:
+                                                $goalMessage = "Your diet plan is designed according to your specific fitness goals, ensuring a balance of macronutrients tailored to your needs.";
+                                                break;
+                                        }
+                                        ?>
+                                        <p style="font-size: 20px; margin-top: 20px;">
+                                            <strong><?php echo $goalMessage; ?></strong>
+                                        </p>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -2357,9 +2398,17 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <p style="font-size: 20px;">Click the food AFTER consumption to track your progress.</p>
-
-                                <p><strong>Tip:</strong> You can eat the foods in any order, as long as you meet the
-                                    recommended daily macronutrients.</p>
+                                <div id="total-<?php echo strtolower($day); ?>" class="large-counter-text mb-3" data-calories="0"
+                                    data-protein="0">
+                                    <?php
+                                    echo '<u>Total Consumed:</u> <br>';
+                                    echo 'Calories: <span id="calories-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['caloricIntake'] . '<br>';
+                                    echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
+                                    ?>
+                                </div>
+                                <p><strong>Tip:</strong> You can eat the foods in any order, as long as you meet the recommended
+                                    daily
+                                    macronutrients.</p>
                                 <div class="diet-horizontal-display">
                                     <table class="border border-black" id="mealPlanTable-<?php echo strtolower($day); ?>">
                                         <thead>
@@ -2391,11 +2440,10 @@ $mysqli->close();
                                                             data-protein="<?php echo $foodItem['protein_g']; ?>">
                                                             <br><?php echo $foodItem['english_name']; ?><br>
                                                             <br><?php echo $foodItem['filipino_name']; ?><br><br>
-                                                            <strong>Measure:</strong>
-                                                            <?php echo $foodItem['household_measure']; ?><br><br>
-                                                            <strong>Calories (kcal):</strong>
-                                                            <?php echo $foodItem['energy_kcal']; ?><br>
+                                                            <strong>Measure:</strong> <?php echo $foodItem['household_measure']; ?><br>
+                                                            <strong>Calories (kcal):</strong> <?php echo $foodItem['energy_kcal']; ?><br>
                                                             <strong>Protein (g):</strong> <?php echo $foodItem['protein_g']; ?><br>
+
 
                                                         </td>
                                                         <?php $mealIndex++; ?>
@@ -2404,184 +2452,185 @@ $mysqli->close();
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
+                                    <div id="tooltip"
+                                        style="display: none; position: absolute; padding: 5px; background-color: rgba(0, 0, 0, 0.75); color: white; border-radius: 5px; font-size: 12px; pointer-events: none;">
+                                    </div>
                                 </div>
-                                <div id="total-<?php echo strtolower($day); ?>" class="large-counter-text mb-3" data-calories="0"
-                                    data-protein="0">
-                                    <?php
-                                    echo '<u>Total Consumed:</u> <br>';
-                                    echo 'Calories: <span id="calories-' . strtolower($day) . '" class="calories-counter">0</span> / ' . $bodyFatResults['caloricIntake'] . '<br>';
-                                    echo 'Protein (g): <span id="protein-' . strtolower($day) . '" class="protein-counter">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
-                                    ?>
+                                <div id="total-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text"
+                                    data-calories="0" data-protein="0">
+                                    <button onclick="printSection('dietPlanSection')" class="btn btn-primary mt-3">Print Diet
+                                        Plan</button>
                                     <div class="note">
                                         <b>Meal plan food suggestions are based on the Philippine Department of Science and
-                                            Technology, Food and Nutrition Research Institute, Food Exchange List</b>
+                                            Technology,
+                                            Food and Nutrition Research Institute, Food Exchange List</b>
                                     </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
-            </div>
 
-            <section class="pricing_tables_section">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                            <div class="pricing_tables_content">
-                                <h2>UPGRADE</h2>
-                                <h5>TO ACCESS THE RECOMMENDED EXERCISE PLANS</h5>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row justify-content-center" data-aos="fade-up">
-                        <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
-                            <div class="pricing_tables_box_content">
-                                <div class="pricing_tables_box_upper_portion">
-                                    <figure class="mb-0">
-                                        <img src="./assets/images/pricing_tables_2.png" alt="" class="img-fluid">
-                                    </figure>
-                                    <div class="pricing_tables_box_image_content">
-                                        <span class="price">P50</span>
-                                        <span class="month">Monthly</span>
-                                    </div>
-                                </div>
-                                <div class="pricing_tables_box_lower_portion">
-                                    <h5>PREMIUM TIER</h5>
-                                    <ul class="list-unstyled">
-                                        <li>
-                                            <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Meal
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Plan
-                                        </li>
-                                        <li>
-                                            <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Exercises
-                                        </li>
-                                        <li>
-                                            <i class="fa-solid fa-check" aria-hidden="true"></i>Progress Tracking
-                                        </li>
-                                        <li>
-                                            <i class="fa-solid fa-check" aria-hidden="true"></i>Access to Forums
-                                        </li>
-                                    </ul>
-                                    <div class="btn_wrapper">
-                                        <a class="join_now_btn text-decoration-none"
-                                            href="./checkout.php?plan=premium&price=50&description=Intermediate%20content%2C%20Bodyweight%20exercises%2C%20Progress%20Tracking%2C%20Nutritional%20Guidance"
-                                            onclick="logSubscription('Premium')">Subscribe</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
-                            <div class="pricing_tables_box_content">
-                                <div class="pricing_tables_box_upper_portion">
-                                    <figure class="mb-0">
-                                        <img src="./assets/images/pricing_tables_1.png" alt="" class="img-fluid">
-                                    </figure>
-                                    <div class="pricing_tables_box_image_content">
-                                        <span class="price">P60</span>
-                                        <span class="month">Monthly</span>
-                                    </div>
-                                </div>
-                                <div class="pricing_tables_box_lower_portion">
-                                    <h5>ELITE TIER</h5>
-                                    <ul class="list-unstyled">
-                                        <li>
-                                            <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Meal
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Plan
-                                        </li>
-                                        <li>
-                                            <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Exercises
-                                        </li>
-                                        <li>
-                                            <i class="fa-solid fa-check" aria-hidden="true"></i>Progress Tracking
-                                        </li>
-                                        <li>
-                                            <i class="fa-solid fa-check" aria-hidden="true"></i>Access to Forums
-                                        </li>
-                                        <li>
-                                            <i class="fa-solid fa-check" aria-hidden="true"></i>Bonus Exercise
-                                            routines
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;from
-                                            world famous &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bodybuilders.
-                                            (Mike
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mentzer,
-                                            Arnold &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Schwarzenegger, and
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;more!)
-                                        </li>
-                                    </ul>
-                                    <div class="btn_wrapper">
-                                        <a class="join_now_btn text-decoration-none"
-                                            href="./checkout.php?plan=elite&price=60&description=Advanced%20content%2C%20Bodyweight%20exercises%2C%20Progress%20Tracking%2C%20Nutritional%20Guidance%2C%20Curated%20weight-lifting%20routines%2C%2024%2F7%20Live%20Support"
-                                            onclick="logSubscription('Elite')">Subscribe</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            </section>
 
-            <!-- ESSENTIAL TIER QUOTE SECTION -->
-            <section class="quote_section">
-                <div class="container">
-                    <div class="row" data-aos="fade-right">
-                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                            <div class="quote_content">
-                                <h2>“<?php echo htmlspecialchars($quote['quote']); ?>”</h2>
-                                <div class="quote_content_wrapper">
-                                    <div class="quote_wrapper">
-                                        <h6><?php echo htmlspecialchars($quote['author']); ?></h6>
-                                        <span><?php echo htmlspecialchars($quote['title']); ?></span>
-                                        <?php if (!empty($quote['image_path'])): ?>
-                                            <figure class="quote_image mb-0">
-                                                <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
-                                                    class="img-fluid">
+                    <section class="pricing_tables_section">
+                        <div class="container">
+                            <div class="row">
+                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                    <div class="pricing_tables_content">
+                                        <h2>UPGRADE</h2>
+                                        <h5>TO ACCESS THE RECOMMENDED EXERCISE PLANS</h5>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row justify-content-center" data-aos="fade-up">
+                                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                                    <div class="pricing_tables_box_content">
+                                        <div class="pricing_tables_box_upper_portion">
+                                            <figure class="mb-0">
+                                                <img src="./assets/images/pricing_tables_2.png" alt="" class="img-fluid">
                                             </figure>
-                                        <?php endif; ?>
+                                            <div class="pricing_tables_box_image_content">
+                                                <span class="price">P50</span>
+                                                <span class="month">Monthly</span>
+                                            </div>
+                                        </div>
+                                        <div class="pricing_tables_box_lower_portion">
+                                            <h5>PREMIUM TIER</h5>
+                                            <ul class="list-unstyled">
+                                                <li>
+                                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Meal
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Plan
+                                                </li>
+                                                <li>
+                                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Exercises
+                                                </li>
+                                                <li>
+                                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Progress Tracking
+                                                </li>
+                                                <li>
+                                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Access to Forums
+                                                </li>
+                                            </ul>
+                                            <div class="btn_wrapper">
+                                                <a class="join_now_btn text-decoration-none"
+                                                    href="./checkout.php?plan=premium&price=50&description=Intermediate%20content%2C%20Bodyweight%20exercises%2C%20Progress%20Tracking%2C%20Nutritional%20Guidance"
+                                                    onclick="logSubscription('Premium')">Subscribe</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                                    <div class="pricing_tables_box_content">
+                                        <div class="pricing_tables_box_upper_portion">
+                                            <figure class="mb-0">
+                                                <img src="./assets/images/pricing_tables_1.png" alt="" class="img-fluid">
+                                            </figure>
+                                            <div class="pricing_tables_box_image_content">
+                                                <span class="price">P60</span>
+                                                <span class="month">Monthly</span>
+                                            </div>
+                                        </div>
+                                        <div class="pricing_tables_box_lower_portion">
+                                            <h5>ELITE TIER</h5>
+                                            <ul class="list-unstyled">
+                                                <li>
+                                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended Meal
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Plan
+                                                </li>
+                                                <li>
+                                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Recommended
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Exercises
+                                                </li>
+                                                <li>
+                                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Progress Tracking
+                                                </li>
+                                                <li>
+                                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Access to Forums
+                                                </li>
+                                                <li>
+                                                    <i class="fa-solid fa-check" aria-hidden="true"></i>Bonus Exercise
+                                                    routines
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;from
+                                                    world famous &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bodybuilders.
+                                                    (Mike
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Mentzer,
+                                                    Arnold &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Schwarzenegger, and
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;more!)
+                                                </li>
+                                            </ul>
+                                            <div class="btn_wrapper">
+                                                <a class="join_now_btn text-decoration-none"
+                                                    href="./checkout.php?plan=elite&price=60&description=Advanced%20content%2C%20Bodyweight%20exercises%2C%20Progress%20Tracking%2C%20Nutritional%20Guidance%2C%20Curated%20weight-lifting%20routines%2C%2024%2F7%20Live%20Support"
+                                                    onclick="logSubscription('Elite')">Subscribe</a>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </section>
+                </section>
+
+                <!-- ESSENTIAL TIER QUOTE SECTION -->
+                <section class="quote_section">
+                    <div class="container">
+                        <div class="row" data-aos="fade-right">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                <div class="quote_content">
+                                    <h2>“<?php echo htmlspecialchars($quote['quote']); ?>”</h2>
+                                    <div class="quote_content_wrapper">
+                                        <div class="quote_wrapper">
+                                            <h6><?php echo htmlspecialchars($quote['author']); ?></h6>
+                                            <span><?php echo htmlspecialchars($quote['title']); ?></span>
+                                            <?php if (!empty($quote['image_path'])): ?>
+                                                <figure class="quote_image mb-0">
+                                                    <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
+                                                        class="img-fluid">
+                                                </figure>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <figure class="quote_left_icon left_icon mb-0">
+                            <img src="./assets/images/quote_left_icon.png" alt="" class="img-fluid">
+                        </figure>
+                        <figure class="quote_right_icon right_icon mb-0">
+                            <img src="./assets/images/quote_right_icon.png" alt="" class="img-fluid">
+                        </figure>
                     </div>
-                    <figure class="quote_left_icon left_icon mb-0">
-                        <img src="./assets/images/quote_left_icon.png" alt="" class="img-fluid">
-                    </figure>
-                    <figure class="quote_right_icon right_icon mb-0">
-                        <img src="./assets/images/quote_right_icon.png" alt="" class="img-fluid">
-                    </figure>
-                </div>
-            </section>
+                </section>
+            <?php endif; ?>
         <?php endif; ?>
-    <?php endif; ?>
 
-    <script>
-        function printSection(sectionId) {
-            var section = document.getElementById(sectionId);
+        <script>
+            function printSection(sectionId) {
+                var section = document.getElementById(sectionId);
 
-            // Clone the section to capture the current state
-            var clonedSection = section.cloneNode(true);
+                // Clone the section to capture the current state
+                var clonedSection = section.cloneNode(true);
 
-            // Apply inline styles to preserve the color changes for the consumed (green) items
-            clonedSection.querySelectorAll('.mealItem.consumed').forEach(function (item) {
-                item.style.backgroundColor = 'green';
-                item.style.color = 'white';
-            });
+                // Apply inline styles to preserve the color changes for the consumed (green) items
+                clonedSection.querySelectorAll('.mealItem.consumed').forEach(function (item) {
+                    item.style.backgroundColor = 'green';
+                    item.style.color = 'white';
+                });
 
-            // Apply inline styles to make unconsumed (unselected) items yellow
-            clonedSection.querySelectorAll('.mealItem').forEach(function (item) {
-                if (!item.classList.contains('consumed')) {
-                    item.style.backgroundColor = 'yellow';
-                    item.style.color = 'black';
-                }
-            });
+                // Apply inline styles to make unconsumed (unselected) items yellow
+                clonedSection.querySelectorAll('.mealItem').forEach(function (item) {
+                    if (!item.classList.contains('consumed')) {
+                        item.style.backgroundColor = 'yellow';
+                        item.style.color = 'black';
+                    }
+                });
 
-            // Create a new document for printing
-            var printWindow = window.open('', '', 'height=500, width=800');
-            printWindow.document.write('<html><head><title>Print Diet Plan</title>');
+                // Create a new document for printing
+                var printWindow = window.open('', '', 'height=500, width=800');
+                printWindow.document.write('<html><head><title>Print Diet Plan</title>');
 
-            // Add inline CSS for printing the dynamically changed styles
-            var styles = `
+                // Add inline CSS for printing the dynamically changed styles
+                var styles = `
             <style>
                 body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
                 table { width: 100%; border-collapse: collapse; }
@@ -2593,404 +2642,407 @@ $mysqli->close();
             </style>
         `;
 
-            printWindow.document.write(styles);
-            printWindow.document.write('</head><body>');
-            printWindow.document.write(clonedSection.innerHTML); // Write the cloned content with inline styles
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
+                printWindow.document.write(styles);
+                printWindow.document.write('</head><body>');
+                printWindow.document.write(clonedSection.innerHTML); // Write the cloned content with inline styles
+                printWindow.document.write('</body></html>');
+                printWindow.document.close();
 
-            // Automatically open the print dialog for the print window (single print window)
-            printWindow.focus();
-            printWindow.onload = function () {
-                printWindow.print();
-                printWindow.onafterprint = function () {
-                    printWindow.close(); // Close the window after printing
+                // Automatically open the print dialog for the print window (single print window)
+                printWindow.focus();
+                printWindow.onload = function () {
+                    printWindow.print();
+                    printWindow.onafterprint = function () {
+                        printWindow.close(); // Close the window after printing
+                    };
                 };
-            };
-        }
-    </script>
+            }
+        </script>
 
 
-    <!-- AUTO GENERATED (PREMIUM AND ELITE TIER) DIET PLAN -->
-    <?php if ($showDietPlanningSection && isset($goal_name)): ?>
-        <?php if ($plan === 'premium' || $plan === 'elite'): ?>
-            <section class="our_schedule_section diet-planning" id="dietPlanSection">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                            <div class="our_schedule_content">
-                                <?php if (!empty($meal_plan)): ?>
-                                    <h5 class="mt-5" style="font-size: 80px;">DIET PLAN</h5>
-                                    <h2><u><?php echo strtoupper($goal_name); ?></h2></u>
+        <!-- AUTO GENERATED (PREMIUM AND ELITE TIER) DIET PLAN -->
+        <?php if ($showDietPlanningSection && isset($goal_name)): ?>
+            <?php if ($plan === 'premium' || $plan === 'elite'): ?>
+                <section class="our_schedule_section diet-planning" id="dietPlanSection">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                <div class="our_schedule_content">
+                                    <?php if (!empty($meal_plan)): ?>
+                                        <h5 class="mt-5" style="font-size: 80px;">DIET PLAN</h5>
+                                        <h2><u><?php echo strtoupper($goal_name); ?></h2></u>
 
-                                    <!-- Custom message based on the goal -->
-                                    <?php
-                                    $goalMessage = '';
-                                    $goal = strtolower($goal_name); // Convert to lowercase for the switch
-                                    switch ($goal) {
-                                        case 'maintenance':
-                                            $goalMessage = "The food curated for your diet plan is balanced with moderate calories and high in protein, designed to help you maintain your current body weight while optimizing your macronutrient intake.";
-                                            break;
-                                        case 'weight-loss':
-                                            $goalMessage = "Your diet plan focuses on calorie deficit meals, low in calories but rich in protein, to help you shed excess weight while preserving lean muscle mass.";
-                                            break;
-                                        case 'weight-gain':
-                                            $goalMessage = "This diet plan emphasizes calorie surplus, providing higher calorie meals rich in both protein and healthy fats to support weight gain and muscle building.";
-                                            break;
-                                        default:
-                                            $goalMessage = "Your diet plan is designed according to your specific fitness goals, ensuring a balance of macronutrients tailored to your needs.";
-                                            break;
-                                    }
-                                    ?>
-                                    <p style="font-size: 20px; margin-top: 20px;">
-                                        <strong><?php echo $goalMessage; ?></strong>
-                                    </p>
-                                <?php endif; ?>
+                                        <!-- Custom message based on the goal -->
+                                        <?php
+                                        $goalMessage = '';
+                                        $goal = strtolower($goal_name); // Convert to lowercase for the switch
+                                        switch ($goal) {
+                                            case 'maintenance':
+                                                $goalMessage = "The food curated for your diet plan is balanced with moderate calories and high in protein, designed to help you maintain your current body weight while optimizing your macronutrient intake.";
+                                                break;
+                                            case 'weight-loss':
+                                                $goalMessage = "Your diet plan focuses on calorie deficit meals, low in calories but rich in protein, to help you shed excess weight while preserving lean muscle mass.";
+                                                break;
+                                            case 'weight-gain':
+                                                $goalMessage = "This diet plan emphasizes calorie surplus, providing higher calorie meals rich in both protein and healthy fats to support weight gain and muscle building.";
+                                                break;
+                                            default:
+                                                $goalMessage = "Your diet plan is designed according to your specific fitness goals, ensuring a balance of macronutrients tailored to your needs.";
+                                                break;
+                                        }
+                                        ?>
+                                        <p style="font-size: 20px; margin-top: 20px;">
+                                            <strong><?php echo $goalMessage; ?></strong>
+                                        </p>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="diet-horizontal-display">
-                    <?php
-                    $mealIndex = 0;
-                    $totalMeals = count($meal_plan);
-                    $dailyTotals = array();
+                    <div class="diet-horizontal-display">
+                        <?php
+                        $mealIndex = 0;
+                        $totalMeals = count($meal_plan);
+                        $dailyTotals = array();
 
-                    foreach ($days as $day): ?>
-                        <div class="border-mealplan">
+                        foreach ($days as $day): ?>
+                            <div class="border-mealplan">
+                                <div class="container">
+                                    <div class="row">
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                            <div class="our_schedule_content">
+                                                <h2 class="mt-5"><?php echo $day; ?></h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p style="font-size: 20px;">Click the food AFTER consumption to track your progress.</p>
+                                <div id="total-<?php echo strtolower($day); ?>" class="large-counter-text mb-3" data-calories="0"
+                                    data-protein="0">
+                                    <?php
+                                    echo '<u>Total Consumed:</u> <br>';
+                                    echo 'Calories: <span id="calories-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['caloricIntake'] . '<br>';
+                                    echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
+                                    ?>
+                                </div>
+                                <p><strong>Tip:</strong> You can eat the foods in any order, as long as you meet the recommended
+                                    daily
+                                    macronutrients.</p>
+                                <div class="diet-horizontal-display">
+                                    <table class="border border-black" id="mealPlanTable-<?php echo strtolower($day); ?>">
+                                        <thead>
+                                            <tr>
+                                                <th>Time Slot</th>
+                                                <?php for ($i = 0; $i < count($timeSlots); $i++) {
+                                                    echo '<th>Food Item</th>';
+                                                } ?>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($timeSlots as $timeSlot): ?>
+                                                <?php
+                                                $foodItem = $meal_plan[$mealIndex % $totalMeals];
+
+                                                if (!isset($dailyTotals[$day])) {
+                                                    $dailyTotals[$day] = array('calories' => 0, 'protein' => 0);
+                                                }
+                                                $dailyTotals[$day]['calories'] += $foodItem['energy_kcal'];
+                                                $dailyTotals[$day]['protein'] += $foodItem['protein_g'];
+                                                ?>
+                                                <tr>
+                                                    <td><?php echo $timeSlot; ?></td>
+                                                    <?php for ($i = 0; $i < count($timeSlots); $i++): ?>
+                                                        <?php $foodItem = $meal_plan[$mealIndex % $totalMeals]; ?>
+                                                        <td class="mealItem" data-day="<?php echo strtolower($day); ?>"
+                                                            data-time-slot="<?php echo $timeSlot; ?>"
+                                                            data-calories="<?php echo $foodItem['energy_kcal']; ?>"
+                                                            data-protein="<?php echo $foodItem['protein_g']; ?>">
+                                                            <br><?php echo $foodItem['english_name']; ?><br>
+                                                            <br><?php echo $foodItem['filipino_name']; ?><br><br>
+                                                            <strong>Measure:</strong> <?php echo $foodItem['household_measure']; ?><br>
+                                                            <strong>Calories (kcal):</strong> <?php echo $foodItem['energy_kcal']; ?><br>
+                                                            <strong>Protein (g):</strong> <?php echo $foodItem['protein_g']; ?><br>
+
+
+                                                        </td>
+                                                        <?php $mealIndex++; ?>
+                                                    <?php endfor; ?>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                    <div id="tooltip"
+                                        style="display: none; position: absolute; padding: 5px; background-color: rgba(0, 0, 0, 0.75); color: white; border-radius: 5px; font-size: 12px; pointer-events: none;">
+                                    </div>
+                                </div>
+                                <div id="total-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text"
+                                    data-calories="0" data-protein="0">
+                                    <button onclick="printSection('dietPlanSection')" class="btn btn-primary mt-3">Print Diet
+                                        Plan</button>
+                                    <div class="note">
+                                        <b>Meal plan food suggestions are based on the Philippine Department of Science and
+                                            Technology,
+                                            Food and Nutrition Research Institute, Food Exchange List</b>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+
+                <script>
+                    function printSection(sectionId) {
+                        var section = document.getElementById(sectionId);
+
+                        // Clone the section to capture the current state
+                        var clonedSection = section.cloneNode(true);
+
+                        // Apply inline styles to preserve the color changes for the completed items
+                        clonedSection.querySelectorAll('.exerciseItem.completed').forEach(function (item) {
+                            item.style.backgroundColor = 'green';
+                            item.style.color = 'white';
+                        });
+
+                        // Apply inline styles to preserve the color changes for the uncompleted but unblurred (yellow) items
+                        clonedSection.querySelectorAll('.exerciseItem:not(.completed)').forEach(function (item) {
+                            item.style.backgroundColor = 'yellow';
+                            item.style.color = 'black';
+                        });
+
+                        // Apply inline styles for the blurred-out (gray) items
+                        clonedSection.querySelectorAll('.exerciseItem.blurred').forEach(function (item) {
+                            item.style.backgroundColor = 'lightgray';
+                            item.style.color = 'black';
+                        });
+
+                        // Create a new document for printing
+                        var printWindow = window.open('', '', 'height=500, width=800');
+                        printWindow.document.write('<html><head><title>Print Plan</title>');
+
+                        // Add inline CSS for printing the dynamically changed styles
+                        var styles = `
+                                                                                                                                                                                                                                                                                                                                            <style>
+                                                                                                                                                                                                                                                                                                                                                body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+                                                                                                                                                                                                                                                                                                                                                table { width: 100%; border-collapse: collapse; }
+                                                                                                                                                                                                                                                                                                                                                table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
+                                                                                                                                                                                                                                                                                                                                                th { background-color: #f0f0f0; color: black; }
+                                                                                                                                                                                                                                                                                                                                                .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
+                                                                                                                                                                                                                                                                                                                                                .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
+                                                                                                                                                                                                                                                                                                                                                .exerciseItem.completed { background-color: green; color: white; }
+                                                                                                                                                                                                                                                                                                                                                .exerciseItem:not(.completed) { background-color: yellow; color: black; }
+                                                                                                                                                                                                                                                                                                                                                .exerciseItem.blurred { background-color: lightgray; color: black; }
+                                                                                                                                                                                                                                                                                                                                            </style>
+                                                                                                                                                                                                                                                                                                                                        `;
+
+                        printWindow.document.write(styles);
+                        printWindow.document.write('</head><body>');
+                        printWindow.document.write(clonedSection.innerHTML); // Write the cloned content with inline styles
+                        printWindow.document.write('</body></html>');
+                        printWindow.document.close();
+
+                        // Automatically open the print dialog for the print window (single print window)
+                        printWindow.focus();
+                        printWindow.onload = function () {
+                            printWindow.print();
+                            printWindow.onafterprint = function () {
+                                printWindow.close(); // Close the window after printing
+                            };
+                        };
+                    }
+                </script>
+
+                <!-- AUTO GENERATED (PREMIUM AND ELITE TIER) EXERCISE PLAN -->
+                <?php if (isset($goal_name)): ?>
+                    <?php if ($plan === 'premium' || $plan === 'elite'): ?>
+                        <section class="our_schedule_section exercise-planning" id="exercisePlanSection">
                             <div class="container">
                                 <div class="row">
                                     <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                                         <div class="our_schedule_content">
-                                            <h2 class="mt-5"><?php echo $day; ?></h2>
+                                            <?php if (!empty($exercise_plan)): ?>
+                                                <h5 style="font-size: 80px;">EXERCISE PLAN</h5>
+                                                <h2><u><?php echo strtoupper($fitnessLevel); ?> FITNESS LEVEL</u></h2>
+
+                                                <!-- Custom message based on fitness level -->
+                                                <?php
+                                                $intensityMessage = '';
+                                                switch (strtolower($fitnessLevel)) { // Using fitnessLevel instead of goal_name
+                                                    case 'beginner':
+                                                        $intensityMessage = "This exercise plan consists of Low Intensity workouts. It’s perfect for beginners looking to ease into a regular workout routine with low-impact exercises.";
+                                                        break;
+                                                    case 'intermediate':
+                                                        $intensityMessage = "Your exercise plan is designed with Moderate Intensity workouts. Expect a balanced mix of cardio and strength exercises to improve your fitness level and endurance.";
+                                                        break;
+                                                    case 'advanced':
+                                                        $intensityMessage = "Get ready for High Intensity workouts! This plan includes more challenging exercises, designed for advanced fitness enthusiasts aiming to push their limits and maximize results.";
+                                                        break;
+                                                    default:
+                                                        $intensityMessage = "This exercise plan is customized to match your fitness goals, offering a balanced approach to help you achieve your desired results.";
+                                                        break;
+                                                }
+
+                                                // Display the intensity message
+                                                if (!empty($intensityMessage)) {
+                                                    echo "<p style='font-size: 20px; margin-top: 20px; font-weight: bold;'>$intensityMessage</p>";
+                                                }
+                                                ?>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <p style="font-size: 20px;">Click the food AFTER consumption to track your progress.</p>
-                            <div id="total-<?php echo strtolower($day); ?>" class="large-counter-text mb-3" data-calories="0"
-                                data-protein="0">
+                            <div class="exercise-horizontal-display">
                                 <?php
-                                echo '<u>Total Consumed:</u> <br>';
-                                echo 'Calories: <span id="calories-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['caloricIntake'] . '<br>';
-                                echo 'Protein (g): <span id="protein-' . strtolower($day) . '">0</span> / ' . $bodyFatResults['proteinIntake'] . '<br>';
-                                ?>
-                            </div>
-                            <p><strong>Tip:</strong> You can eat the foods in any order, as long as you meet the recommended daily
-                                macronutrients.</p>
-                            <div class="diet-horizontal-display">
-                                <table class="border border-black" id="mealPlanTable-<?php echo strtolower($day); ?>">
-                                    <thead>
-                                        <tr>
-                                            <th>Time Slot</th>
-                                            <?php for ($i = 0; $i < count($timeSlots); $i++) {
-                                                echo '<th>Food Item</th>';
-                                            } ?>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($timeSlots as $timeSlot): ?>
-                                            <?php
-                                            $foodItem = $meal_plan[$mealIndex % $totalMeals];
+                                $exerciseIndex = 0;
+                                $totalExercises = count($exercise_plan);
+                                $dailyExerciseTotals = array();
 
-                                            if (!isset($dailyTotals[$day])) {
-                                                $dailyTotals[$day] = array('calories' => 0, 'protein' => 0);
-                                            }
-                                            $dailyTotals[$day]['calories'] += $foodItem['energy_kcal'];
-                                            $dailyTotals[$day]['protein'] += $foodItem['protein_g'];
-                                            ?>
-                                            <tr>
-                                                <td><?php echo $timeSlot; ?></td>
-                                                <?php for ($i = 0; $i < count($timeSlots); $i++): ?>
-                                                    <?php $foodItem = $meal_plan[$mealIndex % $totalMeals]; ?>
-                                                    <td class="mealItem" data-day="<?php echo strtolower($day); ?>"
-                                                        data-time-slot="<?php echo $timeSlot; ?>"
-                                                        data-calories="<?php echo $foodItem['energy_kcal']; ?>"
-                                                        data-protein="<?php echo $foodItem['protein_g']; ?>">
-                                                        <br><?php echo $foodItem['english_name']; ?><br>
-                                                        <br><?php echo $foodItem['filipino_name']; ?><br><br>
-                                                        <strong>Measure:</strong> <?php echo $foodItem['household_measure']; ?><br>
-                                                        <strong>Calories (kcal):</strong> <?php echo $foodItem['energy_kcal']; ?><br>
-                                                        <strong>Protein (g):</strong> <?php echo $foodItem['protein_g']; ?><br>
-
-
-                                                    </td>
-                                                    <?php $mealIndex++; ?>
-                                                <?php endfor; ?>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                                <div id="tooltip"
-                                    style="display: none; position: absolute; padding: 5px; background-color: rgba(0, 0, 0, 0.75); color: white; border-radius: 5px; font-size: 12px; pointer-events: none;">
-                                </div>
-                            </div>
-                            <div id="total-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text"
-                                data-calories="0" data-protein="0">
-                                <button onclick="printSection('dietPlanSection')" class="btn btn-primary mt-3">Print Diet
-                                    Plan</button>
-                                <div class="note">
-                                    <b>Meal plan food suggestions are based on the Philippine Department of Science and Technology,
-                                        Food and Nutrition Research Institute, Food Exchange List</b>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </section>
-
-            <script>
-                function printSection(sectionId) {
-                    var section = document.getElementById(sectionId);
-
-                    // Clone the section to capture the current state
-                    var clonedSection = section.cloneNode(true);
-
-                    // Apply inline styles to preserve the color changes for the completed items
-                    clonedSection.querySelectorAll('.exerciseItem.completed').forEach(function (item) {
-                        item.style.backgroundColor = 'green';
-                        item.style.color = 'white';
-                    });
-
-                    // Apply inline styles to preserve the color changes for the uncompleted but unblurred (yellow) items
-                    clonedSection.querySelectorAll('.exerciseItem:not(.completed)').forEach(function (item) {
-                        item.style.backgroundColor = 'yellow';
-                        item.style.color = 'black';
-                    });
-
-                    // Apply inline styles for the blurred-out (gray) items
-                    clonedSection.querySelectorAll('.exerciseItem.blurred').forEach(function (item) {
-                        item.style.backgroundColor = 'lightgray';
-                        item.style.color = 'black';
-                    });
-
-                    // Create a new document for printing
-                    var printWindow = window.open('', '', 'height=500, width=800');
-                    printWindow.document.write('<html><head><title>Print Plan</title>');
-
-                    // Add inline CSS for printing the dynamically changed styles
-                    var styles = `
-                                                                                                                                                                            <style>
-                                                                                                                                                                                body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
-                                                                                                                                                                                table { width: 100%; border-collapse: collapse; }
-                                                                                                                                                                                table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
-                                                                                                                                                                                th { background-color: #f0f0f0; color: black; }
-                                                                                                                                                                                .large-counter-text { font-size: 18px; font-weight: bold; margin-top: 10px; }
-                                                                                                                                                                                .mealItem, .exerciseItem { border: 1px solid black; padding: 10px; cursor: pointer; }
-                                                                                                                                                                                .exerciseItem.completed { background-color: green; color: white; }
-                                                                                                                                                                                .exerciseItem:not(.completed) { background-color: yellow; color: black; }
-                                                                                                                                                                                .exerciseItem.blurred { background-color: lightgray; color: black; }
-                                                                                                                                                                            </style>
-                                                                                                                                                                        `;
-
-                    printWindow.document.write(styles);
-                    printWindow.document.write('</head><body>');
-                    printWindow.document.write(clonedSection.innerHTML); // Write the cloned content with inline styles
-                    printWindow.document.write('</body></html>');
-                    printWindow.document.close();
-
-                    // Automatically open the print dialog for the print window (single print window)
-                    printWindow.focus();
-                    printWindow.onload = function () {
-                        printWindow.print();
-                        printWindow.onafterprint = function () {
-                            printWindow.close(); // Close the window after printing
-                        };
-                    };
-                }
-            </script>
-
-            <!-- AUTO GENERATED (PREMIUM AND ELITE TIER) EXERCISE PLAN -->
-            <?php if (isset($goal_name)): ?>
-                <?php if ($plan === 'premium' || $plan === 'elite'): ?>
-                    <section class="our_schedule_section exercise-planning" id="exercisePlanSection">
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                    <div class="our_schedule_content">
-                                        <?php if (!empty($exercise_plan)): ?>
-                                            <h5 style="font-size: 80px;">EXERCISE PLAN</h5>
-                                            <h2><u><?php echo strtoupper($fitnessLevel); ?> FITNESS LEVEL</u></h2>
-
-                                            <!-- Custom message based on fitness level -->
-                                            <?php
-                                            $intensityMessage = '';
-                                            switch (strtolower($fitnessLevel)) { // Using fitnessLevel instead of goal_name
-                                                case 'beginner':
-                                                    $intensityMessage = "This exercise plan consists of Low Intensity workouts. It’s perfect for beginners looking to ease into a regular workout routine with low-impact exercises.";
-                                                    break;
-                                                case 'intermediate':
-                                                    $intensityMessage = "Your exercise plan is designed with Moderate Intensity workouts. Expect a balanced mix of cardio and strength exercises to improve your fitness level and endurance.";
-                                                    break;
-                                                case 'advanced':
-                                                    $intensityMessage = "Get ready for High Intensity workouts! This plan includes more challenging exercises, designed for advanced fitness enthusiasts aiming to push their limits and maximize results.";
-                                                    break;
-                                                default:
-                                                    $intensityMessage = "This exercise plan is customized to match your fitness goals, offering a balanced approach to help you achieve your desired results.";
-                                                    break;
-                                            }
-
-                                            // Display the intensity message
-                                            if (!empty($intensityMessage)) {
-                                                echo "<p style='font-size: 20px; margin-top: 20px; font-weight: bold;'>$intensityMessage</p>";
-                                            }
-                                            ?>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="exercise-horizontal-display">
-                            <?php
-                            $exerciseIndex = 0;
-                            $totalExercises = count($exercise_plan);
-                            $dailyExerciseTotals = array();
-
-                            foreach ($days as $day): ?>
-                                <div class="border-mealplan mt-5">
-                                    <div class="container">
-                                        <div class="row">
-                                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                                <div class="our_schedule_content">
-                                                    <h2 class="mt-5"><?php echo $day; ?>
-                                                    </h2>
+                                foreach ($days as $day): ?>
+                                    <div class="border-mealplan mt-5">
+                                        <div class="container">
+                                            <div class="row">
+                                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                                    <div class="our_schedule_content">
+                                                        <h2 class="mt-5"><?php echo $day; ?>
+                                                        </h2>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <p style="font-size: 20px;">Track your progress by marking the exercises you've completed.</p>
-                                    <?php
-                                    $tipMessage = '';
-                                    switch (strtolower($fitnessLevel)) {
-                                        case 'beginner':
-                                            $tipMessage = "Goal: Complete at least 3 exercises each day. <br><br>Keep the intensity low to focus on form and building consistency.";
-                                            break;
-                                        case 'intermediate':
-                                            $tipMessage = "Goal: Complete at least 5 exercises each day. <br><br>Push for a balanced routine with moderate intensity.";
-                                            break;
-                                        case 'advanced':
-                                            $tipMessage = "Goal: Complete at least 7 exercises each day, with high intensity. <br><br>Focus on pushing your limits and maximizing your gains.";
-                                            break;
-                                        default:
-                                            $tipMessage = "Goal: Aim to do at least 5 exercises from all 3 categories in a day (Cardio, Strength, Core).";
-                                            break;
-                                    }
-                                    ?>
+                                        <p style="font-size: 20px;">Track your progress by marking the exercises you've completed.</p>
+                                        <?php
+                                        $tipMessage = '';
+                                        switch (strtolower($fitnessLevel)) {
+                                            case 'beginner':
+                                                $tipMessage = "Goal: Complete at least 3 exercises each day. <br><br>Keep the intensity low to focus on form and building consistency.";
+                                                break;
+                                            case 'intermediate':
+                                                $tipMessage = "Goal: Complete at least 5 exercises each day. <br><br>Push for a balanced routine with moderate intensity.";
+                                                break;
+                                            case 'advanced':
+                                                $tipMessage = "Goal: Complete at least 7 exercises each day, with high intensity. <br><br>Focus on pushing your limits and maximizing your gains.";
+                                                break;
+                                            default:
+                                                $tipMessage = "Goal: Aim to do at least 5 exercises from all 3 categories in a day (Cardio, Strength, Core).";
+                                                break;
+                                        }
+                                        ?>
 
-                                    <!-- Display the dynamic tip message -->
-                                    <p><strong><?php echo $tipMessage; ?></strong></p>
+                                        <!-- Display the dynamic tip message -->
+                                        <p><strong><?php echo $tipMessage; ?></strong></p>
 
-                                    <div class="diet-horizontal-display">
-                                        <table class="border border-black" id="exercisePlanTable-<?php echo strtolower($day); ?>">
-                                            <thead>
-                                                <tr>
-                                                    <th>Time Slot</th>
-                                                    <th>Exercise</th>
-                                                    <th>Exercise</th>
-                                                    <th>Exercise</th>
-                                                    <th>Exercise</th>
-                                                    <th>Exercise</th>
-                                                    <th>Exercise</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($exercisetimeSlots as $timeSlot): ?>
-                                                    <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
+                                        <div class="diet-horizontal-display">
+                                            <table class="border border-black" id="exercisePlanTable-<?php echo strtolower($day); ?>">
+                                                <thead>
                                                     <tr>
-                                                        <td><?php echo $timeSlot; ?></td>
-                                                        <?php for ($i = 0; $i < 6; $i++): ?>
-                                                            <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
-                                                            <td class="exerciseItem" data-image="<?php echo $exerciseItem['image_link']; ?>"
-                                                                data-description="<?php echo $exerciseItem['description']; ?>">
-                                                                <br><strong>
-                                                                    <?php echo $exerciseItem['name']; ?><br></strong>
-                                                                <?php echo $exerciseItem['duration']; ?><br><br>
-                                                                <strong><?php echo $exerciseItem['intensity']; ?> Intensity</strong><br>
-                                                                <?php echo $exerciseItem['category']; ?><br><br>
-                                                                <?php echo $exerciseItem['target_body_part']; ?><br><br>
-                                                            </td>
-                                                            <?php $exerciseIndex++; ?>
-                                                        <?php endfor; ?>
+                                                        <th>Time Slot</th>
+                                                        <th>Exercise</th>
+                                                        <th>Exercise</th>
+                                                        <th>Exercise</th>
+                                                        <th>Exercise</th>
+                                                        <th>Exercise</th>
+                                                        <th>Exercise</th>
                                                     </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($exercisetimeSlots as $timeSlot): ?>
+                                                        <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
+                                                        <tr>
+                                                            <td><?php echo $timeSlot; ?></td>
+                                                            <?php for ($i = 0; $i < 6; $i++): ?>
+                                                                <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
+                                                                <td class="exerciseItem" data-image="<?php echo $exerciseItem['image_link']; ?>"
+                                                                    data-description="<?php echo $exerciseItem['description']; ?>">
+                                                                    <br><strong>
+                                                                        <?php echo $exerciseItem['name']; ?><br></strong>
+                                                                    <?php echo $exerciseItem['duration']; ?><br><br>
+                                                                    <strong><?php echo $exerciseItem['intensity']; ?> Intensity</strong><br>
+                                                                    <?php echo $exerciseItem['category']; ?><br><br>
+                                                                    <?php echo $exerciseItem['target_body_part']; ?><br><br>
+                                                                </td>
+                                                                <?php $exerciseIndex++; ?>
+                                                            <?php endfor; ?>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <?php
+                                        // Set the minimum number of exercises based on fitness level
+                                        $minimumExercises = 5; // Default value
+                                        switch (strtolower($fitnessLevel)) {
+                                            case 'beginner':
+                                                $minimumExercises = 3;
+                                                break;
+                                            case 'intermediate':
+                                                $minimumExercises = 5;
+                                                break;
+                                            case 'advanced':
+                                                $minimumExercises = 7;
+                                                break;
+                                            default:
+                                                $minimumExercises = 5; // Default value
+                                                break;
+                                        }
+                                        ?>
+
+                                        <!-- Render hidden input to pass fitnessLevel to JavaScript -->
+                                        <input type="hidden" id="userFitnessLevel" value="<?php echo $fitnessLevel; ?>">
+
+                                        <div id="total-exercises-<?php echo strtolower($day); ?>"
+                                            class="border border-grey large-counter-text">
+                                            <?php echo 'Minimum Exercises to Complete: <span class="minimum-to-complete">' . $minimumExercises . '</span><br>'; ?>
+                                            <?php echo 'Total Exercises Completed: <span id="exerciseCounter-' . strtolower($day) . '">0</span><br>'; ?>
+                                        </div>
+
+                                        <input type="hidden" name="day" value="<?php echo $day; ?>">
+                                        <input type="hidden" name="exercise_plan" id="exercisePlanData-<?php echo strtolower($day); ?>">
+                                        <button onclick="printSection('exercisePlanSection')" class="btn btn-primary mt-3">Print Exercise
+                                            Plan</button>
                                     </div>
-                                    <?php
-                                    // Set the minimum number of exercises based on fitness level
-                                    $minimumExercises = 5; // Default value
-                                    switch (strtolower($fitnessLevel)) {
-                                        case 'beginner':
-                                            $minimumExercises = 3;
-                                            break;
-                                        case 'intermediate':
-                                            $minimumExercises = 5;
-                                            break;
-                                        case 'advanced':
-                                            $minimumExercises = 7;
-                                            break;
-                                        default:
-                                            $minimumExercises = 5; // Default value
-                                            break;
-                                    }
-                                    ?>
-
-                                    <!-- Render hidden input to pass fitnessLevel to JavaScript -->
-                                    <input type="hidden" id="userFitnessLevel" value="<?php echo $fitnessLevel; ?>">
-
-                                    <div id="total-exercises-<?php echo strtolower($day); ?>" class="border border-grey large-counter-text">
-                                        <?php echo 'Minimum Exercises to Complete: <span class="minimum-to-complete">' . $minimumExercises . '</span><br>'; ?>
-                                        <?php echo 'Total Exercises Completed: <span id="exerciseCounter-' . strtolower($day) . '">0</span><br>'; ?>
-                                    </div>
-
-                                    <input type="hidden" name="day" value="<?php echo $day; ?>">
-                                    <input type="hidden" name="exercise_plan" id="exercisePlanData-<?php echo strtolower($day); ?>">
-                                    <button onclick="printSection('exercisePlanSection')" class="btn btn-primary mt-3">Print Exercise
-                                        Plan</button>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </section>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                    <?php endif; ?>
                 <?php endif; ?>
-            <?php endif; ?>
 
 
-            <!-- QUOTE SECTION -->
-            <section class="quote_section">
-                <div class="container">
-                    <div class="row" data-aos="fade-right">
-                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                            <div class="quote_content">
-                                <h2>“
-                                    <?php echo htmlspecialchars($quote['quote']); ?>”
-                                </h2>
-                                <div class="quote_content_wrapper">
-                                    <div class="quote_wrapper">
-                                        <h6>
-                                            <?php echo htmlspecialchars($quote['author']); ?>
-                                        </h6>
-                                        <span>
-                                            <?php echo htmlspecialchars($quote['title']); ?>
-                                        </span>
-                                        <?php if (!empty($quote['image_path'])): ?>
-                                            <figure class="quote_image mb-0">
-                                                <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
-                                                    class="img-fluid">
-                                            </figure>
-                                        <?php endif; ?>
+                <!-- QUOTE SECTION -->
+                <section class="quote_section">
+                    <div class="container">
+                        <div class="row" data-aos="fade-right">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                <div class="quote_content">
+                                    <h2>“
+                                        <?php echo htmlspecialchars($quote['quote']); ?>”
+                                    </h2>
+                                    <div class="quote_content_wrapper">
+                                        <div class="quote_wrapper">
+                                            <h6>
+                                                <?php echo htmlspecialchars($quote['author']); ?>
+                                            </h6>
+                                            <span>
+                                                <?php echo htmlspecialchars($quote['title']); ?>
+                                            </span>
+                                            <?php if (!empty($quote['image_path'])): ?>
+                                                <figure class="quote_image mb-0">
+                                                    <img src="<?php echo htmlspecialchars($quote['image_path']); ?>" alt=""
+                                                        class="img-fluid">
+                                                </figure>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        <figure class="quote_left_icon left_icon mb-0">
+                            <img src="./assets/images/quote_left_icon.png" alt="" class="img-fluid">
+                        </figure>
+                        <figure class="quote_right_icon right_icon mb-0">
+                            <img src="./assets/images/quote_right_icon.png" alt="" class="img-fluid">
+                        </figure>
                     </div>
-                    <figure class="quote_left_icon left_icon mb-0">
-                        <img src="./assets/images/quote_left_icon.png" alt="" class="img-fluid">
-                    </figure>
-                    <figure class="quote_right_icon right_icon mb-0">
-                        <img src="./assets/images/quote_right_icon.png" alt="" class="img-fluid">
-                    </figure>
-                </div>
-            </section>
+                </section>
             </div>
         <?php endif; ?>
     <?php endif; ?>
