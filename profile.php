@@ -813,6 +813,63 @@ if (!function_exists('getArrow')) {
     }
 }
 
+// Fetch food activity log for the last 7 days
+$foodLogData = [];
+$foodQuery = "SELECT date, SUM(calories_consumed) as total_calories, SUM(protein_consumed) as total_protein
+               FROM food_activity_log
+               WHERE username = ? AND date >= CURDATE() - INTERVAL 6 DAY
+               GROUP BY date ORDER BY date";
+$stmt = $mysqli->prepare($foodQuery);
+$stmt->bind_param('s', $username);
+$stmt->execute();
+$result = $stmt->get_result();
+
+while ($row = $result->fetch_assoc()) {
+    $dayName = date('l', strtotime($row['date'])); // Get the day name (e.g., Monday)
+    $foodLogData[$dayName] = [
+        'total_calories' => $row['total_calories'],
+        'total_protein' => $row['total_protein']
+    ];
+}
+$stmt->close();
+
+// Fetch exercise activity log for the last 7 days
+$exerciseLogData = [];
+$exerciseQuery = "SELECT date, COUNT(*) as exercises_completed
+                  FROM exercise_activity_log
+                  WHERE username = ? AND date >= CURDATE() - INTERVAL 6 DAY
+                  GROUP BY date ORDER BY date";
+$stmt = $mysqli->prepare($exerciseQuery);
+$stmt->bind_param('s', $username);
+$stmt->execute();
+$result = $stmt->get_result();
+
+while ($row = $result->fetch_assoc()) {
+    $dayName = date('l', strtotime($row['date'])); // Get the day name (e.g., Monday)
+    $exerciseLogData[$dayName] = [
+        'exercises_completed' => $row['exercises_completed']
+    ];
+}
+$stmt->close();
+
+// Prepare data for chart
+$days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+$labels = []; // For chart labels
+
+foreach ($days as $day) {
+    // Assuming that we want to match the current week starting from Monday
+    $dateOfDay = date('Y-m-d', strtotime("last $day")); // Get the last occurrence of the day
+    $labels[] = $day; // Add day name to labels
+
+    if (!isset($foodLogData[$day])) {
+        $foodLogData[$day] = ['total_calories' => 0, 'total_protein' => 0];
+    }
+    if (!isset($exerciseLogData[$day])) {
+        $exerciseLogData[$day] = ['exercises_completed' => 0];
+    }
+}
+
+
 $mysqli->close();
 ?>
 
@@ -890,7 +947,6 @@ $mysqli->close();
             background-color: rgba(0, 0, 0, 0.6);
             position: relative;
             z-index: 2;
-
         }
 
         .navbar::before {
@@ -978,31 +1034,25 @@ $mysqli->close();
         }
 
         /* Plan-specific styling */
-        .plan-elite {
-            color: #9370DB;
-            font-weight: bold;
-        }
-
-        .plan-premium {
-            color: #9370DB;
-            font-weight: bold;
-        }
-
+        .plan-elite,
+        .plan-premium,
         .plan-essential {
             color: #9370DB;
             font-weight: bold;
         }
 
-
+        /* Calculator Section */
         .calculator-section {
             text-align: center;
-            padding: 50px 0;
+            padding: 50px 20px;
+            /* Adjusted for smaller screens */
             background-color: #f4f6f9;
         }
 
         .calculator-form,
         .results-form {
-            max-width: 500px;
+            max-width: 100%;
+            /* Allow it to fill the width */
             margin: 0 auto;
             border: 1px solid #ddd;
             padding: 30px;
@@ -1016,7 +1066,8 @@ $mysqli->close();
         .calculator-form h2,
         .results-form h2 {
             margin-bottom: 20px;
-            font-size: 60px;
+            font-size: 2.5rem;
+            /* Adjusted font size for better scaling */
             color: #333;
             font-weight: 600;
         }
@@ -1026,7 +1077,8 @@ $mysqli->close();
             display: block;
             margin-bottom: 10px;
             font-weight: 500;
-            font-size: 16px;
+            font-size: 1rem;
+            /* Use rem for better scaling */
             color: #555;
         }
 
@@ -1142,9 +1194,9 @@ $mysqli->close();
             flex-wrap: nowrap;
             overflow-x: auto;
             width: 1870px;
-            /* ^ affects the width of the horizontal scroll container of the table*/
+            /* Adjust as needed */
             max-width: 100%;
-            /* ^ affects the width of the viewport of the page*/
+            /* Adjust as needed */
             text-align: center;
         }
 
@@ -1190,7 +1242,6 @@ $mysqli->close();
             text-align: center;
         }
 
-
         .exerciseItem {
             cursor: pointer;
         }
@@ -1223,9 +1274,49 @@ $mysqli->close();
             object-fit: cover;
             /* Maintain the aspect ratio and cover the container */
         }
-    </style>
 
-    <style>
+        /* Media Queries for Responsiveness */
+        @media (max-width: 768px) {
+
+            .calculator-form,
+            .results-form {
+                padding: 20px;
+                /* Adjust padding for smaller screens */
+            }
+
+            .calculator-form h2,
+            .results-form h2 {
+                font-size: 2rem;
+                /* Smaller font size for mobile */
+            }
+
+            .calculator-form label,
+            .results-form label {
+                font-size: 0.9rem;
+                /* Slightly smaller labels */
+            }
+
+            .calculator-section {
+                padding: 30px 15px;
+                /* Adjust overall section padding */
+            }
+
+            .btn-calculate,
+            .btn-recalculate {
+                width: 100%;
+                /* Full-width buttons on smaller screens */
+            }
+
+            /* Infographic section */
+            .infographic-section {
+                height: auto;
+                /* Ensure it can expand on mobile */
+                text-align: center;
+                /* Center the content */
+            }
+        }
+
+        /* Add print styles */
         @media print {
             #resultsSection {
                 position: relative;
@@ -1261,7 +1352,6 @@ $mysqli->close();
                 display: none;
             }
         }
-
 
         #tooltip {
             display: none;
@@ -2200,6 +2290,7 @@ $mysqli->close();
             </div>
         <?php endif; ?>
 
+
         <!-- JavaScript to print only chart and table -->
         <script>
             function printProgress() {
@@ -2371,6 +2462,174 @@ $mysqli->close();
                 </div>
             </section>
         <?php endif; ?>
+
+        <!-- ACTIVITY FEED TRACKER -->
+        <section class="activity-feed">
+            <h3>Daily Activity Tracker</h3>
+            <div style="display: flex; justify-content: space-between;">
+                <div style="width: 30%;">
+                    <h4>Calories Consumed</h4>
+                    <canvas id="caloriesChart" width="400" height="200"></canvas>
+                </div>
+                <div style="width: 30%;">
+                    <h4>Protein Intake</h4>
+                    <canvas id="proteinChart" width="400" height="200"></canvas>
+                </div>
+                <div style="width: 30%;">
+                    <h4>Exercises Completed</h4>
+                    <canvas id="exerciseChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                // Common data fetching for all charts
+                const labels = <?php echo json_encode(array_keys($foodLogData)); ?>; // Days of the week as labels
+
+                const caloriesData = <?php echo json_encode(array_column($foodLogData, 'total_calories')); ?>;
+                const proteinData = <?php echo json_encode(array_column($foodLogData, 'total_protein')); ?>;
+                const exerciseData = <?php echo json_encode(array_column($exerciseLogData, 'exercises_completed')); ?>;
+
+                // Define dynamic limits/goals
+                const calorieGoal = <?php echo $bodyFatResults['caloricIntake']; ?>; // Set your dynamic goal for calories
+                const proteinGoal = <?php echo $bodyFatResults['proteinIntake']; ?>; // Set your dynamic goal for protein
+                const exerciseGoal = 5; // This could be dynamically set as well based on fitness level
+
+                // Chart for Calories Consumed
+                const ctxCalories = document.getElementById('caloriesChart').getContext('2d');
+                new Chart(ctxCalories, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Calories Consumed',
+                            data: caloriesData,
+                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1,
+                        }, {
+                            label: 'Goal',
+                            data: Array(labels.length).fill(calorieGoal),
+                            type: 'line',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            fill: false,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Calories',
+                                    font: { size: 14 }
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Days',
+                                    font: { size: 14 }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Chart for Protein Intake
+                const ctxProtein = document.getElementById('proteinChart').getContext('2d');
+                new Chart(ctxProtein, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Protein Intake (g)',
+                            data: proteinData,
+                            backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            borderWidth: 1,
+                        }, {
+                            label: 'Goal',
+                            data: Array(labels.length).fill(proteinGoal),
+                            type: 'line',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            fill: false,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Protein (g)',
+                                    font: { size: 14 }
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Days',
+                                    font: { size: 14 }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Chart for Exercises Completed
+                const ctxExercise = document.getElementById('exerciseChart').getContext('2d');
+                new Chart(ctxExercise, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Exercises Completed',
+                            data: exerciseData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1,
+                        }, {
+                            label: 'Goal',
+                            data: Array(labels.length).fill(exerciseGoal),
+                            type: 'line',
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            borderWidth: 2,
+                            fill: false,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Exercises',
+                                    font: { size: 14 }
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Days',
+                                    font: { size: 14 }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        </script>
 
         <!-- UNIFIED DIET AND EXERCISE PLANNING SECTION -->
         <?php if ($showDietPlanningSection && isset($goal_name)): ?>
@@ -2721,8 +2980,6 @@ $mysqli->close();
             <?php endif; ?>
         <?php endif; ?>
 
-
-
         <script>
             function printSection(sectionId) {
                 var section = document.getElementById(sectionId);
@@ -2902,10 +3159,30 @@ $mysqli->close();
             });
         });
 
+        // Function to log activity to the database via AJAX
+        function logActivity(type, data) {
+            fetch('log_activity.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ type, data })
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        console.log('Activity logged successfully');
+                    } else {
+                        console.error('Failed to log activity:', result.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
         // Function to attach event listeners to meal items
         function attachEventListeners() {
             const mealItems = document.querySelectorAll('.mealItem');
-            const tooltip = document.getElementById('tooltip');  // Tooltip element
+            const tooltip = document.getElementById('tooltip'); // Tooltip element
 
             mealItems.forEach(item => {
                 item.addEventListener('mouseenter', (e) => {
@@ -2924,8 +3201,8 @@ $mysqli->close();
                     const proteinColor = currentProtein >= maxProtein ? 'lightgreen' : 'white';
 
                     tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
-                    <span style="color:${calorieColor};">Calories: ${currentCalories} / ${maxCalories}</span><br>
-                    <span style="color:${proteinColor};">Protein: ${currentProtein} g / ${maxProtein} g</span>`;
+            <span style="color:${calorieColor};">Calories: ${currentCalories} / ${maxCalories}</span><br>
+            <span style="color:${proteinColor};">Protein: ${currentProtein} g / ${maxProtein} g</span>`;
 
                     tooltip.style.display = 'block';
                 });
@@ -2982,110 +3259,102 @@ $mysqli->close();
                     const proteinColor = newProteinValue >= maxProtein ? 'lightgreen' : 'white';
 
                     tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
-                    <span style="color:${calorieColor};">Calories: ${newCalorieValue} / ${maxCalories}</span><br>
-                    <span style="color:${proteinColor};">Protein: ${newProteinValue} g / ${maxProtein} g</span>`;
+            <span style="color:${calorieColor};">Calories: ${newCalorieValue} / ${maxCalories}</span><br>
+            <span style="color:${proteinColor};">Protein: ${newProteinValue} g / ${maxProtein} g</span>`;
 
                     if (newCalorieValue >= maxCalories) {
                         alert('You have reached the maximum calorie intake for the day.');
+                    }
+
+                    // Log the food consumption activity
+                    logActivity('food', {
+                        foodItem: item.innerText.trim(), // Get the food name from the cell
+                        calories,
+                        protein
+                    });
+                });
+            });
+        }
+
+        // Function to attach event listeners to exercise items
+        function attachExerciseEventListeners() {
+            const exerciseItems = document.querySelectorAll('.exerciseItem');
+            let tooltip = null;
+
+            exerciseItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    if (tooltip) {
+                        tooltip.style.display = 'none';
+                    }
+
+                    item.classList.toggle('completed');
+                    const day = item.closest('table').id.split('-')[1];
+                    updateExerciseCounter(day);
+
+                    // Log the exercise activity
+                    const exerciseName = item.querySelector('strong').innerText.trim(); // Get the exercise name
+                    const caloriesBurnt = 100; // Adjust based on your logic for calories burnt
+
+                    logActivity('exercise', {
+                        day,
+                        exerciseName,
+                        caloriesBurnt
+                    });
+                });
+
+                item.addEventListener('mouseenter', (e) => {
+                    const imageUrl = item.getAttribute('data-image');
+                    const description = item.getAttribute('data-description');
+
+                    if (imageUrl || description) {
+                        if (!tooltip) {
+                            tooltip = document.createElement('div');
+                            tooltip.className = 'exercise-tooltip';
+                            tooltip.style.position = 'absolute';
+                            tooltip.style.zIndex = '1000';
+                            document.body.appendChild(tooltip);
+                        }
+
+                        tooltip.innerHTML = `
+                <div style="background-color: white; padding: 15px; max-width: 400px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); border-radius: 15px;">
+                    <img src="${imageUrl}" alt="Exercise Image" style="width: 100%; max-width: 400px; height: auto; border-radius: 10px;">
+                    <p style="margin-top: 10px; font-size: 18px;">${description}</p>
+                </div>
+                `;
+
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = `${e.pageX + 10}px`;
+                        tooltip.style.top = `${e.pageY + 10}px`;
+                    }
+                });
+
+                item.addEventListener('mousemove', (e) => {
+                    if (tooltip) {
+                        tooltip.style.left = `${e.pageX + 10}px`;
+                        tooltip.style.top = `${e.pageY + 10}px`;
+                    }
+                });
+
+                item.addEventListener('mouseleave', () => {
+                    if (tooltip) {
+                        tooltip.style.display = 'none';
                     }
                 });
             });
         }
 
+        // Initialize the event listeners
         document.addEventListener('DOMContentLoaded', () => {
             attachEventListeners();
             attachExerciseEventListeners();
-        });
 
-        // Function to attach event listeners to exercise items
-        const exerciseItems = document.querySelectorAll('.exerciseItem');
-
-        let tooltip = null;
-
-        exerciseItems.forEach(item => {
-            item.addEventListener('click', () => {
-                if (tooltip) {
-                    tooltip.style.display = 'none';
-                }
-
-                item.classList.toggle('completed');
-                const day = item.closest('table').id.split('-')[1];
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            days.forEach(day => {
                 updateExerciseCounter(day);
             });
-
-            item.addEventListener('mouseenter', (e) => {
-                const imageUrl = item.getAttribute('data-image');
-                const description = item.getAttribute('data-description');
-
-                if (imageUrl || description) {
-                    if (!tooltip) {
-                        tooltip = document.createElement('div');
-                        tooltip.className = 'exercise-tooltip';
-                        tooltip.style.position = 'absolute';
-                        tooltip.style.zIndex = '1000';
-                        document.body.appendChild(tooltip);
-                    }
-
-                    tooltip.innerHTML = `
-                <div style="background-color: white; padding: 15px; max-width: 400px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); border-radius: 15px;">
-                    <img src="${imageUrl}" alt="Exercise Image" style="width: 100%; max-width: 400px; height: auto; border-radius: 10px;">
-                    <p style="margin-top: 10px; font-size: 18px;">${description}</p>
-                </div>
-            `;
-
-                    tooltip.style.display = 'block';
-                    tooltip.style.left = `${e.pageX + 10}px`;
-                    tooltip.style.top = `${e.pageY + 10}px`;
-                }
-            });
-
-            item.addEventListener('mousemove', (e) => {
-                if (tooltip) {
-                    tooltip.style.left = `${e.pageX + 10}px`;
-                    tooltip.style.top = `${e.pageY + 10}px`;
-                }
-            });
-
-            item.addEventListener('mouseleave', () => {
-                if (tooltip) {
-                    tooltip.style.display = 'none';
-                }
-            });
         });
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const fitnessLevel = '<?php echo $fitnessLevel; ?>';
-            let maxExercises;
-
-            switch (fitnessLevel.toLowerCase()) {
-                case 'beginner':
-                    maxExercises = 5;
-                    break;
-                case 'intermediate':
-                    maxExercises = 8;
-                    break;
-                case 'advanced':
-                    maxExercises = 12;
-                    break;
-                default:
-                    maxExercises = 6;
-            }
-
-            const exerciseTables = document.querySelectorAll('table[id^="exercisePlanTable-"]');
-            exerciseTables.forEach(table => {
-                const exercises = table.querySelectorAll('.exerciseItem');
-                const shuffledExercises = Array.from(exercises).sort(() => Math.random() - 0.5);
-
-                shuffledExercises.forEach((exercise, index) => {
-                    if (index >= maxExercises) {
-                        exercise.classList.add('blurred');
-                    } else {
-                        exercise.classList.remove('blurred');
-                    }
-                });
-            });
-        });
-
+        // Function to get minimum exercises based on fitness level
         function getMinimumExercises(fitnessLevel) {
             switch (fitnessLevel.toLowerCase()) {
                 case 'beginner':
@@ -3099,6 +3368,7 @@ $mysqli->close();
             }
         }
 
+        // Function to update the exercise counter
         function updateExerciseCounter(day) {
             const fitnessLevel = document.getElementById('userFitnessLevel').value;
             const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
@@ -3114,12 +3384,6 @@ $mysqli->close();
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-            days.forEach(day => {
-                updateExerciseCounter(day);
-            });
-        });
 
         document.addEventListener("DOMContentLoaded", function () {
             const ctx = document.getElementById('bodyReportsChart').getContext('2d');
