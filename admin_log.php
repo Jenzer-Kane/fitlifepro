@@ -6,7 +6,7 @@ include 'database.php';
 
 // Check if admin is logged in and is a superadmin
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true || !isset($_SESSION['superadmin']) || $_SESSION['superadmin'] !== true) {
-    header("Location: admin_login.php");
+    header("Location: login.php");
     exit();
 }
 
@@ -149,14 +149,27 @@ $result = $mysqli->query($sql);
         /* Row color styles */
         .added-row {
             background-color: #d4edda !important;
+            /* Light green for added rows */
         }
 
         .deleted-row {
             background-color: #f8d7da !important;
+            /* Light red for deleted rows */
         }
 
         .updated-row {
             background-color: #d1ecf1 !important;
+            /* Light blue for updated rows */
+        }
+
+        .approved-row {
+            background-color: #cce5ff !important;
+            /* Light blue for approved rows */
+        }
+
+        .disapproved-row {
+            background-color: #fff3cd !important;
+            /* Light yellow for disapproved rows */
         }
     </style>
 </head>
@@ -241,6 +254,8 @@ $result = $mysqli->query($sql);
                 <button onclick="filterByAction('Added')" class="btn-status btn-success">Added</button>
                 <button onclick="filterByAction('Deleted')" class="btn-status btn-danger">Deleted</button>
                 <button onclick="filterByAction('Updated')" class="btn-status btn-info">Updated</button>
+                <button onclick="filterByAction('Approved')" class="btn-status btn-primary">Approved</button>
+                <button onclick="filterByAction('Disapproved')" class="btn-status btn-warning">Disapproved</button>
             </div>
 
             <div class="table-responsive" style="max-height: 1000px; overflow-y: auto; border: 1px solid #ccc;">
@@ -264,13 +279,17 @@ $result = $mysqli->query($sql);
                                     $rowClass = 'deleted-row';
                                 } elseif (strpos($activity, 'Updated') !== false) {
                                     $rowClass = 'updated-row';
+                                } elseif (strpos($activity, 'Approved') !== false) {
+                                    $rowClass = 'approved-row';
+                                } elseif (strpos($activity, 'Disapproved') !== false) {
+                                    $rowClass = 'disapproved-row';
                                 }
 
                                 echo "<tr class='{$rowClass}' data-action='{$rowClass}'>
-                                <td>" . htmlspecialchars($row['admin_username']) . "</td>
-                                <td>" . $activity . "</td>
-                                <td>" . date('F j, Y | g:i A', strtotime($row['timestamp'])) . "</td>
-                              </tr>";
+                            <td>" . htmlspecialchars($row['admin_username']) . "</td>
+                            <td>" . $activity . "</td>
+                            <td>" . date('F j, Y | g:i A', strtotime($row['timestamp'])) . "</td>
+                          </tr>";
                             }
                         } else {
                             echo "<tr><td colspan='3' class='text-center'>No activity found.</td></tr>";
@@ -302,7 +321,9 @@ $result = $mysqli->query($sql);
                         row.style.display = "";
                     } else if ((action === 'Added' && rowAction === 'added-row') ||
                         (action === 'Deleted' && rowAction === 'deleted-row') ||
-                        (action === 'Updated' && rowAction === 'updated-row')) {
+                        (action === 'Updated' && rowAction === 'updated-row') ||
+                        (action === 'Approved' && rowAction === 'approved-row') ||
+                        (action === 'Disapproved' && rowAction === 'disapproved-row')) {
                         row.style.display = "";
                     } else {
                         row.style.display = "none";
@@ -322,6 +343,7 @@ $result = $mysqli->query($sql);
         <script src="assets/js/counter.js"></script>
         <script src="assets/js/animation.js"></script>
     </body>
+
 
 </html>
 

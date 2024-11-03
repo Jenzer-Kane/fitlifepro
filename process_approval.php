@@ -1,9 +1,25 @@
 <?php
+session_start();
 // Load Composer's autoloader
 require 'vendor/autoload.php';
 
-// Include database connection
+// Include database connection and logger
 include 'database.php';
+include 'logger.php';
+
+// Check if admin is logged in
+if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
+    header("Location: login.php");
+    exit();
+}
+
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
+}
+
+// Get the admin's username from the session
+$adminUsername = $_SESSION['admin'] ?? 'admin';
 
 // Function to send email
 function sendEmail($to, $plan, $price, $description)
@@ -80,26 +96,33 @@ function sendEmail($to, $plan, $price, $description)
         ";
 
         // Attach a file based on the subscription tier
-        $attachmentPath = '';
-        switch ($plan) {
-            case 'essential':
-                $attachmentPath = './src/ESSENTIALTIER.pdf';
-                break;
-            case 'premium':
-                $attachmentPath = './src/PREMIUMTIER.pdf';
-                break;
-            case 'elite':
-                $attachmentPath = './src/ELITETIER.pdf';
-                break;
-            default:
-                return false; // Handle unrecognized plan
-        }
+        // $attachmentPath = '';
+        //switch ($plan) {
+        //  case 'essential':
+        //     $attachmentPath = './src/ESSENTIALTIER.pdf';
+        //      break;
+        // case 'premium':
+        //      $attachmentPath = './src/PREMIUMTIER.pdf';
+        //      break;
+        //  case 'elite':
+        //     $attachmentPath = './src/ELITETIER.pdf';
+        //      break;
+        //  default:
+        //      echo 'Unrecognized subscription plan: ' . htmlspecialchars($plan);
+        //      return false; // Handle unrecognized plan
+        //   }
 
-        $mail->addAttachment($attachmentPath, $plan . '_TIER.pdf');
+        // if (!file_exists($attachmentPath)) {
+        //      echo 'Attachment not found: ' . $attachmentPath;
+        //     return false;
+        //   }
+
+        // $mail->addAttachment($attachmentPath, $plan . '_TIER.pdf');
 
         // Send the email
         return $mail->send();
     } catch (Exception $e) {
+        echo 'Mailer Error: ' . $mail->ErrorInfo;
         return false;
     }
 }
@@ -115,64 +138,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reference_number'], $
 
     // Check which button was clicked (Approve or Disapprove)
     if (isset($_POST['approve'])) {
-        // Perform approval logic here
+        // Perform approval logic
+        $updateStatusQuery = "UPDATE transactions SET status = 'Approved' WHERE reference_number = ?";
+        $stmt = $mysqli->prepare($updateStatusQuery);
+        if ($stmt) {
+            $stmt->bind_param("s", $reference_number);
+            if ($stmt->execute()) {
+                // Log the approval action
+                logAdminActivity($mysqli, $adminUsername, "Approved transaction with Reference Number: $reference_number");
 
-        // Fetch the user email associated with the transaction
-        $transactionQuery = "SELECT * FROM transactions WHERE reference_number = '$reference_number'";
-        $result = $mysqli->query($transactionQuery);
-        if ($result && $result->num_rows > 0) {
-            $transactionData = $result->fetch_assoc();
-            $userEmail = $transactionData['user_email'];
-
-            // Delete all previous transactions by this user except the new one
-            $deleteOldTransactionsQuery = "DELETE FROM transactions WHERE user_email = '$userEmail' AND reference_number != '$reference_number'";
-            if ($mysqli->query($deleteOldTransactionsQuery) === TRUE) {
-                // Update status of the new transaction to "Approved"
-                $updateStatusQuery = "UPDATE transactions SET status = 'Approved' WHERE reference_number = '$reference_number'";
-                if ($mysqli->query($updateStatusQuery) === TRUE) {
-                    // Status updated successfully
-
-                    if (sendEmail($email, $plan, $price, $description)) {
-                        // Email sent successfully
-                        // Fetch transaction details from the database
-                        $approvedTransaction = $mysqli->query("SELECT * FROM transactions WHERE reference_number = '$reference_number'");
-                        if ($approvedTransaction && $approvedTransaction->num_rows > 0) {
-                            $transactionData = $approvedTransaction->fetch_assoc();
-                            $approvedTransactionDetails = "Transaction approved. Transaction ID: " . $transactionData['transaction_id'] . " | Reference Number: " . $transactionData['reference_number'];
-                            // Redirect back to admin_subscription_approval.php with success message
-                            header("Location: admin_subscription_approval.php?message=" . urlencode($approvedTransactionDetails));
-                            exit();
-                        } else {
-                            // Transaction details not found
-                            echo 'Error: Transaction details not found.';
-                        }
+                // Send email notification
+                if (sendEmail($email, $plan, $price, $description)) {
+                    // Fetch the approved transaction details
+                    $approvedTransaction = $mysqli->query("SELECT * FROM transactions WHERE reference_number = '$reference_number'");
+                    if ($approvedTransaction && $approvedTransaction->num_rows > 0) {
+                        $transactionData = $approvedTransaction->fetch_assoc();
+                        $approvedTransactionDetails = "Transaction Approved. Transaction ID: " . $transactionData['transaction_id'] . " | Reference Number: " . $transactionData['reference_number'] . " | User Email: " . $transactionData['user_email'] . " | Plan: " . $transactionData['plan'] . " | Price: " . $transactionData['price'];
+                        header("Location: admin_subscription_approval.php?message=" . urlencode($approvedTransactionDetails));
+                        exit();
                     } else {
-                        // Error sending email
-                        echo 'Error sending email.';
+                        echo 'Error: Transaction details not found.';
                     }
                 } else {
-                    // Error updating status
-                    echo 'Error updating status: ' . $mysqli->error;
+                    echo 'Error sending email.';
                 }
             } else {
-                // Error deleting old transactions
-                echo 'Error deleting old transactions: ' . $mysqli->error;
+                echo 'Error updating status: ' . $stmt->error;
             }
+            $stmt->close();
         } else {
-            // Transaction not found
-            echo 'Error: Transaction not found.';
+            echo 'Error preparing statement: ' . $mysqli->error;
         }
     } elseif (isset($_POST['disapprove'])) {
-        // Perform disapproval logic here
-        // Update status in the database to "Disapproved"
-        $updateStatusQuery = "UPDATE transactions SET status = 'Disapproved' WHERE reference_number = '$reference_number'";
-        if ($mysqli->query($updateStatusQuery) === TRUE) {
-            // Status updated successfully
-            header("Location: admin_subscription_approval.php");
-            exit();
+        // Perform disapproval logic
+        $updateStatusQuery = "UPDATE transactions SET status = 'Disapproved' WHERE reference_number = ?";
+        $stmt = $mysqli->prepare($updateStatusQuery);
+        if ($stmt) {
+            $stmt->bind_param("s", $reference_number);
+            if ($stmt->execute()) {
+                // Log the disapproval action
+                logAdminActivity($mysqli, $adminUsername, "Disapproved Transaction with Reference Number: $reference_number");
+
+                // Fetch the disapproved transaction details
+                $disapprovedTransaction = $mysqli->query("SELECT * FROM transactions WHERE reference_number = '$reference_number'");
+                if ($disapprovedTransaction && $disapprovedTransaction->num_rows > 0) {
+                    $transactionData = $disapprovedTransaction->fetch_assoc();
+                    $disapprovedTransactionDetails = "Transaction Disapproved. Transaction ID: " . $transactionData['transaction_id'] . " | Reference Number: " . $transactionData['reference_number'] . " | User Email: " . $transactionData['user_email'] . " | Plan: " . $transactionData['plan'] . " | Price: " . $transactionData['price'];
+                    header("Location: admin_subscription_approval.php?message=" . urlencode($disapprovedTransactionDetails));
+                    exit();
+                } else {
+                    echo 'Error: Transaction details not found.';
+                }
+            } else {
+                echo 'Error updating status: ' . $stmt->error;
+            }
+            $stmt->close();
         } else {
-            // Error updating status
-            echo 'Error updating status: ' . $mysqli->error;
+            echo 'Error preparing statement: ' . $mysqli->error;
         }
     } else {
         echo 'Invalid request.';

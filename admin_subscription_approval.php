@@ -7,12 +7,15 @@ include 'logger.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
-    header("Location: admin_login.php");
+    header("Location: login.php");
     exit();
 }
 
-// Log page view for Transactions section
-logAdminActivity($mysqli, $_SESSION['admin'], "Viewed Transactions List");
+// Set session username as "Superadmin" if the user is a superadmin
+if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
+    $_SESSION['username'] = 'Superadmin';
+}
+
 
 // Retrieve data from the transactions table
 $sql = "SELECT * FROM transactions ORDER BY username, created_at DESC";
@@ -356,44 +359,44 @@ function maskGCashNumber($gcashNumber)
                     }
 
                     echo "<tr class='transaction-row' data-status='$status'>
-                        <td style='text-align: center;'><a href='view_user.php?username=" . urlencode($username) . "'>" . htmlspecialchars($transaction_id) . "</a></td>
-                        <td style='text-align: center;'>" . htmlspecialchars($username) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($firstname) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($lastname) . "</td>
-                        <td style='text-align: center;'>
-                            <span class='reveal-container'>
-                                <span id='emailMasked$transaction_id'>" . htmlspecialchars($displayEmail) . "</span>
-                                <span id='emailUnmasked$transaction_id' style='display: none;'>" . htmlspecialchars($user_email) . "</span>
-                                <i class='fas fa-eye reveal-btn' onclick='toggleVisibility(\"email\", \"$transaction_id\")' style='color: black;'></i>
-                            </span>
-                        </td>
-                        <td style='text-align: center;'>" . htmlspecialchars($plan) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($description) . "</td>
-                        <td style='text-align: center;'>" . htmlspecialchars($price) . "</td>
-                        <td style='text-align: center;'>
-                            <span class='reveal-container'>
-                                <span id='gcashMasked$transaction_id'>" . htmlspecialchars($displayGCash) . "</span>
-                                <span id='gcashUnmasked$transaction_id' style='display: none;'>" . htmlspecialchars($gcash_number) . "</span>
-                                <i class='fas fa-eye reveal-btn' onclick='toggleVisibility(\"gcash\", \"$transaction_id\")' style='color: black;'></i>
-                            </span>
-                        </td>
-                        <td style='text-align: center;'>" . htmlspecialchars($reference_number) . "</td>
-                        <td style='text-align: center; white-space: nowrap;'>" . htmlspecialchars($created_at) . "</td>
-                        <td style='text-align: center; white-space: nowrap;'>" . htmlspecialchars($date_end) . "</td>
-                        <td style='text-align: center; white-space: nowrap;' class='$statusClass'>" . htmlspecialchars($status) . "</td>
-                        <td style='text-align: center;'>";
+        <td style='text-align: center;'><a href='view_user.php?username=" . urlencode($username) . "'>" . htmlspecialchars($transaction_id) . "</a></td>
+        <td style='text-align: center;'>" . htmlspecialchars($username) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($firstname) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($lastname) . "</td>
+        <td style='text-align: center;'>
+            <span class='reveal-container'>
+                <span id='emailMasked$transaction_id'>" . htmlspecialchars($displayEmail) . "</span>
+                <span id='emailUnmasked$transaction_id' style='display: none;'>" . htmlspecialchars($user_email) . "</span>
+                <i class='fas fa-eye reveal-btn' onclick='toggleVisibility(\"email\", \"$transaction_id\")' style='color: black;'></i>
+            </span>
+        </td>
+        <td style='text-align: center;'>" . htmlspecialchars($plan) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($description) . "</td>
+        <td style='text-align: center;'>" . htmlspecialchars($price) . "</td>
+        <td style='text-align: center;'>
+            <span class='reveal-container'>
+                <span id='gcashMasked$transaction_id'>" . htmlspecialchars($displayGCash) . "</span>
+                <span id='gcashUnmasked$transaction_id' style='display: none;'>" . htmlspecialchars($gcash_number) . "</span>
+                <i class='fas fa-eye reveal-btn' onclick='toggleVisibility(\"gcash\", \"$transaction_id\")' style='color: black;'></i>
+            </span>
+        </td>
+        <td style='text-align: center;'>" . htmlspecialchars($reference_number) . "</td>
+        <td style='text-align: center; white-space: nowrap;'>" . htmlspecialchars($created_at) . "</td>
+        <td style='text-align: center; white-space: nowrap;'>" . htmlspecialchars($date_end) . "</td>
+        <td style='text-align: center; white-space: nowrap;' class='$statusClass'>" . htmlspecialchars($status) . "</td>
+        <td style='text-align: center;'>";
 
                     if ($status === 'Pending') {
                         echo "<form id='emailForm$transaction_id' action='process_approval.php' method='post'>
-                            <input type='hidden' name='reference_number' value='$reference_number'>
-                            <input type='hidden' name='email' id='email_$transaction_id'>
-                            <input type='hidden' name='plan' id='plan_$transaction_id'>
-                            <input type='hidden' name='description' id='description_$transaction_id' value='$description'>
-                            <input type='hidden' name='price' id='price_$transaction_id'>
-                            <input type='hidden' name='status' id='status_$transaction_id' value='Pending'>
-                            <button type='submit' name='approve' onclick='populateFields($transaction_id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Approved\", \"$status\")' class='btn btn-success'>Approve</button>
-                            <button type='submit' name='disapprove' onclick='populateFields($transaction_id, \"$user_email\", \"$plan\", \"$price\", \"$description\", \"Disapproved\", \"$status\")' class='btn btn-danger'>Disapprove</button>
-                        </form>";
+            <input type='hidden' name='reference_number' value='$reference_number'>
+            <input type='hidden' name='email' value='$user_email'>
+            <input type='hidden' name='plan' value='$plan'>
+            <input type='hidden' name='description' value='$description'>
+            <input type='hidden' name='price' value='$price'>
+            <input type='hidden' name='status' value='Pending'>
+            <button type='submit' name='approve' class='btn btn-success'>Approve</button>
+            <button type='submit' name='disapprove' class='btn btn-danger'>Disapprove</button>
+        </form>";
                     }
                     echo "</td></tr>";
                 }

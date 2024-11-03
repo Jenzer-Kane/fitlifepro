@@ -6,7 +6,7 @@ include 'database.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
-    header("Location: admin_login.php");
+    header("Location: login.php");
     exit();
 }
 

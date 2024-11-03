@@ -7,7 +7,7 @@ include 'logger.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
-    header("Location: admin_login.php");
+    header("Location: login.php");
     exit();
 }
 
@@ -15,9 +15,6 @@ if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
 if (isset($_SESSION['superadmin']) && $_SESSION['superadmin'] === true) {
     $_SESSION['username'] = 'Superadmin';
 }
-
-// Log the admin viewing the forums page
-logAdminActivity($mysqli, $_SESSION['admin'], "Viewed Forum Management");
 
 // Retrieve all forums
 $sql = "SELECT * FROM forums";

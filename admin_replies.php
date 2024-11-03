@@ -7,7 +7,7 @@ include 'logger.php';
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
-    header("Location: admin_login.php");
+    header("Location: login.php");
     exit();
 }
 
@@ -37,8 +37,6 @@ if ($thread_id) {
         $thread_title = $thread_row['title'];
         $forum_name = $thread_row['forum_name'];
 
-        // Log the action
-        logAdminActivity($conn, $_SESSION['admin'], "Viewed Replies for Thread: $thread_title in Forum: $forum_name");
     }
     $thread_stmt->close();
 
