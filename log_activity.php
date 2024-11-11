@@ -8,7 +8,7 @@ $data = json_decode(file_get_contents('php://input'), true);
 if ($data) {
     $type = $data['type']; // 'food' or 'exercise'
     $username = $_SESSION['username']; // Assuming username is stored in session
-    $date = date('Y-m-d');
+    $date = $data['data']['date']; // Use the date passed from the frontend
 
     if ($type === 'food') {
         $foodItem = $data['data']['foodItem'];

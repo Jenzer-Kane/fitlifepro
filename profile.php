@@ -203,7 +203,8 @@ if (isset($gender) && $gender === 'female') {
 
 // Calculate fat mass and lean mass
 $fatMass = ($bodyFatPercentage / 100) * $bmiWeight;
-$leanMass = $bmiWeight - $fatMass;
+$leanMass = $bmiWeight - ($bmiWeight * ($bodyFatPercentage / 100));
+
 
 // Function to calculate weight from BMI and height
 function getWeightFromBMI($bmi, $height)
@@ -246,13 +247,17 @@ $bodyFatResults = [
 // Function to calculate body fat percentage using Navy Method for men
 function calculateBodyFatPercentageForMen($waist, $neck, $height)
 {
-    return (495 / (1.0324 - 0.19077 * log10($waist - $neck) + 0.15456 * log10($height))) - 450;
+    $bodyFatPercentage = (495 / (1.0324 - 0.19077 * log10($waist - $neck) + 0.15456 * log10($height))) - 450;
+
+    return round($bodyFatPercentage, 2); // Round to two decimal places
 }
 
 // Function to calculate body fat percentage using Navy Method for women
 function calculateBodyFatPercentageForWomen($waist, $neck, $hip, $height)
 {
-    return (495 / (1.29579 - 0.35004 * log10($waist + $hip - $neck) + 0.221 * log10($height))) - 450;
+    $bodyFatPercentage = (495 / (1.29579 - 0.35004 * log10($waist + $hip - $neck) + 0.221 * log10($height))) - 450;
+
+    return round($bodyFatPercentage, 2); // Round to two decimal places
 }
 
 // Function to fetch the meal plan based on the recommended goal from the meat_info table
@@ -659,7 +664,7 @@ $status = isset($user['status']) ? $user['status'] : null;
 $plan = isset($user['plan']) ? $user['plan'] : null;
 
 // Always show the calculator section, regardless of subscription status
-$disableButton = false; // Ensure this is false so the calculator section remains enabled
+$disableButton = true; // Ensure this is false so the calculator section remains enabled
 
 // Only show diet and exercise planning sections if status is approved and active
 $showDietPlanningSection = ($status === 'Approved');
@@ -785,13 +790,15 @@ if ($result->num_rows > 0) {
 
 $stmt->close();
 
-$disabledDays = 14;
+$disabledDays = 5;
 $remainingDays = $disabledDays;
 
 if ($lastCalculationDate) {
+    // Calculate the number of days since the last calculation
     $remainingDays = $disabledDays - (new DateTime())->diff(new DateTime($lastCalculationDate))->days;
-    // Ensure remaining days is not negative
+    // Ensure remaining days is not negative and set disable flag
     $remainingDays = max($remainingDays, 0);
+    $disableButton = $remainingDays > 0;
 }
 
 $disableButton = $remainingDays > 0;
@@ -828,62 +835,71 @@ if (!function_exists('getArrow')) {
     }
 }
 
-// Fetch food activity log for the last 7 days
+// Get today's date
+$today = date('Y-m-d');
+
+// Initialize arrays for storing chart data
 $foodLogData = [];
+$exerciseLogData = [];
+
+// Define an array to keep a consistent order of days starting from today
+$days = [];
+for ($i = 0; $i < 7; $i++) {
+    $days[] = date('l', strtotime("-$i days")); // Get each day name (e.g., Monday)
+}
+
+// Fetch food activity log for the last 7 days
 $foodQuery = "SELECT date, SUM(calories_consumed) as total_calories, SUM(protein_consumed) as total_protein
-               FROM food_activity_log
-               WHERE username = ? AND date >= CURDATE() - INTERVAL 6 DAY
-               GROUP BY date ORDER BY date";
+              FROM food_activity_log
+              WHERE username = ? AND date >= CURDATE() - INTERVAL 6 DAY
+              GROUP BY date ORDER BY date DESC";
 $stmt = $mysqli->prepare($foodQuery);
 $stmt->bind_param('s', $username);
 $stmt->execute();
 $result = $stmt->get_result();
 
 while ($row = $result->fetch_assoc()) {
-    $dayName = date('l', strtotime($row['date'])); // Get the day name (e.g., Monday)
+    $dayName = date('l', strtotime($row['date']));
     $foodLogData[$dayName] = [
-        'total_calories' => $row['total_calories'],
-        'total_protein' => $row['total_protein']
+        'total_calories' => (int) $row['total_calories'],
+        'total_protein' => (int) $row['total_protein']
     ];
 }
 $stmt->close();
 
 // Fetch exercise activity log for the last 7 days
-$exerciseLogData = [];
 $exerciseQuery = "SELECT date, COUNT(*) as exercises_completed
                   FROM exercise_activity_log
                   WHERE username = ? AND date >= CURDATE() - INTERVAL 6 DAY
-                  GROUP BY date ORDER BY date";
+                  GROUP BY date ORDER BY date DESC";
 $stmt = $mysqli->prepare($exerciseQuery);
 $stmt->bind_param('s', $username);
 $stmt->execute();
 $result = $stmt->get_result();
 
 while ($row = $result->fetch_assoc()) {
-    $dayName = date('l', strtotime($row['date'])); // Get the day name (e.g., Monday)
+    $dayName = date('l', strtotime($row['date']));
     $exerciseLogData[$dayName] = [
-        'exercises_completed' => $row['exercises_completed']
+        'exercises_completed' => (int) $row['exercises_completed']
     ];
 }
 $stmt->close();
 
-// Prepare data for chart
-$days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-$labels = []; // For chart labels
-
+// Prepare data for the last 7 days (ensures all days are present)
+$caloriesData = [];
+$proteinData = [];
+$exerciseData = [];
 foreach ($days as $day) {
-    // Assuming that we want to match the current week starting from Monday
-    $dateOfDay = date('Y-m-d', strtotime("last $day")); // Get the last occurrence of the day
-    $labels[] = $day; // Add day name to labels
-
-    if (!isset($foodLogData[$day])) {
-        $foodLogData[$day] = ['total_calories' => 0, 'total_protein' => 0];
-    }
-    if (!isset($exerciseLogData[$day])) {
-        $exerciseLogData[$day] = ['exercises_completed' => 0];
-    }
+    $caloriesData[] = $foodLogData[$day]['total_calories'] ?? 0;
+    $proteinData[] = $foodLogData[$day]['total_protein'] ?? 0;
+    $exerciseData[] = $exerciseLogData[$day]['exercises_completed'] ?? 0;
 }
 
+// Pass data to JavaScript
+$labels = json_encode(array_reverse($days)); // Reverse to display from Monday to Sunday
+$caloriesData = json_encode(array_reverse($caloriesData));
+$proteinData = json_encode(array_reverse($proteinData));
+$exerciseData = json_encode(array_reverse($exerciseData));
 
 $mysqli->close();
 ?>
@@ -1064,9 +1080,34 @@ $mysqli->close();
             background-color: #f4f6f9;
         }
 
-        .calculator-form,
+        .calculator-form {
+            max-width: 70%;
+            /* Allow it to fill the width */
+            margin: 0 auto;
+            border: 1px solid #ddd;
+            padding: 30px;
+            margin-bottom: 20px;
+            text-align: center;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+
+        /* Optional: If you want to adjust for smaller screens */
+        @media (max-width: 768px) {
+
+            .calculator-form,
+            .results-form {
+                max-width: 90%;
+                /* Allow more width on smaller screens */
+                padding: 15px;
+                /* Further reduced padding */
+            }
+        }
+
         .results-form {
-            max-width: 100%;
+            width: 100%;
             /* Allow it to fill the width */
             margin: 0 auto;
             border: 1px solid #ddd;
@@ -1150,7 +1191,7 @@ $mysqli->close();
             border-radius: 8px;
             background-color: #fff;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            height: 60%;
+            height: 65%;
             text-align: left;
             margin-top: 30px;
         }
@@ -1167,7 +1208,7 @@ $mysqli->close();
         }
 
         .infographic-section p {
-            font-size: 16px;
+            font-size: 17px;
             line-height: 1.6;
             color: #555;
         }
@@ -1379,6 +1420,18 @@ $mysqli->close();
             /* Add !important to force the change */
             pointer-events: none;
             z-index: 1000;
+        }
+
+        .goal-maintenance {
+            color: orange;
+        }
+
+        .goal-weight-loss {
+            color: red;
+        }
+
+        .goal-weight-gain {
+            color: green;
         }
     </style>
 
@@ -1619,13 +1672,17 @@ $mysqli->close();
                             <?php if (!isset($bodyFatResults) && !isset($intakeResults)): ?>
                                 <button type="submit" class="btn-calculate">Calculate</button>
                             <?php else: ?>
-                                <!-- Show Recalculate button if data from DB is showing -->
-                                <button type="submit" id="recalculateButton" class="btn-recalculate">
+                                <!-- Show Re-calculate button with conditional disabling -->
+                                <button type="submit" id="recalculateButton" class="btn-recalculate" <?php echo $disableButton ? 'disabled' : ''; ?>>
                                     Re-calculate
                                 </button>
-                                <p class="disabled-message">Re-calculate button will be enabled after 14 days. <br>
-                                    <?php echo isset($remainingDays) ? $remainingDays : 'N/A'; ?> days remaining.
-                                </p>
+                                <!-- Display remaining days message if button is disabled -->
+                                <?php if ($disableButton): ?>
+                                    <p class="disabled-message">Re-calculate button will be enabled after
+                                        <?php echo $disabledDays; ?> days. <br>
+                                        <?php echo $remainingDays; ?> days remaining.
+                                    </p>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </form>
                     </div>
@@ -1665,21 +1722,44 @@ $mysqli->close();
 
                     <?php if (isset($intakeResults)): ?>
                         <!-- Display for Current Session Data -->
-                        <h5 class="mt-5 mb-5" style="font-size: 80px;">RECOMMENDED GOAL<br></h5>
-                        <h2 data-aos="fade-up" style="font-size: 80px;" class="mt-5">
-                            <u><?php echo strtoupper(str_replace('-', ' ', $intakeResults['goal'])); ?></u>
+                        <h5 class="mt-3" style="font-size: 50px;">RECOMMENDED GOAL<br></h5>
+                        <h2 data-aos="fade-up" style="font-size: 50px;" class="mt-3">
+                            <?php
+                            $goal = strtolower($intakeResults['goal']);
+                            if ($goal === 'maintenance') {
+                                echo '<span style="color: #007bff;">↔️</span> MAINTENANCE <span style="color: #007bff;">↔️</span>';
+                            } elseif ($goal === 'weight-loss') {
+                                echo '<span style="color: #ff0000;">⬇️</span> WEIGHT-LOSS <span style="color: #ff0000;">⬇️</span>';
+                            } elseif ($goal === 'weight-gain') {
+                                echo '<span style="color: #00cc44;">⬆️</span> WEIGHT-GAIN <span style="color: #00cc44;">⬆️</span>';
+                            } else {
+                                echo strtoupper(str_replace('-', ' ', $intakeResults['goal']));
+                            }
+                            ?>
                         </h2>
-                        <h5 class="mt-5" style="font-size: 50px;">AS OF</h5><br>
-                        <h2 data-aos="fade-up" style="font-size: 60px;"><u><?php echo $formattedDate; ?></u></h2>
+
+                        <h5 style="font-size: 50px;">AS OF</h5><br>
+                        <h2 data-aos="fade-up" style="font-size: 50px;"><u><?php echo $formattedDate; ?></u></h2>
 
                     <?php elseif (isset($bodyFatResults)): ?>
                         <!-- Display for Database Data -->
-                        <h5 class="mt-5 mb-5" style="font-size: 80px;">RECOMMENDED GOAL<br></h5>
-                        <h2 data-aos="fade-up" style="font-size: 80px;" class="mt-5">
-                            <u><?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?></u>
+                        <h5 class="mt-3" style="font-size: 50px;">RECOMMENDED GOAL<br></h5>
+                        <h2 data-aos="fade-up" style="font-size: 50px;" class="mt-3">
+                            <?php
+                            $goal = strtolower($bodyFatResults['recommendedGoal']);
+                            if ($goal === 'maintenance') {
+                                echo '<span style="color: #007bff;">↔️</span> MAINTENANCE <span style="color: #007bff;">↔️</span>';
+                            } elseif ($goal === 'weight-loss') {
+                                echo '<span style="color: #ff0000;">⬇️</span> WEIGHT-LOSS <span style="color: #ff0000;">⬇️</span>';
+                            } elseif ($goal === 'weight-gain') {
+                                echo '<span style="color: #00cc44;">⬆️</span> WEIGHT-GAIN <span style="color: #00cc44;">⬆️</span>';
+                            } else {
+                                echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal']));
+                            }
+                            ?>
                         </h2>
-                        <h5 class="mt-5" style="font-size: 50px;">AS OF</h5><br>
-                        <h2 data-aos="fade-up" style="font-size: 60px;"><u><?php echo $formattedDate; ?></u></h2>
+                        <h5 style="font-size: 50px;">AS OF</h5><br>
+                        <h2 data-aos="fade-up" style="font-size: 50px;"><u><?php echo $formattedDate; ?></u></h2>
                         <h5 style="font-size: 40px;"><?php echo $daysAgoMessage; ?></h5>
                     <?php endif; ?>
                 </div>
@@ -1712,13 +1792,33 @@ $mysqli->close();
                                                 <p><strong>Your BMI:</strong>
                                                     <?php echo number_format($bmiResults['bmi'], 2); ?>
                                                 </p>
-                                                <p><strong>Weight Category:</strong> <?php echo $bmiCategory; ?>
+                                                <p><strong>Category:
+                                                        <?php
+                                                        $bmiCategory = strtolower($bmiCategory);
+                                                        switch ($bmiCategory) {
+                                                            case 'underweight':
+                                                                echo '<span style="color: #1e90ff;">UNDERWEIGHT</span>'; // Light blue
+                                                                break;
+                                                            case 'normal':
+                                                                echo '<span style="color: #32cd32;">NORMAL</span>'; // Green
+                                                                break;
+                                                            case 'overweight':
+                                                                echo '<span style="color: #ffa500;">OVERWEIGHT</span>'; // Orange
+                                                                break;
+                                                            case 'obese':
+                                                                echo '<span style="color: #ff0000;">OBESE</span>'; // Red
+                                                                break;
+                                                            default:
+                                                                echo strtoupper($bmiCategory); // Fallback for unhandled categories
+                                                        }
+                                                        ?>
+                                                    </strong>
                                                 </p>
                                                 <?php
                                                 $bmiDifference = $bmiResults['bmiDifference'];
                                                 $lowerUnderweightRange = $bmiResults['bmi'] - $bmiDifference['underweight'];
                                                 ?>
-                                                <p><strong>Underweight BMI:</strong> 18.50 & below /
+                                                <p><strong>UNDERWEIGHT BMI:</strong> 18.50 & below /
                                                     (<?php echo number_format(getWeightFromBMI(18.5, $bmiHeight), 2); ?>
                                                     kg & below)
                                                 </p>
@@ -1729,19 +1829,19 @@ $mysqli->close();
                                                 $upperOverweightRange = 29.9;
                                                 $lowerObeseRange = 30;
                                                 ?>
-                                                <p><strong>Normal BMI:</strong> 18.50 - 24.99 /
+                                                <p><strong>NORMAL BMI:</strong> 18.50 - 24.99 /
                                                     (<?php echo number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2); ?>
                                                     kg -
                                                     <?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
                                                     kg)
                                                 </p>
-                                                <p><strong>Overweight BMI:</strong> 25 - 29.99 /
+                                                <p><strong>OVERWEIGHT BMI:</strong> 25 - 29.99 /
                                                     (<?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
                                                     kg -
                                                     <?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
                                                     kg)
                                                 </p>
-                                                <p><strong>Obese BMI:</strong>
+                                                <p><strong>OBESE BMI:</strong>
                                                     <?php echo number_format($lowerObeseRange, 2); ?> & above /
                                                     (<?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
                                                     kg & above)
@@ -1763,10 +1863,29 @@ $mysqli->close();
                                                                     <?php echo number_format($bodyFatResults['bmi'], 2); ?>
                                                                     cm
                                                                 </p>
-                                                                <p><strong>Weight Category:</strong>
-                                                                    <?php echo $bodyFatResults['bmiCategory']; ?>
+                                                                <p><strong>Category:
+                                                                        <?php
+                                                                        $bodyFatBmiCategory = strtolower($bodyFatResults['bmiCategory']);
+                                                                        switch ($bodyFatBmiCategory) {
+                                                                            case 'underweight':
+                                                                                echo '<span style="color: #1e90ff;">UNDERWEIGHT</span>';
+                                                                                break;
+                                                                            case 'normal':
+                                                                                echo '<span style="color: #32cd32;">NORMAL</span>';
+                                                                                break;
+                                                                            case 'overweight':
+                                                                                echo '<span style="color: #ffa500;">OVERWEIGHT</span>';
+                                                                                break;
+                                                                            case 'obese':
+                                                                                echo '<span style="color: #ff0000;">OBESE</span>';
+                                                                                break;
+                                                                            default:
+                                                                                echo strtoupper($bodyFatBmiCategory);
+                                                                        }
+                                                                        ?>
+                                                                    </strong>
                                                                 </p>
-                                                                <p><strong>Underweight BMI:</strong> 18.50 & below /
+                                                                <p><strong>UNDERWEIGHT BMI:</strong> 18.50 & below /
                                                                     (<?php echo number_format(getWeightFromBMI(18.5, $bmiHeight), 2); ?>
                                                                     kg & below)
                                                                 </p>
@@ -1777,19 +1896,19 @@ $mysqli->close();
                                                                 $upperOverweightRange = 29.9;
                                                                 $lowerObeseRange = 30;
                                                                 ?>
-                                                                <p><strong>Normal BMI:</strong> 18.50 - 24.99 /
+                                                                <p><strong>NORMAL BMI:</strong> 18.50 - 24.99 /
                                                                     (<?php echo number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2); ?>
                                                                     kg -
                                                                     <?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
                                                                     kg)
                                                                 </p>
-                                                                <p><strong>Overweight BMI:</strong> 25 - 29.99 /
+                                                                <p><strong>OVERWEIGHT BMI:</strong> 25 - 29.99 /
                                                                     (<?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
                                                                     kg -
                                                                     <?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
                                                                     kg)
                                                                 </p>
-                                                                <p><strong>Obese BMI:</strong>
+                                                                <p><strong>OBESE BMI:</strong>
                                                                     <?php echo number_format($lowerObeseRange, 2); ?>
                                                                     & above /
                                                                     (<?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
@@ -1816,7 +1935,6 @@ $mysqli->close();
                                     <p><strong>Gender:</strong> <?php echo ucfirst($gender); ?></p>
                                     <p><strong>Waist Circumference:</strong> <?php echo $waist; ?> cm</p>
                                     <p><strong>Neck Circumference:</strong> <?php echo $neck; ?> cm</p>
-                                    <p><strong>Height:</strong> <?php echo $bmiHeight; ?> cm</p>
                                     <?php if (isset($hip) && $hip !== '' && $hip != 0): ?>
                                         <p><strong>Hip Circumference:</strong> <?php echo $hip; ?> cm</p>
                                     <?php endif; ?>
@@ -1829,6 +1947,7 @@ $mysqli->close();
                                     </p>
                                     <p><strong>Lean Body Mass:</strong> <?php echo number_format($leanMass, 2); ?>
                                         kg</p>
+                                    <p><strong>Weight / Total Body Mass:</strong> <?php echo $bmiWeight; ?> kg</p>
 
                                     <!-- Check for negative values in session data -->
                                     <?php
@@ -1856,7 +1975,6 @@ $mysqli->close();
                                         cm</p>
                                     <p><strong>Neck Circumference:</strong> <?php echo $savedUserInfo['neck']; ?> cm
                                     </p>
-                                    <p><strong>Height:</strong> <?php echo $savedUserInfo['bmiHeight']; ?> cm</p>
                                     <?php if (isset($hip) && $hip !== '' && $hip != 0): ?>
                                         <p><strong>Hip Circumference:</strong> <?php echo $hip; ?> cm</p>
                                     <?php endif; ?>
@@ -1869,6 +1987,8 @@ $mysqli->close();
                                         <?php echo number_format($bodyFatResults['fatMass'], 2); ?> kg</p>
                                     <p><strong>Lean Body Mass:</strong>
                                         <?php echo number_format($bodyFatResults['leanMass'], 2); ?> kg</p>
+                                    <p><strong>Weight / Total Body Mass:</strong>
+                                        <?php echo $savedUserInfo['bmiWeight']; ?> kg</p>
 
                                     <!-- Check for negative values in database data -->
                                     <?php
@@ -1912,11 +2032,10 @@ $mysqli->close();
                             <div class="results-form form-section">
                                 <?php if (isset($intakeResults)): ?>
                                     <!-- SESSION STUFF -->
-                                    <h2>Current Recommended Goal, Calorie and Protein Intake:</h2>
-                                    <p><u><strong>Recommended Goal:</strong>
-                                            <?php echo ucwords(str_replace('-', ' ', $intakeResults['goal'])); ?>
+                                    <h2>Recommended Daily Calorie and Protein Intake:</h2>
+                                    <p><strong>Goal:</strong>
+                                        <?php echo ucwords(str_replace('-', ' ', $intakeResults['goal'])); ?>
                                     </p>
-                                    <p><strong>Lifestyle:</strong> <?php echo ucfirst($activityLevel); ?></p></u>
                                     <p><strong>Caloric Intake:</strong>
                                         <?php echo number_format($intakeResults['caloricIntake']); ?> calories/day
                                     </p>
@@ -1927,13 +2046,10 @@ $mysqli->close();
                                         the foods you eat on the nutrition labels on the packages.</p>
                                 <?php elseif (isset($bodyFatResults)): ?>
                                     <!-- DATABASE STUFF -->
-                                    <h2>Recommended Goal, Calorie and Protein Intake:</h2>
-                                    <p><u><strong>Recommended Goal:</strong>
-                                            <?php echo ucwords(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
+                                    <h2>Recommended Daily Calorie and Protein Intake:</h2>
+                                    <p><strong>Goal:</strong>
+                                        <?php echo ucwords(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
                                     </p></u>
-                                    <p><strong>Lifestyle:</strong>
-                                        <?php echo ucfirst($bodyFatResults['activityLevel']); ?>
-                                    </p>
                                     <p><strong>Caloric Intake:</strong>
                                         <?php echo number_format($bodyFatResults['caloricIntake']); ?> calories/day
                                     </p>
@@ -2013,12 +2129,12 @@ $mysqli->close();
                                             <?php
                                             $maintenanceRecommendations = [
                                                 'Chicken breast',
-                                                'Fish',
+                                                'Fish (tuna, tilapia, salmon)',
                                                 'Eggs',
                                                 'Quinoa',
                                                 'Brown rice',
                                                 'Mixed vegetables',
-                                                'Fruits (apple, orange, berries)',
+                                                'Fruits (bananas, apples, oranges, blueberries)',
                                                 'Nuts and seeds',
                                                 'Greek yogurt',
                                                 'Whole grains'
@@ -2091,12 +2207,12 @@ $mysqli->close();
                                             <?php
                                             $maintenanceRecommendations = [
                                                 'Chicken breast',
-                                                'Fish',
+                                                'Fish (tuna, tilapia, salmon)',
                                                 'Eggs',
                                                 'Quinoa',
                                                 'Brown rice',
                                                 'Mixed vegetables',
-                                                'Fruits (apple, orange, berries)',
+                                                'Fruits (bananas, apples, oranges, blueberries)',
                                                 'Nuts and seeds',
                                                 'Greek yogurt',
                                                 'Whole grains'
@@ -2240,8 +2356,8 @@ $mysqli->close();
         <div class="results-container" style="border: 1px solid #ddd; padding: 15px;">
             <div class="our_schedule_content" style="text-align: center;"> <!-- Center the content -->
                 <?php if (!isset($intakeResults) && isset($bodyFatResults)): ?>
-                    <h5 class="mt-5" style="font-size: 80px;">PROGRESS TRACKING</h5>
-                    <h2 class="mt-5"><u>
+                    <h5 class="mt-5" style="font-size: 50px;">PROGRESS TRACKING</h5>
+                    <h2 class="mt-5" style="font-size: 50px;"><u>
                             <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
                         </u></h2>
                 </div>
@@ -2265,7 +2381,8 @@ $mysqli->close();
 
                 <!-- Chart Section -->
                 <div id="chartContainer" style="text-align: center; margin-top: 20px;"> <!-- Center the chart -->
-                    <canvas id="bodyReportsChart"></canvas>
+                    <canvas id="bodyReportsChart" width="60" height="20"></canvas>
+
                 </div>
 
                 <!-- Chart Table Section -->
@@ -2361,6 +2478,155 @@ $mysqli->close();
                 </style>
             <?php endif; ?>
         </div>
+
+        <!-- ACTIVITY FEED TRACKER -->
+        <section class="activity-feed; mt-4">
+            <h3>Daily Activity Tracker</h3>
+            <div style="display: flex; justify-content: space-between;">
+                <div style="width: 30%;">
+                    <h4>Calories Consumed</h4>
+                    <canvas id="caloriesChart" width="400" height="200"></canvas>
+                </div>
+                <div style="width: 30%;">
+                    <h4>Protein Intake</h4>
+                    <canvas id="proteinChart" width="400" height="200"></canvas>
+                </div>
+                <div style="width: 30%;">
+                    <h4>Exercises Completed</h4>
+                    <canvas id="exerciseChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </section>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            <?php
+            // Determine exercise goal based on fitness level
+            $exerciseGoal = 5; // Default goal
+            switch (strtolower($fitnessLevel)) {
+                case 'beginner':
+                    $exerciseGoal = 3;
+                    break;
+                case 'intermediate':
+                    $exerciseGoal = 5;
+                    break;
+                case 'advanced':
+                    $exerciseGoal = 7;
+                    break;
+                default:
+                    $exerciseGoal = 5;
+                    break;
+            }
+            ?>
+
+            document.addEventListener('DOMContentLoaded', () => {
+                // Weekly labels and data for the last 7 days
+                const labels = <?php echo $labels; ?>;
+                const caloriesData = <?php echo $caloriesData; ?>;
+                const proteinData = <?php echo $proteinData; ?>;
+                const exerciseData = <?php echo $exerciseData; ?>;
+
+                const calorieGoal = <?php echo $bodyFatResults['caloricIntake']; ?>;
+                const proteinGoal = <?php echo $bodyFatResults['proteinIntake']; ?>;
+                const exerciseGoal = <?php echo $exerciseGoal ?>;  // Directly set exercise goal
+
+                // Calories Chart
+                new Chart(document.getElementById('caloriesChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Calories Consumed',
+                                data: caloriesData,
+                                backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Goal',
+                                data: Array(labels.length).fill(calorieGoal),
+                                type: 'line',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 2,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true, // Keeps the aspect ratio within the defined canvas size
+                        scales: {
+                            x: { title: { display: true, text: 'Days' } },
+                            y: { beginAtZero: true, title: { display: true, text: 'Calories' } }
+                        }
+                    }
+                });
+
+                // Protein Intake Chart
+                new Chart(document.getElementById('proteinChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Protein Intake (g)',
+                                data: proteinData,
+                                backgroundColor: 'rgba(153, 102, 255, 0.7)',
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Goal',
+                                data: Array(labels.length).fill(proteinGoal),
+                                type: 'line',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 2,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: { title: { display: true, text: 'Days' } },
+                            y: { beginAtZero: true, title: { display: true, text: 'Protein (g)' } }
+                        }
+                    }
+                });
+
+                // Exercises Completed Chart
+                new Chart(document.getElementById('exerciseChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Exercises Completed',
+                                data: exerciseData,
+                                backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Goal',
+                                data: Array(labels.length).fill(exerciseGoal),
+                                type: 'line',
+                                borderColor: 'rgba(255, 206, 86, 1)',
+                                borderWidth: 2,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: { title: { display: true, text: 'Days' } },
+                            y: { beginAtZero: true, title: { display: true, text: 'Exercises' } }
+                        }
+                    }
+                });
+            });
+        </script>
     <?php endif; ?>
 
 
@@ -2536,174 +2802,6 @@ $mysqli->close();
             </section>
         <?php endif; ?>
 
-        <!-- ACTIVITY FEED TRACKER -->
-        <section class="activity-feed">
-            <h3>Daily Activity Tracker</h3>
-            <div style="display: flex; justify-content: space-between;">
-                <div style="width: 30%;">
-                    <h4>Calories Consumed</h4>
-                    <canvas id="caloriesChart" width="400" height="200"></canvas>
-                </div>
-                <div style="width: 30%;">
-                    <h4>Protein Intake</h4>
-                    <canvas id="proteinChart" width="400" height="200"></canvas>
-                </div>
-                <div style="width: 30%;">
-                    <h4>Exercises Completed</h4>
-                    <canvas id="exerciseChart" width="400" height="200"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                // Common data fetching for all charts
-                const labels = <?php echo json_encode(array_keys($foodLogData)); ?>; // Days of the week as labels
-
-                const caloriesData = <?php echo json_encode(array_column($foodLogData, 'total_calories')); ?>;
-                const proteinData = <?php echo json_encode(array_column($foodLogData, 'total_protein')); ?>;
-                const exerciseData = <?php echo json_encode(array_column($exerciseLogData, 'exercises_completed')); ?>;
-
-                // Define dynamic limits/goals
-                const calorieGoal = <?php echo $bodyFatResults['caloricIntake']; ?>; // Set your dynamic goal for calories
-                const proteinGoal = <?php echo $bodyFatResults['proteinIntake']; ?>; // Set your dynamic goal for protein
-                const exerciseGoal = 5; // This could be dynamically set as well based on fitness level
-
-                // Chart for Calories Consumed
-                const ctxCalories = document.getElementById('caloriesChart').getContext('2d');
-                new Chart(ctxCalories, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Calories Consumed',
-                            data: caloriesData,
-                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1,
-                        }, {
-                            label: 'Goal',
-                            data: Array(labels.length).fill(calorieGoal),
-                            type: 'line',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 2,
-                            fill: false,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        indexAxis: 'y',
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Calories',
-                                    font: { size: 14 }
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Days',
-                                    font: { size: 14 }
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // Chart for Protein Intake
-                const ctxProtein = document.getElementById('proteinChart').getContext('2d');
-                new Chart(ctxProtein, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Protein Intake (g)',
-                            data: proteinData,
-                            backgroundColor: 'rgba(153, 102, 255, 0.7)',
-                            borderColor: 'rgba(153, 102, 255, 1)',
-                            borderWidth: 1,
-                        }, {
-                            label: 'Goal',
-                            data: Array(labels.length).fill(proteinGoal),
-                            type: 'line',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 2,
-                            fill: false,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        indexAxis: 'y',
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Protein (g)',
-                                    font: { size: 14 }
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Days',
-                                    font: { size: 14 }
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // Chart for Exercises Completed
-                const ctxExercise = document.getElementById('exerciseChart').getContext('2d');
-                new Chart(ctxExercise, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Exercises Completed',
-                            data: exerciseData,
-                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 1,
-                        }, {
-                            label: 'Goal',
-                            data: Array(labels.length).fill(exerciseGoal),
-                            type: 'line',
-                            borderColor: 'rgba(255, 206, 86, 1)',
-                            borderWidth: 2,
-                            fill: false,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        indexAxis: 'y',
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Exercises',
-                                    font: { size: 14 }
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Days',
-                                    font: { size: 14 }
-                                }
-                            }
-                        }
-                    }
-                });
-            });
-        </script>
-
         <!-- UNIFIED DIET AND EXERCISE PLANNING SECTION -->
         <?php if ($showDietPlanningSection && isset($goal_name)): ?>
             <?php if (in_array($plan, ['essential', 'premium', 'elite'])): ?>
@@ -2714,12 +2812,12 @@ $mysqli->close();
                                 <div class="our_schedule_content">
                                     <?php if (!empty($meal_plan)): ?>
                                         <h5 class="mt-5" style="font-size: 80px;">DIET PLAN</h5>
-                                        <h2><u><?php echo strtoupper($goal_name); ?></u></h2>
+                                        <h2><u><?php echo strtoupper($goal); ?></u></h2>
 
                                         <!-- Custom message based on the goal -->
                                         <?php
                                         $goalMessage = '';
-                                        $goal = strtolower($goal_name);
+                                        $goal = strtolower($goal);
                                         switch ($goal) {
                                             case 'maintenance':
                                                 $goalMessage = "The food curated for your diet plan is balanced with moderate calories and high in protein, designed to help you maintain your current body weight while optimizing your macronutrient intake.";
@@ -2748,8 +2846,14 @@ $mysqli->close();
                         $mealIndex = 0;
                         $totalMeals = count($meal_plan);
                         $dailyTotals = array();
-
-                        foreach ($days as $day): ?>
+                        $today = strtolower(date('l')); // Get the current day in lowercase
+                
+                        foreach ($days as $day):
+                            if (strtolower($day) !== $today) {
+                                continue; // Skip rendering for all days except today
+                            }
+                            $dayDate = date('Y-m-d', strtotime("this $day"));
+                            ?>
                             <div class="border-mealplan">
                                 <div class="container">
                                     <div class="row">
@@ -2797,7 +2901,7 @@ $mysqli->close();
                                                     <?php for ($i = 0; $i < count($timeSlots); $i++): ?>
                                                         <?php $foodItem = $meal_plan[$mealIndex % $totalMeals]; ?>
                                                         <td class="mealItem" data-day="<?php echo strtolower($day); ?>"
-                                                            data-time-slot="<?php echo $timeSlot; ?>"
+                                                            data-date="<?php echo $dayDate; ?>" data-time-slot="<?php echo $timeSlot; ?>"
                                                             data-calories="<?php echo $foodItem['energy_kcal']; ?>"
                                                             data-protein="<?php echo $foodItem['protein_g']; ?>">
                                                             <br><?php echo $foodItem['english_name']; ?><br>
@@ -2946,8 +3050,14 @@ $mysqli->close();
                             $exerciseIndex = 0;
                             $totalExercises = count($exercise_plan);
                             $dailyExerciseTotals = array();
+                            $today = strtolower(date('l')); // Get the current day in lowercase
+                
+                            foreach ($days as $day):
+                                if (strtolower($day) !== $today) {
+                                    continue; // Skip rendering for all days except today
+                                }
+                                ?>
 
-                            foreach ($days as $day): ?>
                                 <div class="border-mealplan mt-5">
                                     <div class="container">
                                         <div class="row">
@@ -2998,9 +3108,9 @@ $mysqli->close();
                                                         <?php for ($i = 0; $i < 6; $i++): ?>
                                                             <?php $exerciseItem = $exercise_plan[$exerciseIndex % $totalExercises]; ?>
                                                             <td class="exerciseItem" data-image="<?php echo $exerciseItem['image_link']; ?>"
-                                                                data-description="<?php echo $exerciseItem['description']; ?>">
-                                                                <br><strong>
-                                                                    <?php echo $exerciseItem['name']; ?><br></strong>
+                                                                data-description="<?php echo $exerciseItem['description']; ?>"
+                                                                data-date="<?php echo $dayDate; ?>">
+                                                                <br><strong><?php echo $exerciseItem['name']; ?><br></strong>
                                                                 <?php echo $exerciseItem['duration']; ?><br><br>
                                                                 <strong><?php echo $exerciseItem['intensity']; ?> Intensity</strong><br>
                                                                 <?php echo $exerciseItem['category']; ?><br><br>
@@ -3032,7 +3142,6 @@ $mysqli->close();
                                     }
                                     ?>
 
-                                    <!-- Render hidden input to pass fitnessLevel to JavaScript -->
                                     <input type="hidden" id="userFitnessLevel" value="<?php echo $fitnessLevel; ?>">
 
                                     <div id="total-exercises-<?php echo strtolower($day); ?>"
@@ -3232,267 +3341,6 @@ $mysqli->close();
                 });
             });
         });
-
-        // Function to log activity to the database via AJAX
-        function logActivity(type, data) {
-            fetch('log_activity.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ type, data })
-            })
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        console.log('Activity logged successfully');
-                    } else {
-                        console.error('Failed to log activity:', result.message);
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        }
-
-        // Function to attach event listeners to meal items
-        function attachEventListeners() {
-            const mealItems = document.querySelectorAll('.mealItem');
-            const tooltip = document.getElementById('tooltip'); // Tooltip element
-
-            mealItems.forEach(item => {
-                item.addEventListener('mouseenter', (e) => {
-                    const day = item.getAttribute('data-day');
-                    const calories = parseFloat(item.getAttribute('data-calories'));
-                    const protein = parseFloat(item.getAttribute('data-protein'));
-
-                    const totalElement = document.getElementById(`total-${day}`);
-                    const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
-                    const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
-
-                    const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
-                    const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
-
-                    const calorieColor = currentCalories >= maxCalories ? 'lightgreen' : 'white';
-                    const proteinColor = currentProtein >= maxProtein ? 'lightgreen' : 'white';
-
-                    tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
-            <span style="color:${calorieColor};">Calories: ${currentCalories} / ${maxCalories}</span><br>
-            <span style="color:${proteinColor};">Protein: ${currentProtein} g / ${maxProtein} g</span>`;
-
-                    tooltip.style.display = 'block';
-                });
-
-                item.addEventListener('mousemove', (e) => {
-                    tooltip.style.top = `${e.pageY + 10}px`;
-                    tooltip.style.left = `${e.pageX + 10}px`;
-                });
-
-                item.addEventListener('mouseleave', () => {
-                    tooltip.style.display = 'none';
-                });
-
-                item.addEventListener('click', () => {
-                    const day = item.getAttribute('data-day');
-                    const calories = parseFloat(item.getAttribute('data-calories'));
-                    const protein = parseFloat(item.getAttribute('data-protein'));
-
-                    const totalElement = document.getElementById(`total-${day}`);
-                    const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
-                    const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
-
-                    const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
-                    const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
-
-                    if (currentCalories >= maxCalories && !item.classList.contains('consumed')) {
-                        alert('You have reached the maximum calorie intake for the day.');
-                        return;
-                    }
-
-                    if (item.classList.contains('consumed')) {
-                        return;
-                    }
-
-                    item.classList.add('consumed');
-                    item.style.backgroundColor = 'green'; // Inline style for print
-                    item.style.color = 'white'; // Inline style for print
-
-                    totalElement.setAttribute('data-calories', currentCalories + calories);
-                    totalElement.setAttribute('data-protein', currentProtein + protein);
-
-                    const calorieElement = document.getElementById(`calories-${day}`);
-                    const proteinElement = document.getElementById(`protein-${day}`);
-
-                    const newCalorieValue = parseFloat(totalElement.getAttribute('data-calories'));
-                    calorieElement.innerText = newCalorieValue;
-                    calorieElement.style.color = newCalorieValue >= maxCalories ? 'lightgreen' : 'black';
-
-                    const newProteinValue = parseFloat(totalElement.getAttribute('data-protein'));
-                    proteinElement.innerText = newProteinValue;
-                    proteinElement.style.color = newProteinValue >= maxProtein ? 'lightgreen' : 'black';
-
-                    const calorieColor = newCalorieValue >= maxCalories ? 'lightgreen' : 'white';
-                    const proteinColor = newProteinValue >= maxProtein ? 'lightgreen' : 'white';
-
-                    tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
-            <span style="color:${calorieColor};">Calories: ${newCalorieValue} / ${maxCalories}</span><br>
-            <span style="color:${proteinColor};">Protein: ${newProteinValue} g / ${maxProtein} g</span>`;
-
-                    if (newCalorieValue >= maxCalories) {
-                        alert('You have reached the maximum calorie intake for the day.');
-                    }
-
-                    // Log the food consumption activity
-                    logActivity('food', {
-                        foodItem: item.innerText.trim(), // Get the food name from the cell
-                        calories,
-                        protein
-                    });
-                });
-            });
-        }
-
-        // Function to attach event listeners to exercise items
-        function attachExerciseEventListeners() {
-            const exerciseItems = document.querySelectorAll('.exerciseItem');
-            let tooltip = null;
-
-            exerciseItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    if (tooltip) {
-                        tooltip.style.display = 'none';
-                    }
-
-                    item.classList.toggle('completed');
-                    const day = item.closest('table').id.split('-')[1];
-                    updateExerciseCounter(day);
-
-                    // Log the exercise activity
-                    const exerciseName = item.querySelector('strong').innerText.trim(); // Get the exercise name
-                    const caloriesBurnt = 100; // Adjust based on your logic for calories burnt
-
-                    logActivity('exercise', {
-                        day,
-                        exerciseName,
-                        caloriesBurnt
-                    });
-                });
-
-                item.addEventListener('mouseenter', (e) => {
-                    const imageUrl = item.getAttribute('data-image');
-                    const description = item.getAttribute('data-description');
-
-                    if (imageUrl || description) {
-                        if (!tooltip) {
-                            tooltip = document.createElement('div');
-                            tooltip.className = 'exercise-tooltip';
-                            tooltip.style.position = 'absolute';
-                            tooltip.style.zIndex = '1000';
-                            document.body.appendChild(tooltip);
-                        }
-
-                        tooltip.innerHTML = `
-                <div style="background-color: white; padding: 15px; max-width: 400px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); border-radius: 15px;">
-                    <img src="${imageUrl}" alt="Exercise Image" style="width: 100%; max-width: 400px; height: auto; border-radius: 10px;">
-                    <p style="margin-top: 10px; font-size: 18px;">${description}</p>
-                </div>
-                `;
-
-                        tooltip.style.display = 'block';
-                        tooltip.style.left = `${e.pageX + 10}px`;
-                        tooltip.style.top = `${e.pageY + 10}px`;
-                    }
-                });
-
-                item.addEventListener('mousemove', (e) => {
-                    if (tooltip) {
-                        tooltip.style.left = `${e.pageX + 10}px`;
-                        tooltip.style.top = `${e.pageY + 10}px`;
-                    }
-                });
-
-                item.addEventListener('mouseleave', () => {
-                    if (tooltip) {
-                        tooltip.style.display = 'none';
-                    }
-                });
-            });
-        }
-
-
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const fitnessLevel = '<?php echo $fitnessLevel; ?>';
-            let maxExercises;
-
-            switch (fitnessLevel.toLowerCase()) {
-                case 'beginner':
-                    maxExercises = 5;
-                    break;
-                case 'intermediate':
-                    maxExercises = 8;
-                    break;
-                case 'advanced':
-                    maxExercises = 12;
-                    break;
-                default:
-                    maxExercises = 6;
-            }
-
-            const exerciseTables = document.querySelectorAll('table[id^="exercisePlanTable-"]');
-            exerciseTables.forEach(table => {
-                const exercises = table.querySelectorAll('.exerciseItem');
-                const shuffledExercises = Array.from(exercises).sort(() => Math.random() - 0.5);
-
-                shuffledExercises.forEach((exercise, index) => {
-                    if (index >= maxExercises) {
-                        exercise.classList.add('blurred');
-                    } else {
-                        exercise.classList.remove('blurred');
-                    }
-                });
-            });
-        });
-
-        // Function to get minimum exercises based on fitness level
-        function getMinimumExercises(fitnessLevel) {
-            switch (fitnessLevel.toLowerCase()) {
-                case 'beginner':
-                    return 3;
-                case 'intermediate':
-                    return 5;
-                case 'advanced':
-                    return 7;
-                default:
-                    return 5;
-            }
-        }
-
-        // Function to update the exercise counter
-        function updateExerciseCounter(day) {
-            const fitnessLevel = document.getElementById('userFitnessLevel').value;
-            const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
-            const minimumExercises = getMinimumExercises(fitnessLevel);
-            const exerciseCounter = document.getElementById(`exerciseCounter-${day}`);
-            exerciseCounter.innerText = completedExercises;
-
-            const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
-            if (completedExercises >= minimumExercises) {
-                minimumToComplete.innerHTML = `<span style="color: green;">${minimumExercises} - Minimum hit! Good job!</span>`;
-            } else {
-                minimumToComplete.innerHTML = `${minimumExercises}`;
-            }
-        }
-
-        // Initialize the event listeners
-        document.addEventListener('DOMContentLoaded', () => {
-            attachEventListeners();
-            attachExerciseEventListeners();
-
-            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-            days.forEach(day => {
-                updateExerciseCounter(day);
-            });
-        });
-
 
         document.addEventListener("DOMContentLoaded", function () {
             const ctx = document.getElementById('bodyReportsChart').getContext('2d');
@@ -3718,6 +3566,268 @@ $mysqli->close();
                         }
                     }
                 }
+            });
+        });
+
+        // Function to log activity to the database via AJAX
+        function logActivity(type, data) {
+            fetch('log_activity.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    type: type,
+                    data: data
+                })
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        console.log('Activity logged successfully');
+                    } else {
+                        console.error('Failed to log activity:', result.message);
+                    }
+                })
+                .catch(error => console.error('Error logging activity:', error));
+        }
+
+        // Function to attach event listeners to meal items
+        function attachEventListeners() {
+            const mealItems = document.querySelectorAll('.mealItem');
+            const tooltip = document.getElementById('tooltip'); // Tooltip element
+
+            mealItems.forEach(item => {
+                item.addEventListener('mouseenter', (e) => {
+                    const day = item.getAttribute('data-day');
+                    const calories = parseFloat(item.getAttribute('data-calories'));
+                    const protein = parseFloat(item.getAttribute('data-protein'));
+
+                    const totalElement = document.getElementById(`total-${day}`);
+                    const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
+                    const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
+
+                    const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
+                    const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
+
+                    const calorieColor = currentCalories >= maxCalories ? 'lightgreen' : 'white';
+                    const proteinColor = currentProtein >= maxProtein ? 'lightgreen' : 'white';
+
+                    tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
+                <span style="color:${calorieColor};">Calories: ${currentCalories} / ${maxCalories}</span><br>
+                <span style="color:${proteinColor};">Protein: ${currentProtein} g / ${maxProtein} g</span>`;
+
+                    tooltip.style.display = 'block';
+                });
+
+                item.addEventListener('mousemove', (e) => {
+                    tooltip.style.top = `${e.pageY + 10}px`;
+                    tooltip.style.left = `${e.pageX + 10}px`;
+                });
+
+                item.addEventListener('mouseleave', () => {
+                    tooltip.style.display = 'none';
+                });
+
+                item.addEventListener('click', () => {
+                    const day = item.getAttribute('data-day');
+                    const date = item.getAttribute('data-date'); // Fetch the specific date
+                    const calories = parseFloat(item.getAttribute('data-calories'));
+                    const protein = parseFloat(item.getAttribute('data-protein'));
+
+                    const totalElement = document.getElementById(`total-${day}`);
+                    const currentCalories = parseFloat(totalElement.getAttribute('data-calories')) || 0;
+                    const currentProtein = parseFloat(totalElement.getAttribute('data-protein')) || 0;
+
+                    const maxCalories = parseFloat(document.querySelector(`#calories-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
+                    const maxProtein = parseFloat(document.querySelector(`#protein-${day}`).nextSibling.nodeValue.split("/")[1].trim()) || 0;
+
+                    if (currentCalories >= maxCalories && !item.classList.contains('consumed')) {
+                        alert('You have reached the maximum calorie intake for the day.');
+                        return;
+                    }
+
+                    if (item.classList.contains('consumed')) {
+                        return;
+                    }
+
+                    item.classList.add('consumed');
+                    item.style.backgroundColor = 'green'; // Inline style for print
+                    item.style.color = 'white'; // Inline style for print
+
+                    totalElement.setAttribute('data-calories', currentCalories + calories);
+                    totalElement.setAttribute('data-protein', currentProtein + protein);
+
+                    const calorieElement = document.getElementById(`calories-${day}`);
+                    const proteinElement = document.getElementById(`protein-${day}`);
+
+                    const newCalorieValue = parseFloat(totalElement.getAttribute('data-calories'));
+                    calorieElement.innerText = newCalorieValue;
+                    calorieElement.style.color = newCalorieValue >= maxCalories ? 'lightgreen' : 'black';
+
+                    const newProteinValue = parseFloat(totalElement.getAttribute('data-protein'));
+                    proteinElement.innerText = newProteinValue;
+                    proteinElement.style.color = newProteinValue >= maxProtein ? 'lightgreen' : 'black';
+
+                    const calorieColor = newCalorieValue >= maxCalories ? 'lightgreen' : 'white';
+                    const proteinColor = newProteinValue >= maxProtein ? 'lightgreen' : 'white';
+
+                    tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
+                <span style="color:${calorieColor};">Calories: ${newCalorieValue} / ${maxCalories}</span><br>
+                <span style="color:${proteinColor};">Protein: ${newProteinValue} g / ${maxProtein} g</span>`;
+
+                    if (newCalorieValue >= maxCalories) {
+                        alert('You have reached the maximum calorie intake for the day.');
+                    }
+
+                    // Log the food consumption activity
+                    logActivity('food', {
+                        foodItem: item.innerText.trim(), // Get the food name from the cell
+                        calories,
+                        protein,
+                        date // Pass the date for correct logging
+                    });
+                });
+            });
+        }
+
+        // Function to attach event listeners to exercise items
+        function attachExerciseEventListeners() {
+            const exerciseItems = document.querySelectorAll('.exerciseItem');
+            let tooltip = null;
+
+            exerciseItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const date = item.getAttribute('data-date'); // Fetch the specific date for each exercise item
+                    item.classList.toggle('completed');
+                    const day = item.closest('table').id.split('-')[1];
+                    updateExerciseCounter(day);
+
+                    // Log the exercise activity
+                    const exerciseName = item.querySelector('strong').innerText.trim(); // Get the exercise name
+                    const caloriesBurnt = 100; // Adjust based on your logic for calories burnt
+
+                    logActivity('exercise', {
+                        day,
+                        exerciseName,
+                        caloriesBurnt,
+                        date // Pass the date for correct logging
+                    });
+                });
+
+                item.addEventListener('mouseenter', (e) => {
+                    const imageUrl = item.getAttribute('data-image');
+                    const description = item.getAttribute('data-description');
+
+                    if (imageUrl || description) {
+                        if (!tooltip) {
+                            tooltip = document.createElement('div');
+                            tooltip.className = 'exercise-tooltip';
+                            tooltip.style.position = 'absolute';
+                            tooltip.style.zIndex = '1000';
+                            document.body.appendChild(tooltip);
+                        }
+
+                        tooltip.innerHTML = `
+                    <div style="background-color: white; padding: 15px; max-width: 400px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); border-radius: 15px;">
+                        <img src="${imageUrl}" alt="Exercise Image" style="width: 100%; max-width: 400px; height: auto; border-radius: 10px;">
+                        <p style="margin-top: 10px; font-size: 18px;">${description}</p>
+                    </div>
+                `;
+
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = `${e.pageX + 10}px`;
+                        tooltip.style.top = `${e.pageY + 10}px`;
+                    }
+                });
+
+                item.addEventListener('mousemove', (e) => {
+                    if (tooltip) {
+                        tooltip.style.left = `${e.pageX + 10}px`;
+                        tooltip.style.top = `${e.pageY + 10}px`;
+                    }
+                });
+
+                item.addEventListener('mouseleave', () => {
+                    if (tooltip) {
+                        tooltip.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const fitnessLevel = '<?php echo $fitnessLevel; ?>';
+            let maxExercises;
+
+            switch (fitnessLevel.toLowerCase()) {
+                case 'beginner':
+                    maxExercises = 5;
+                    break;
+                case 'intermediate':
+                    maxExercises = 8;
+                    break;
+                case 'advanced':
+                    maxExercises = 12;
+                    break;
+                default:
+                    maxExercises = 6;
+            }
+
+            const exerciseTables = document.querySelectorAll('table[id^="exercisePlanTable-"]');
+            exerciseTables.forEach(table => {
+                const exercises = table.querySelectorAll('.exerciseItem');
+                const shuffledExercises = Array.from(exercises).sort(() => Math.random() - 0.5);
+
+                shuffledExercises.forEach((exercise, index) => {
+                    if (index >= maxExercises) {
+                        exercise.classList.add('blurred');
+                    } else {
+                        exercise.classList.remove('blurred');
+                    }
+                });
+            });
+        });
+
+        // Function to get minimum exercises based on fitness level
+        function getMinimumExercises(fitnessLevel) {
+            switch (fitnessLevel.toLowerCase()) {
+                case 'beginner':
+                    return 3;
+                case 'intermediate':
+                    return 5;
+                case 'advanced':
+                    return 7;
+                default:
+                    return 5;
+            }
+        }
+
+        // Function to update the exercise counter
+        function updateExerciseCounter(day) {
+            const fitnessLevel = document.getElementById('userFitnessLevel').value;
+            const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
+            const minimumExercises = getMinimumExercises(fitnessLevel);
+            const exerciseCounter = document.getElementById(`exerciseCounter-${day}`);
+            exerciseCounter.innerText = completedExercises;
+
+            const minimumToComplete = document.querySelector(`#total-exercises-${day} .minimum-to-complete`);
+            if (completedExercises >= minimumExercises) {
+                minimumToComplete.innerHTML = `<span style="color: green;">${minimumExercises} - Minimum hit! Good job!</span>`;
+            } else {
+                minimumToComplete.innerHTML = `${minimumExercises}`;
+            }
+        }
+
+        // Initialize the event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            attachEventListeners();
+            attachExerciseEventListeners();
+
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            days.forEach(day => {
+                updateExerciseCounter(day);
             });
         });
 
