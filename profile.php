@@ -610,17 +610,32 @@ if (isset($intakeResults['created_at']) && $intakeResults['created_at'] !== null
     // If intakeResults timestamp is available, use it
     $timestamp = strtotime($intakeResults['created_at']);
     $formattedDate = date("F j, Y   |   g:i A", $timestamp);
-    $generatedText = "Generated as of";
+    $generatedText = "";
 } elseif (isset($bodyFatResults['created_at']) && $bodyFatResults['created_at'] !== null) {
     // If intakeResults timestamp is not available but bodyFatResults timestamp is, use it
     $timestamp = strtotime($bodyFatResults['created_at']);
     $formattedDate = date("F j, Y   |   g:i A", $timestamp);
-    $generatedText = "Last generated on";
+    $generatedText = "";
 } else {
     // If neither timestamp is available
     $formattedDate = "No timestamp available";
     $generatedText = "";
 }
+
+// Calculate days ago message if timestamp is available
+$daysAgoMessage = '';
+if (isset($timestamp)) {
+    $currentDate = strtotime("now");
+    $diffInDays = floor(($currentDate - $timestamp) / (60 * 60 * 24));
+
+    // Set the "days ago" message
+    if ($diffInDays > 0) {
+        $daysAgoMessage = "($diffInDays days ago)";
+    } else {
+        $daysAgoMessage = "(Today)";
+    }
+}
+
 
 // Fetch the latest user transaction from transactions table, ordered by created_at descending
 $userTransactionsSql = "SELECT * FROM transactions WHERE username = ? ORDER BY created_at DESC LIMIT 1";
@@ -813,63 +828,6 @@ if (!function_exists('getArrow')) {
     }
 }
 
-// Fetch food activity log for the last 7 days
-$foodLogData = [];
-$foodQuery = "SELECT date, SUM(calories_consumed) as total_calories, SUM(protein_consumed) as total_protein
-               FROM food_activity_log
-               WHERE username = ? AND date >= CURDATE() - INTERVAL 6 DAY
-               GROUP BY date ORDER BY date";
-$stmt = $mysqli->prepare($foodQuery);
-$stmt->bind_param('s', $username);
-$stmt->execute();
-$result = $stmt->get_result();
-
-while ($row = $result->fetch_assoc()) {
-    $dayName = date('l', strtotime($row['date'])); // Get the day name (e.g., Monday)
-    $foodLogData[$dayName] = [
-        'total_calories' => $row['total_calories'],
-        'total_protein' => $row['total_protein']
-    ];
-}
-$stmt->close();
-
-// Fetch exercise activity log for the last 7 days
-$exerciseLogData = [];
-$exerciseQuery = "SELECT date, COUNT(*) as exercises_completed
-                  FROM exercise_activity_log
-                  WHERE username = ? AND date >= CURDATE() - INTERVAL 6 DAY
-                  GROUP BY date ORDER BY date";
-$stmt = $mysqli->prepare($exerciseQuery);
-$stmt->bind_param('s', $username);
-$stmt->execute();
-$result = $stmt->get_result();
-
-while ($row = $result->fetch_assoc()) {
-    $dayName = date('l', strtotime($row['date'])); // Get the day name (e.g., Monday)
-    $exerciseLogData[$dayName] = [
-        'exercises_completed' => $row['exercises_completed']
-    ];
-}
-$stmt->close();
-
-// Prepare data for chart
-$days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-$labels = []; // For chart labels
-
-foreach ($days as $day) {
-    // Assuming that we want to match the current week starting from Monday
-    $dateOfDay = date('Y-m-d', strtotime("last $day")); // Get the last occurrence of the day
-    $labels[] = $day; // Add day name to labels
-
-    if (!isset($foodLogData[$day])) {
-        $foodLogData[$day] = ['total_calories' => 0, 'total_protein' => 0];
-    }
-    if (!isset($exerciseLogData[$day])) {
-        $exerciseLogData[$day] = ['exercises_completed' => 0];
-    }
-}
-
-
 $mysqli->close();
 ?>
 
@@ -947,6 +905,7 @@ $mysqli->close();
             background-color: rgba(0, 0, 0, 0.6);
             position: relative;
             z-index: 2;
+
         }
 
         .navbar::before {
@@ -1034,25 +993,31 @@ $mysqli->close();
         }
 
         /* Plan-specific styling */
-        .plan-elite,
-        .plan-premium,
+        .plan-elite {
+            color: #9370DB;
+            font-weight: bold;
+        }
+
+        .plan-premium {
+            color: #9370DB;
+            font-weight: bold;
+        }
+
         .plan-essential {
             color: #9370DB;
             font-weight: bold;
         }
 
-        /* Calculator Section */
+
         .calculator-section {
             text-align: center;
-            padding: 50px 20px;
-            /* Adjusted for smaller screens */
+            padding: 50px 0;
             background-color: #f4f6f9;
         }
 
         .calculator-form,
         .results-form {
-            max-width: 100%;
-            /* Allow it to fill the width */
+            max-width: 500px;
             margin: 0 auto;
             border: 1px solid #ddd;
             padding: 30px;
@@ -1066,8 +1031,7 @@ $mysqli->close();
         .calculator-form h2,
         .results-form h2 {
             margin-bottom: 20px;
-            font-size: 2.5rem;
-            /* Adjusted font size for better scaling */
+            font-size: 60px;
             color: #333;
             font-weight: 600;
         }
@@ -1077,8 +1041,7 @@ $mysqli->close();
             display: block;
             margin-bottom: 10px;
             font-weight: 500;
-            font-size: 1rem;
-            /* Use rem for better scaling */
+            font-size: 16px;
             color: #555;
         }
 
@@ -1194,9 +1157,9 @@ $mysqli->close();
             flex-wrap: nowrap;
             overflow-x: auto;
             width: 1870px;
-            /* Adjust as needed */
+            /* ^ affects the width of the horizontal scroll container of the table*/
             max-width: 100%;
-            /* Adjust as needed */
+            /* ^ affects the width of the viewport of the page*/
             text-align: center;
         }
 
@@ -1242,6 +1205,7 @@ $mysqli->close();
             text-align: center;
         }
 
+
         .exerciseItem {
             cursor: pointer;
         }
@@ -1274,84 +1238,82 @@ $mysqli->close();
             object-fit: cover;
             /* Maintain the aspect ratio and cover the container */
         }
+    </style>
 
-        /* Media Queries for Responsiveness */
-        @media (max-width: 768px) {
-
-            .calculator-form,
-            .results-form {
-                padding: 20px;
-                /* Adjust padding for smaller screens */
-            }
-
-            .calculator-form h2,
-            .results-form h2 {
-                font-size: 2rem;
-                /* Smaller font size for mobile */
-            }
-
-            .calculator-form label,
-            .results-form label {
-                font-size: 0.9rem;
-                /* Slightly smaller labels */
-            }
-
-            .calculator-section {
-                padding: 30px 15px;
-                /* Adjust overall section padding */
-            }
-
-            .btn-calculate,
-            .btn-recalculate {
-                width: 100%;
-                /* Full-width buttons on smaller screens */
-            }
-
-            /* Infographic section */
-            .infographic-section {
-                height: auto;
-                /* Ensure it can expand on mobile */
-                text-align: center;
-                /* Center the content */
-            }
-        }
-
-        /* Add print styles */
+    <style>
         @media print {
-            #resultsSection {
-                position: relative;
-                left: 0;
-                top: 0;
-                width: 100%;
+
+            /* Page styling for better structure */
+            body {
+                font-family: Arial, sans-serif;
+                color: #333;
             }
 
-            /* Optional: Style adjustments to match on-screen layout */
-            .container {
+            /* Container and form-section adjustments */
+            .container,
+            .form-section {
+                width: 100%;
                 padding: 20px;
                 margin: 0 auto;
-            }
-
-            .results-form {
                 border: 1px solid #ddd;
-                padding: 15px;
-                margin-bottom: 20px;
+                page-break-inside: avoid;
+                /* Prevents sections from breaking between pages */
             }
 
-            /* Ensure headings maintain the same size and spacing */
-            h2 {
+            /* Form-style section headers */
+            .results-form h2,
+            .results-container h2,
+            .results-container h5 {
                 font-size: 24px;
-                margin-bottom: 10px;
+                color: #333;
+                background-color: #f4f4f4;
+                padding: 10px;
+                margin: 0 -20px 20px;
+                border-bottom: 1px solid #ddd;
             }
 
-            p {
+            /* Styling for each section in a form layout */
+            .form-section {
+                border: 1px solid #007bff;
+                border-radius: 5px;
+                margin-bottom: 15px;
+                padding: 15px;
+            }
+
+            .form-section p,
+            .form-section ul,
+            .form-section .results-container {
+                font-size: 16px;
+                line-height: 1.5;
                 margin: 5px 0;
+                padding-left: 10px;
             }
 
-            /* Hide the print button */
-            button {
-                display: none;
+            /* Table styling for organized data presentation */
+            .table,
+            .border-mealplan {
+                border: 1px solid #007bff;
+                border-collapse: collapse;
+                width: 100%;
+                margin: 10px 0;
+            }
+
+            .table th,
+            .table td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+
+            /* Hide buttons and other non-print elements */
+            button,
+            #saveButton,
+            #message,
+            #tooltip {
+                display: none !important;
             }
         }
+
 
         #tooltip {
             display: none;
@@ -1634,699 +1596,758 @@ $mysqli->close();
         <div id="resultsSection">
             <div class="results-container" style="border: 1px solid #ddd; padding: 15px;">
                 <div class="our_schedule_content">
-                    <?php if (!isset($intakeResults) && isset($bodyFatResults)): ?>
-                        <h5 class="mt-5 mb-5" style="font-size: 80px;">RECOMMENDED GOAL <br></h5>
-                        <h2 data-aos="fade-up" style="font-size: 80px;" class="mt-5"><u>
-                                <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
-                            </u></h2>
+                    <?php
+                    // Set the time zone to ensure the correct time is displayed
+                    date_default_timezone_set('Asia/Manila'); // e.g., 'America/New_York'
+                    
+                    // Set the formatted date based on the source of the data
+                    if (isset($intakeResults)) {
+                        // Use the current session's date and time
+                        $formattedDate = date("F j, Y | g:i A"); // Today's date and time for session data
+                    } elseif (isset($bodyFatResults) && isset($bodyFatResults['dateRecorded'])) {
+                        // Use the date recorded from the database, if available
+                        $formattedDate = date("F j, Y | g:i A", strtotime($bodyFatResults['dateRecorded']));
+                    }
+                    ?>
+
+                    <?php if (isset($intakeResults)): ?>
+                        <!-- Display for Current Session Data -->
+                        <h5 class="mt-5 mb-5" style="font-size: 80px;">RECOMMENDED GOAL<br></h5>
+                        <h2 data-aos="fade-up" style="font-size: 80px;" class="mt-5">
+                            <u><?php echo strtoupper(str_replace('-', ' ', $intakeResults['goal'])); ?></u>
+                        </h2>
                         <h5 class="mt-5" style="font-size: 50px;">AS OF</h5><br>
-                        <h2 data-aos="fade-up" style="font-size: 60px;"><u><?php echo $formattedDate; ?> </u></h2>
+                        <h2 data-aos="fade-up" style="font-size: 60px;"><u><?php echo $formattedDate; ?></u></h2>
+
+                    <?php elseif (isset($bodyFatResults)): ?>
+                        <!-- Display for Database Data -->
+                        <h5 class="mt-5 mb-5" style="font-size: 80px;">RECOMMENDED GOAL<br></h5>
+                        <h2 data-aos="fade-up" style="font-size: 80px;" class="mt-5">
+                            <u><?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?></u>
+                        </h2>
+                        <h5 class="mt-5" style="font-size: 50px;">AS OF</h5><br>
+                        <h2 data-aos="fade-up" style="font-size: 60px;"><u><?php echo $formattedDate; ?></u></h2>
+                        <h5 style="font-size: 40px;"><?php echo $daysAgoMessage; ?></h5>
                     <?php endif; ?>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="lower-section">
-                <div class="horizontal-display">
-                    <section class="calculator-results">
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
 
-                                    <!-- Current Session Results -->
-                                    <?php if (isset($intakeResults)): ?>
-                                        <div class="container">
-                                            <div class="row">
-                                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                                    <div class="results-form form-section">
-                                                        <h2>Current BMI:</h2>
-                                                        <?php if (isset($intakeResults['weight'])): ?>
-                                                            <p><strong>Your Weight:</strong>
-                                                                <?php echo $intakeResults['weight']; ?> kg</p>
-                                                        <?php endif; ?>
-                                                        <?php if (isset($intakeResults['height'])): ?>
-                                                            <p><strong>Your Height:</strong>
-                                                                <?php echo $intakeResults['height']; ?> cm</p>
-                                                        <?php endif; ?>
-                                                        <p><strong>Your BMI:</strong>
-                                                            <?php echo number_format($bmiResults['bmi'], 2); ?>
-                                                        </p>
-                                                        <p><strong>Weight Category:</strong> <?php echo $bmiCategory; ?>
-                                                        </p>
-                                                        <?php
-                                                        $bmiDifference = $bmiResults['bmiDifference'];
-                                                        $lowerUnderweightRange = $bmiResults['bmi'] - $bmiDifference['underweight'];
-                                                        ?>
-                                                        <p><strong>Underweight BMI:</strong> 18.50 & below /
-                                                            (<?php echo number_format(getWeightFromBMI(18.5, $bmiHeight), 2); ?>
-                                                            kg & below)
-                                                        </p>
-                                                        <?php
-                                                        $lowerNormalRange = 18.5;
-                                                        $upperNormalRange = 24.9;
-                                                        $lowerOverweightRange = 25;
-                                                        $upperOverweightRange = 29.9;
-                                                        $lowerObeseRange = 30;
-                                                        ?>
-                                                        <p><strong>Normal BMI:</strong> 18.50 - 24.99 /
-                                                            (<?php echo number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2); ?>
-                                                            kg -
-                                                            <?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
-                                                            kg)
-                                                        </p>
-                                                        <p><strong>Overweight BMI:</strong> 25 - 29.99 /
-                                                            (<?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
-                                                            kg -
-                                                            <?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
-                                                            kg)
-                                                        </p>
-                                                        <p><strong>Obese BMI:</strong>
-                                                            <?php echo number_format($lowerObeseRange, 2); ?> & above /
-                                                            (<?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
-                                                            kg & above)
-                                                        </p>
+    <div class="lower-section">
+        <div class="horizontal-display">
+            <section class="calculator-results">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
 
-                                                    <?php elseif (isset($bodyFatResults)): ?>
-                                                        <div class="container">
-                                                            <div class="row">
-                                                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                                                    <div class="results-form form-section">
-                                                                        <h2>BMI:</h2>
-                                                                        <p><strong>Your Weight:</strong>
-                                                                            <?php echo $savedUserInfo['bmiWeight']; ?> kg
-                                                                        </p>
-                                                                        <p><strong>Your Height:</strong>
-                                                                            <?php echo $savedUserInfo['bmiHeight']; ?> cm
-                                                                        </p>
-                                                                        <p><strong>Your BMI:</strong>
-                                                                            <?php echo number_format($bodyFatResults['bmi'], 2); ?>
-                                                                            cm
-                                                                        </p>
-                                                                        <p><strong>Weight Category:</strong>
-                                                                            <?php echo $bodyFatResults['bmiCategory']; ?>
-                                                                        </p>
-                                                                        <p><strong>Underweight BMI:</strong> 18.50 & below /
-                                                                            (<?php echo number_format(getWeightFromBMI(18.5, $bmiHeight), 2); ?>
-                                                                            kg & below)
-                                                                        </p>
-                                                                        <?php
-                                                                        $lowerNormalRange = 18.5;
-                                                                        $upperNormalRange = 24.9;
-                                                                        $lowerOverweightRange = 25;
-                                                                        $upperOverweightRange = 29.9;
-                                                                        $lowerObeseRange = 30;
-                                                                        ?>
-                                                                        <p><strong>Normal BMI:</strong> 18.50 - 24.99 /
-                                                                            (<?php echo number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2); ?>
-                                                                            kg -
-                                                                            <?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
-                                                                            kg)
-                                                                        </p>
-                                                                        <p><strong>Overweight BMI:</strong> 25 - 29.99 /
-                                                                            (<?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
-                                                                            kg -
-                                                                            <?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
-                                                                            kg)
-                                                                        </p>
-                                                                        <p><strong>Obese BMI:</strong>
-                                                                            <?php echo number_format($lowerObeseRange, 2); ?>
-                                                                            & above /
-                                                                            (<?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
-                                                                            kg & above)
-                                                                        </p>
-                                                                    <?php endif; ?>
-                                                                </div>
-                                                            </div>
+                            <!-- Current Session Results -->
+                            <?php if (isset($intakeResults)): ?>
+                                <div class="container">
+                                    <div class="row">
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                            <div class="results-form form-section">
+                                                <h2>Current BMI:</h2>
+                                                <?php if (isset($intakeResults['weight'])): ?>
+                                                    <p><strong>Your Weight:</strong>
+                                                        <?php echo $intakeResults['weight']; ?> kg</p>
+                                                <?php endif; ?>
+                                                <?php if (isset($intakeResults['height'])): ?>
+                                                    <p><strong>Your Height:</strong>
+                                                        <?php echo $intakeResults['height']; ?> cm</p>
+                                                <?php endif; ?>
+                                                <p><strong>Your BMI:</strong>
+                                                    <?php echo number_format($bmiResults['bmi'], 2); ?>
+                                                </p>
+                                                <p><strong>Weight Category:</strong> <?php echo $bmiCategory; ?>
+                                                </p>
+                                                <?php
+                                                $bmiDifference = $bmiResults['bmiDifference'];
+                                                $lowerUnderweightRange = $bmiResults['bmi'] - $bmiDifference['underweight'];
+                                                ?>
+                                                <p><strong>Underweight BMI:</strong> 18.50 & below /
+                                                    (<?php echo number_format(getWeightFromBMI(18.5, $bmiHeight), 2); ?>
+                                                    kg & below)
+                                                </p>
+                                                <?php
+                                                $lowerNormalRange = 18.5;
+                                                $upperNormalRange = 24.9;
+                                                $lowerOverweightRange = 25;
+                                                $upperOverweightRange = 29.9;
+                                                $lowerObeseRange = 30;
+                                                ?>
+                                                <p><strong>Normal BMI:</strong> 18.50 - 24.99 /
+                                                    (<?php echo number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2); ?>
+                                                    kg -
+                                                    <?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
+                                                    kg)
+                                                </p>
+                                                <p><strong>Overweight BMI:</strong> 25 - 29.99 /
+                                                    (<?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
+                                                    kg -
+                                                    <?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
+                                                    kg)
+                                                </p>
+                                                <p><strong>Obese BMI:</strong>
+                                                    <?php echo number_format($lowerObeseRange, 2); ?> & above /
+                                                    (<?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
+                                                    kg & above)
+                                                </p>
+
+                                            <?php elseif (isset($bodyFatResults)): ?>
+                                                <div class="container">
+                                                    <div class="row">
+                                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                                            <div class="results-form form-section">
+                                                                <h2>BMI:</h2>
+                                                                <p><strong>Your Weight:</strong>
+                                                                    <?php echo $savedUserInfo['bmiWeight']; ?> kg
+                                                                </p>
+                                                                <p><strong>Your Height:</strong>
+                                                                    <?php echo $savedUserInfo['bmiHeight']; ?> cm
+                                                                </p>
+                                                                <p><strong>Your BMI:</strong>
+                                                                    <?php echo number_format($bodyFatResults['bmi'], 2); ?>
+                                                                    cm
+                                                                </p>
+                                                                <p><strong>Weight Category:</strong>
+                                                                    <?php echo $bodyFatResults['bmiCategory']; ?>
+                                                                </p>
+                                                                <p><strong>Underweight BMI:</strong> 18.50 & below /
+                                                                    (<?php echo number_format(getWeightFromBMI(18.5, $bmiHeight), 2); ?>
+                                                                    kg & below)
+                                                                </p>
+                                                                <?php
+                                                                $lowerNormalRange = 18.5;
+                                                                $upperNormalRange = 24.9;
+                                                                $lowerOverweightRange = 25;
+                                                                $upperOverweightRange = 29.9;
+                                                                $lowerObeseRange = 30;
+                                                                ?>
+                                                                <p><strong>Normal BMI:</strong> 18.50 - 24.99 /
+                                                                    (<?php echo number_format(getWeightFromBMI($lowerNormalRange, $bmiHeight), 2); ?>
+                                                                    kg -
+                                                                    <?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
+                                                                    kg)
+                                                                </p>
+                                                                <p><strong>Overweight BMI:</strong> 25 - 29.99 /
+                                                                    (<?php echo number_format(getWeightFromBMI($lowerOverweightRange, $bmiHeight), 2); ?>
+                                                                    kg -
+                                                                    <?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
+                                                                    kg)
+                                                                </p>
+                                                                <p><strong>Obese BMI:</strong>
+                                                                    <?php echo number_format($lowerObeseRange, 2); ?>
+                                                                    & above /
+                                                                    (<?php echo number_format(getWeightFromBMI($upperOverweightRange, $bmiHeight), 2); ?>
+                                                                    kg & above)
+                                                                </p>
+                                                            <?php endif; ?>
                                                         </div>
                                                     </div>
-                    </section>
+                                                </div>
+                                            </div>
+            </section>
 
-                    <!-- Body Fat Results Section -->
-                    <section class="calculator-results">
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                    <div class="results-form form-section">
 
-                                        <?php if (isset($intakeResults)): ?>
-                                            <!-- SESSION DATA -->
-                                            <h2>Current Body Fat:</h2>
-                                            <p><strong>Age:</strong> <?php echo $age; ?> years</p>
-                                            <p><strong>Gender:</strong> <?php echo ucfirst($gender); ?></p>
-                                            <p><strong>Waist Circumference:</strong> <?php echo $waist; ?> cm</p>
-                                            <p><strong>Neck Circumference:</strong> <?php echo $neck; ?> cm</p>
-                                            <p><strong>Height:</strong> <?php echo $bmiHeight; ?> cm</p>
-                                            <?php if (isset($hip) && $hip !== '' && $hip != 0): ?>
-                                                <p><strong>Hip Circumference:</strong> <?php echo $hip; ?> cm</p>
-                                            <?php endif; ?>
-                                            <?php if (isset($thigh) && $thigh !== '' && $thigh != 0): ?>
-                                                <p><strong>Thigh Circumference:</strong> <?php echo $thigh; ?> cm</p>
-                                            <?php endif; ?>
-                                            <p><strong>Body Fat Percentage:</strong>
-                                                <?php echo number_format($bodyFatPercentage, 2); ?>%</p>
-                                            <p><strong>Fat Body Mass:</strong> <?php echo number_format($fatMass, 2); ?> kg
-                                            </p>
-                                            <p><strong>Lean Body Mass:</strong> <?php echo number_format($leanMass, 2); ?>
-                                                kg</p>
+            <!-- Body Fat Results Section -->
+            <section class="calculator-results">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            <div class="results-form form-section">
 
-                                            <!-- Check for negative values in session data -->
-                                            <?php
-                                            $hasNegativeValueSession = $age < 0 || $waist < 0 || $neck < 0 || $bmiHeight < 0 || $bodyFatPercentage < 0 || $fatMass < 0 || $leanMass < 0 || (isset($hip) && $hip < 0) || (isset($thigh) && $thigh < 0);
-                                            ?>
+                                <?php if (isset($intakeResults)): ?>
+                                    <!-- SESSION DATA -->
+                                    <h2>Current Body Fat:</h2>
+                                    <p><strong>Age:</strong> <?php echo $age; ?> years</p>
+                                    <p><strong>Gender:</strong> <?php echo ucfirst($gender); ?></p>
+                                    <p><strong>Waist Circumference:</strong> <?php echo $waist; ?> cm</p>
+                                    <p><strong>Neck Circumference:</strong> <?php echo $neck; ?> cm</p>
+                                    <p><strong>Height:</strong> <?php echo $bmiHeight; ?> cm</p>
+                                    <?php if (isset($hip) && $hip !== '' && $hip != 0): ?>
+                                        <p><strong>Hip Circumference:</strong> <?php echo $hip; ?> cm</p>
+                                    <?php endif; ?>
+                                    <?php if (isset($thigh) && $thigh !== '' && $thigh != 0): ?>
+                                        <p><strong>Thigh Circumference:</strong> <?php echo $thigh; ?> cm</p>
+                                    <?php endif; ?>
+                                    <p><strong>Body Fat Percentage:</strong>
+                                        <?php echo number_format($bodyFatPercentage, 2); ?>%</p>
+                                    <p><strong>Fat Body Mass:</strong> <?php echo number_format($fatMass, 2); ?> kg
+                                    </p>
+                                    <p><strong>Lean Body Mass:</strong> <?php echo number_format($leanMass, 2); ?>
+                                        kg</p>
 
-                                            <p><strong>Important Note:</strong>
-                                                <?php if ($hasNegativeValueSession): ?>
-                                                    Seeing negative values? There might be inaccurate body measurements.
-                                                    <br>Click <button type="button" onclick="unlockCalculatorFields()"
-                                                        class="btn btn-secondary btn-sm">Re-enter Values</button> to adjust.
-                                                <?php endif; ?>
-                                                <br><br>
-                                                The results of these calculations are estimates based on many assumptions.
-                                                For accurate measurements of body fat, consider using tools like a skin
-                                                caliper, bioelectric impedance analysis, or hydrostatic density testing.
-                                            </p>
+                                    <!-- Check for negative values in session data -->
+                                    <?php
+                                    $hasNegativeValueSession = $age < 0 || $waist < 0 || $neck < 0 || $bmiHeight < 0 || $bodyFatPercentage < 0 || $fatMass < 0 || $leanMass < 0 || (isset($hip) && $hip < 0) || (isset($thigh) && $thigh < 0);
+                                    ?>
 
-                                        <?php elseif (isset($bodyFatResults)): ?>
-                                            <!-- DATABASE DATA -->
-                                            <h2>Body Fat:</h2>
-                                            <p><strong>Age:</strong> <?php echo $savedUserInfo['age']; ?> years</p>
-                                            <p><strong>Gender:</strong> <?php echo ucfirst($savedUserInfo['gender']); ?></p>
-                                            <p><strong>Waist Circumference:</strong> <?php echo $savedUserInfo['waist']; ?>
-                                                cm</p>
-                                            <p><strong>Neck Circumference:</strong> <?php echo $savedUserInfo['neck']; ?> cm
-                                            </p>
-                                            <p><strong>Height:</strong> <?php echo $savedUserInfo['bmiHeight']; ?> cm</p>
-                                            <?php if (isset($hip) && $hip !== '' && $hip != 0): ?>
-                                                <p><strong>Hip Circumference:</strong> <?php echo $hip; ?> cm</p>
-                                            <?php endif; ?>
-                                            <?php if (isset($thigh) && $thigh !== '' && $thigh != 0): ?>
-                                                <p><strong>Thigh Circumference:</strong> <?php echo $thigh; ?> cm</p>
-                                            <?php endif; ?>
-                                            <p><strong>Body Fat Percentage:</strong>
-                                                <?php echo number_format($bodyFatResults['bodyFatPercentage'], 2); ?>%</p>
-                                            <p><strong>Fat Body Mass:</strong>
-                                                <?php echo number_format($bodyFatResults['fatMass'], 2); ?> kg</p>
-                                            <p><strong>Lean Body Mass:</strong>
-                                                <?php echo number_format($bodyFatResults['leanMass'], 2); ?> kg</p>
-
-                                            <!-- Check for negative values in database data -->
-                                            <?php
-                                            $hasNegativeValueDatabase = $savedUserInfo['age'] < 0 || $savedUserInfo['waist'] < 0 || $savedUserInfo['neck'] < 0 || $savedUserInfo['bmiHeight'] < 0 || $bodyFatResults['bodyFatPercentage'] < 0 || $bodyFatResults['fatMass'] < 0 || $bodyFatResults['leanMass'] < 0 || (isset($hip) && $hip < 0) || (isset($thigh) && $thigh < 0);
-                                            ?>
-
-                                            <p><strong>Important Note:</strong>
-                                                <?php if ($hasNegativeValueDatabase): ?>
-                                                    Seeing negative values? There might be inaccurate body measurements.
-                                                    <br>Click <button type="button" onclick="unlockCalculatorFields()"
-                                                        class="btn btn-secondary btn-sm">Re-enter Values</button> to adjust.
-                                                <?php endif; ?>
-                                                <br><br>
-                                                The results of these calculations are estimates based on many assumptions.
-                                                For accurate measurements of body fat, consider using tools like a skin
-                                                caliper, bioelectric impedance analysis, or hydrostatic density testing.
-                                            </p>
+                                    <p><strong>Important Note:</strong>
+                                        <?php if ($hasNegativeValueSession): ?>
+                                            Seeing negative values? There might be inaccurate body measurements.
+                                            <br>Click <button type="button" onclick="unlockCalculatorFields()"
+                                                class="btn btn-secondary btn-sm">Re-enter Values</button> to adjust.
                                         <?php endif; ?>
-                                    </div>
-                                </div>
+                                        <br><br>
+                                        The results of these calculations are estimates based on many assumptions.
+                                        For accurate measurements of body fat, consider using tools like a skin
+                                        caliper, bioelectric impedance analysis, or hydrostatic density testing.
+                                    </p>
+
+                                <?php elseif (isset($bodyFatResults)): ?>
+                                    <!-- DATABASE DATA -->
+                                    <h2>Body Fat:</h2>
+                                    <p><strong>Age:</strong> <?php echo $savedUserInfo['age']; ?> years</p>
+                                    <p><strong>Gender:</strong> <?php echo ucfirst($savedUserInfo['gender']); ?></p>
+                                    <p><strong>Waist Circumference:</strong> <?php echo $savedUserInfo['waist']; ?>
+                                        cm</p>
+                                    <p><strong>Neck Circumference:</strong> <?php echo $savedUserInfo['neck']; ?> cm
+                                    </p>
+                                    <p><strong>Height:</strong> <?php echo $savedUserInfo['bmiHeight']; ?> cm</p>
+                                    <?php if (isset($hip) && $hip !== '' && $hip != 0): ?>
+                                        <p><strong>Hip Circumference:</strong> <?php echo $hip; ?> cm</p>
+                                    <?php endif; ?>
+                                    <?php if (isset($thigh) && $thigh !== '' && $thigh != 0): ?>
+                                        <p><strong>Thigh Circumference:</strong> <?php echo $thigh; ?> cm</p>
+                                    <?php endif; ?>
+                                    <p><strong>Body Fat Percentage:</strong>
+                                        <?php echo number_format($bodyFatResults['bodyFatPercentage'], 2); ?>%</p>
+                                    <p><strong>Fat Body Mass:</strong>
+                                        <?php echo number_format($bodyFatResults['fatMass'], 2); ?> kg</p>
+                                    <p><strong>Lean Body Mass:</strong>
+                                        <?php echo number_format($bodyFatResults['leanMass'], 2); ?> kg</p>
+
+                                    <!-- Check for negative values in database data -->
+                                    <?php
+                                    $hasNegativeValueDatabase = $savedUserInfo['age'] < 0 || $savedUserInfo['waist'] < 0 || $savedUserInfo['neck'] < 0 || $savedUserInfo['bmiHeight'] < 0 || $bodyFatResults['bodyFatPercentage'] < 0 || $bodyFatResults['fatMass'] < 0 || $bodyFatResults['leanMass'] < 0 || (isset($hip) && $hip < 0) || (isset($thigh) && $thigh < 0);
+                                    ?>
+
+                                    <p><strong>Important Note:</strong>
+                                        <?php if ($hasNegativeValueDatabase): ?>
+                                            Seeing negative values? There might be inaccurate body measurements.
+                                            <br>Click <button type="button" onclick="unlockCalculatorFields()"
+                                                class="btn btn-secondary btn-sm">Re-enter Values</button> to adjust.
+                                        <?php endif; ?>
+                                        <br><br>
+                                        The results of these calculations are estimates based on many assumptions.
+                                        For accurate measurements of body fat, consider using tools like a skin
+                                        caliper, bioelectric impedance analysis, or hydrostatic density testing.
+                                    </p>
+                                <?php endif; ?>
                             </div>
                         </div>
-                    </section>
-
-                    <script>
-                        function unlockCalculatorFields() {
-                            // Unlock all input fields, selects, and the Recalculate button in the calculator form
-                            document.querySelectorAll('#calculatorForm input, #calculatorForm select').forEach(field => {
-                                field.disabled = false;
-                            });
-                            document.querySelector('#recalculateButton').disabled = false; // Enable the recalculate button
-                        }
-                    </script>
-
-
-                    <!-- Caloric and Protein Intake Results Section -->
-                    <section class="calculator-results">
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                    <div class="results-form form-section">
-                                        <?php if (isset($intakeResults)): ?>
-                                            <!-- SESSION STUFF -->
-                                            <h2>Current Recommended Goal, Calorie and Protein Intake:</h2>
-                                            <p><u><strong>Recommended Goal:</strong>
-                                                    <?php echo ucwords(str_replace('-', ' ', $intakeResults['goal'])); ?>
-                                            </p>
-                                            <p><strong>Lifestyle:</strong> <?php echo ucfirst($activityLevel); ?></p></u>
-                                            <p><strong>Caloric Intake:</strong>
-                                                <?php echo number_format($intakeResults['caloricIntake']); ?> calories/day
-                                            </p>
-                                            <p><strong>Protein Intake:</strong>
-                                                <?php echo number_format($intakeResults['proteinIntake']); ?> grams/day</p>
-                                            <p><strong>Important Note:</strong> You can find the caloric and protein
-                                                contents of
-                                                the foods you eat on the nutrition labels on the packages.</p>
-                                        <?php elseif (isset($bodyFatResults)): ?>
-                                            <!-- DATABASE STUFF -->
-                                            <h2>Recommended Goal, Calorie and Protein Intake:</h2>
-                                            <p><u><strong>Recommended Goal:</strong>
-                                                    <?php echo ucwords(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
-                                            </p></u>
-                                            <p><strong>Lifestyle:</strong>
-                                                <?php echo ucfirst($bodyFatResults['activityLevel']); ?>
-                                            </p>
-                                            <p><strong>Caloric Intake:</strong>
-                                                <?php echo number_format($bodyFatResults['caloricIntake']); ?> calories/day
-                                            </p>
-                                            <p><strong>Protein Intake:</strong>
-                                                <?php echo number_format($bodyFatResults['proteinIntake']); ?> grams/day</p>
-                                            <p><strong>Important Note:</strong> You can find the caloric and protein
-                                                contents of
-                                                the foods you eat on the nutrition labels on the packages.</p>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Food Recommendations Section -->
-                    <section class="calculator-results">
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                                    <div class="results-form form-section">
-                                        <?php if (isset($intakeResults)): ?>
-                                            <!-- SESSION STUFF -->
-                                            <h2>Current Food Recommendations:</h2>
-                                            <h2><u>
-                                                    <?php echo strtoupper(str_replace('-', ' ', $intakeResults['goal'])); ?>
-                                                </u></h2>
-                                            <ul>
-                                                <?php if ($goal === 'weight-loss'): ?>
-                                                    <?php
-                                                    $weightlossRecommendations = [
-                                                        'Chicken breast',
-                                                        'Fish (tuna, tilapia, salmon)',
-                                                        'Eggs',
-                                                        'Spinach',
-                                                        'Avocado',
-                                                        'Oats',
-                                                        'Cottage Cheese',
-                                                        'Greek Yogurt',
-                                                        'Milk',
-                                                        'Nuts and seeds (walnuts, almonds, pumpkin seeds, sunflower seeds)',
-                                                        'Sweet potato',
-                                                        'Vegetables (broccoli, bell peppers, onions, green beans, asparagus)',
-                                                        'Fruits (bananas, apples, oranges, blueberries)'
-                                                    ];
-                                                    ?>
-                                                    <p>Weight loss involves reducing overall body weight through a
-                                                        combination of a calorie deficit, dietary changes, and increased
-                                                        physical
-                                                        activity. The goal
-                                                        is to improve health and fitness by shedding excess fat and achieving a
-                                                        healthier body composition.</p>
-                                                    <?php foreach ($weightlossRecommendations as $recommendation): ?>
-                                                        <li><?php echo $recommendation; ?></li>
-                                                    <?php endforeach; ?>
-                                                <?php elseif ($goal === 'weight-gain'): ?>
-                                                    <?php
-                                                    $weightgainRecommendations = [
-                                                        'Steak',
-                                                        'Ground beef',
-                                                        'Potatoes',
-                                                        'Rice',
-                                                        'Sweet potato',
-                                                        'Whole wheat or wheat bread',
-                                                        'Peanut butter'
-                                                    ];
-                                                    ?>
-                                                    <p>Weight-gain involves increasing calorie intake and adopting a balanced
-                                                        diet
-                                                        to achieve a healthy body mass. Incorporating strength training
-                                                        exercises
-                                                        can promote muscle growth.</p>
-                                                    <?php foreach ($weightgainRecommendations as $recommendation): ?>
-                                                        <li><?php echo $recommendation; ?></li>
-                                                    <?php endforeach; ?>
-                                                <?php elseif ($goal === 'maintenance'): ?>
-                                                    <?php
-                                                    $maintenanceRecommendations = [
-                                                        'Chicken breast',
-                                                        'Fish',
-                                                        'Eggs',
-                                                        'Quinoa',
-                                                        'Brown rice',
-                                                        'Mixed vegetables',
-                                                        'Fruits (apple, orange, berries)',
-                                                        'Nuts and seeds',
-                                                        'Greek yogurt',
-                                                        'Whole grains'
-                                                    ];
-                                                    ?>
-                                                    <p>Maintenance involves sustaining your current weight and body composition
-                                                        by
-                                                        balancing caloric intake with energy expenditure. Focus on a varied and
-                                                        balanced diet to maintain overall health.</p>
-                                                    <?php foreach ($maintenanceRecommendations as $recommendation): ?>
-                                                        <li><?php echo $recommendation; ?></li>
-                                                    <?php endforeach; ?>
-                                                <?php endif; ?>
-                                            </ul>
-                                        <?php elseif (isset($bodyFatResults)): ?>
-                                            <!-- DATABASE STUFF -->
-                                            <h2>Food Recommendations:</h2>
-                                            <h2><u>
-                                                    <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
-                                                </u></h2>
-                                            <ul>
-                                                <?php if ($bodyFatResults['recommendedGoal'] === 'weight-loss'): ?>
-                                                    <?php
-                                                    $weightlossRecommendations = [
-                                                        'Chicken breast',
-                                                        'Fish (tuna, tilapia, salmon)',
-                                                        'Eggs',
-                                                        'Spinach',
-                                                        'Avocado',
-                                                        'Oats',
-                                                        'Cottage Cheese',
-                                                        'Greek Yogurt',
-                                                        'Milk',
-                                                        'Nuts and seeds (walnuts, almonds, pumpkin seeds, sunflower seeds)',
-                                                        'Sweet potato',
-                                                        'Vegetables (broccoli, bell peppers, onions, green beans, asparagus)',
-                                                        'Fruits (bananas, apples, oranges, blueberries)'
-                                                    ];
-                                                    ?>
-                                                    <p>Weight loss involves reducing overall body weight through a
-                                                        combination of a calorie deficit, dietary changes, and increased
-                                                        physical
-                                                        activity. The goal
-                                                        is to improve health and fitness by shedding excess fat and achieving a
-                                                        healthier body composition.</p>
-                                                    <?php foreach ($weightlossRecommendations as $recommendation): ?>
-                                                        <li><?php echo $recommendation; ?></li>
-                                                    <?php endforeach; ?>
-                                                <?php elseif ($bodyFatResults['recommendedGoal'] === 'weight-gain'): ?>
-                                                    <?php
-                                                    $weightgainRecommendations = [
-                                                        'Steak',
-                                                        'Ground beef',
-                                                        'Potatoes',
-                                                        'Rice',
-                                                        'Sweet potato',
-                                                        'Whole wheat or wheat bread',
-                                                        'Peanut butter'
-                                                    ];
-                                                    ?>
-                                                    <p>Weight-gain involves increasing calorie intake and adopting a balanced
-                                                        diet
-                                                        to achieve a healthy body mass. Incorporating strength training
-                                                        exercises
-                                                        can promote muscle growth.</p>
-                                                    <?php foreach ($weightgainRecommendations as $recommendation): ?>
-                                                        <li><?php echo $recommendation; ?></li>
-                                                    <?php endforeach; ?>
-                                                <?php elseif ($bodyFatResults['recommendedGoal'] === 'maintenance'): ?>
-                                                    <?php
-                                                    $maintenanceRecommendations = [
-                                                        'Chicken breast',
-                                                        'Fish',
-                                                        'Eggs',
-                                                        'Quinoa',
-                                                        'Brown rice',
-                                                        'Mixed vegetables',
-                                                        'Fruits (apple, orange, berries)',
-                                                        'Nuts and seeds',
-                                                        'Greek yogurt',
-                                                        'Whole grains'
-                                                    ];
-                                                    ?>
-                                                    <p>Maintenance involves sustaining your current weight and body composition
-                                                        by
-                                                        balancing caloric intake with energy expenditure. Focus on a varied and
-                                                        balanced diet to maintain overall health.</p>
-                                                    <?php foreach ($maintenanceRecommendations as $recommendation): ?>
-                                                        <li><?php echo $recommendation; ?></li>
-                                                    <?php endforeach; ?>
-                                                <?php endif; ?>
-                                            </ul>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                    </div>
                 </div>
+            </section>
+
+            <script>
+                function unlockCalculatorFields() {
+                    // Unlock all input fields, selects, and the Recalculate button in the calculator form
+                    document.querySelectorAll('#calculatorForm input, #calculatorForm select').forEach(field => {
+                        field.disabled = false;
+                    });
+                    document.querySelector('#recalculateButton').disabled = false; // Enable the recalculate button
+                }
+            </script>
+
+
+            <!-- Caloric and Protein Intake Results Section -->
+            <section class="calculator-results">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            <div class="results-form form-section">
+                                <?php if (isset($intakeResults)): ?>
+                                    <!-- SESSION STUFF -->
+                                    <h2>Current Recommended Goal, Calorie and Protein Intake:</h2>
+                                    <p><u><strong>Recommended Goal:</strong>
+                                            <?php echo ucwords(str_replace('-', ' ', $intakeResults['goal'])); ?>
+                                    </p>
+                                    <p><strong>Lifestyle:</strong> <?php echo ucfirst($activityLevel); ?></p></u>
+                                    <p><strong>Caloric Intake:</strong>
+                                        <?php echo number_format($intakeResults['caloricIntake']); ?> calories/day
+                                    </p>
+                                    <p><strong>Protein Intake:</strong>
+                                        <?php echo number_format($intakeResults['proteinIntake']); ?> grams/day</p>
+                                    <p><strong>Important Note:</strong> You can find the caloric and protein
+                                        contents of
+                                        the foods you eat on the nutrition labels on the packages.</p>
+                                <?php elseif (isset($bodyFatResults)): ?>
+                                    <!-- DATABASE STUFF -->
+                                    <h2>Recommended Goal, Calorie and Protein Intake:</h2>
+                                    <p><u><strong>Recommended Goal:</strong>
+                                            <?php echo ucwords(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
+                                    </p></u>
+                                    <p><strong>Lifestyle:</strong>
+                                        <?php echo ucfirst($bodyFatResults['activityLevel']); ?>
+                                    </p>
+                                    <p><strong>Caloric Intake:</strong>
+                                        <?php echo number_format($bodyFatResults['caloricIntake']); ?> calories/day
+                                    </p>
+                                    <p><strong>Protein Intake:</strong>
+                                        <?php echo number_format($bodyFatResults['proteinIntake']); ?> grams/day</p>
+                                    <p><strong>Important Note:</strong> You can find the caloric and protein
+                                        contents of
+                                        the foods you eat on the nutrition labels on the packages.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Food Recommendations Section -->
+            <section class="calculator-results">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            <div class="results-form form-section">
+                                <?php if (isset($intakeResults)): ?>
+                                    <!-- SESSION STUFF -->
+                                    <h2>Current Food Recommendations:</h2>
+                                    <h2><u>
+                                            <?php echo strtoupper(str_replace('-', ' ', $intakeResults['goal'])); ?>
+                                        </u></h2>
+                                    <ul>
+                                        <?php if ($goal === 'weight-loss'): ?>
+                                            <?php
+                                            $weightlossRecommendations = [
+                                                'Chicken breast',
+                                                'Fish (tuna, tilapia, salmon)',
+                                                'Eggs',
+                                                'Spinach',
+                                                'Avocado',
+                                                'Oats',
+                                                'Cottage Cheese',
+                                                'Greek Yogurt',
+                                                'Milk',
+                                                'Nuts and seeds (walnuts, almonds, pumpkin seeds, sunflower seeds)',
+                                                'Sweet potato',
+                                                'Vegetables (broccoli, bell peppers, onions, green beans, asparagus)',
+                                                'Fruits (bananas, apples, oranges, blueberries)'
+                                            ];
+                                            ?>
+                                            <p>Weight loss involves reducing overall body weight through a
+                                                combination of a calorie deficit, dietary changes, and increased
+                                                physical
+                                                activity. The goal
+                                                is to improve health and fitness by shedding excess fat and achieving a
+                                                healthier body composition.</p>
+                                            <?php foreach ($weightlossRecommendations as $recommendation): ?>
+                                                <li><?php echo $recommendation; ?></li>
+                                            <?php endforeach; ?>
+                                        <?php elseif ($goal === 'weight-gain'): ?>
+                                            <?php
+                                            $weightgainRecommendations = [
+                                                'Steak',
+                                                'Ground beef',
+                                                'Potatoes',
+                                                'Rice',
+                                                'Sweet potato',
+                                                'Whole wheat or wheat bread',
+                                                'Peanut butter'
+                                            ];
+                                            ?>
+                                            <p>Weight-gain involves increasing calorie intake and adopting a balanced
+                                                diet
+                                                to achieve a healthy body mass. Incorporating strength training
+                                                exercises
+                                                can promote muscle growth.</p>
+                                            <?php foreach ($weightgainRecommendations as $recommendation): ?>
+                                                <li><?php echo $recommendation; ?></li>
+                                            <?php endforeach; ?>
+                                        <?php elseif ($goal === 'maintenance'): ?>
+                                            <?php
+                                            $maintenanceRecommendations = [
+                                                'Chicken breast',
+                                                'Fish',
+                                                'Eggs',
+                                                'Quinoa',
+                                                'Brown rice',
+                                                'Mixed vegetables',
+                                                'Fruits (apple, orange, berries)',
+                                                'Nuts and seeds',
+                                                'Greek yogurt',
+                                                'Whole grains'
+                                            ];
+                                            ?>
+                                            <p>Maintenance involves sustaining your current weight and body composition
+                                                by
+                                                balancing caloric intake with energy expenditure. Focus on a varied and
+                                                balanced diet to maintain overall health.</p>
+                                            <?php foreach ($maintenanceRecommendations as $recommendation): ?>
+                                                <li><?php echo $recommendation; ?></li>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </ul>
+                                <?php elseif (isset($bodyFatResults)): ?>
+                                    <!-- DATABASE STUFF -->
+                                    <h2>Food Recommendations:</h2>
+                                    <h2><u>
+                                            <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
+                                        </u></h2>
+                                    <ul>
+                                        <?php if ($bodyFatResults['recommendedGoal'] === 'weight-loss'): ?>
+                                            <?php
+                                            $weightlossRecommendations = [
+                                                'Chicken breast',
+                                                'Fish (tuna, tilapia, salmon)',
+                                                'Eggs',
+                                                'Spinach',
+                                                'Avocado',
+                                                'Oats',
+                                                'Cottage Cheese',
+                                                'Greek Yogurt',
+                                                'Milk',
+                                                'Nuts and seeds (walnuts, almonds, pumpkin seeds, sunflower seeds)',
+                                                'Sweet potato',
+                                                'Vegetables (broccoli, bell peppers, onions, green beans, asparagus)',
+                                                'Fruits (bananas, apples, oranges, blueberries)'
+                                            ];
+                                            ?>
+                                            <p>Weight loss involves reducing overall body weight through a
+                                                combination of a calorie deficit, dietary changes, and increased
+                                                physical
+                                                activity. The goal
+                                                is to improve health and fitness by shedding excess fat and achieving a
+                                                healthier body composition.</p>
+                                            <?php foreach ($weightlossRecommendations as $recommendation): ?>
+                                                <li><?php echo $recommendation; ?></li>
+                                            <?php endforeach; ?>
+                                        <?php elseif ($bodyFatResults['recommendedGoal'] === 'weight-gain'): ?>
+                                            <?php
+                                            $weightgainRecommendations = [
+                                                'Steak',
+                                                'Ground beef',
+                                                'Potatoes',
+                                                'Rice',
+                                                'Sweet potato',
+                                                'Whole wheat or wheat bread',
+                                                'Peanut butter'
+                                            ];
+                                            ?>
+                                            <p>Weight-gain involves increasing calorie intake and adopting a balanced
+                                                diet
+                                                to achieve a healthy body mass. Incorporating strength training
+                                                exercises
+                                                can promote muscle growth.</p>
+                                            <?php foreach ($weightgainRecommendations as $recommendation): ?>
+                                                <li><?php echo $recommendation; ?></li>
+                                            <?php endforeach; ?>
+                                        <?php elseif ($bodyFatResults['recommendedGoal'] === 'maintenance'): ?>
+                                            <?php
+                                            $maintenanceRecommendations = [
+                                                'Chicken breast',
+                                                'Fish',
+                                                'Eggs',
+                                                'Quinoa',
+                                                'Brown rice',
+                                                'Mixed vegetables',
+                                                'Fruits (apple, orange, berries)',
+                                                'Nuts and seeds',
+                                                'Greek yogurt',
+                                                'Whole grains'
+                                            ];
+                                            ?>
+                                            <p>Maintenance involves sustaining your current weight and body composition
+                                                by
+                                                balancing caloric intake with energy expenditure. Focus on a varied and
+                                                balanced diet to maintain overall health.</p>
+                                            <?php foreach ($maintenanceRecommendations as $recommendation): ?>
+                                                <li><?php echo $recommendation; ?></li>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </ul>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Save and Print Button -->
+    <div class="container">
+        <div class="row">
+            <div class="calculator-form form-section border-0">
+                <?php
+                if (isset($intakeResults)) {
+                    // Format the current date for display
+                    $formattedDate = date("F j, Y | g:i A");
+
+                    echo '
+            <form id="resultsForm">
+                <input type="hidden" name="bmi" id="bmi" value="' . $bmi . '">
+                <input type="hidden" name="bmiCategory" id="bmiCategory" value="' . $bmiCategory . '">
+                <input type="hidden" name="recommendedGoal" id="recommendedGoal" value="' . $recommendedGoal . '">
+                <input type="hidden" name="bodyFatPercentage" id="bodyFatPercentage" value="' . $bodyFatPercentage . '">
+                <input type="hidden" name="fatMass" id="fatMass" value="' . $fatMass . '">
+                <input type="hidden" name="leanMass" id="leanMass" value="' . $leanMass . '">
+                <input type="hidden" name="caloricIntake" id="caloricIntake" value="' . $caloricIntake . '">
+                <input type="hidden" name="proteinIntake" id="proteinIntake" value="' . $proteinIntake . '">
+                <input type="hidden" name="formattedDate" id="formattedDate" value="' . $formattedDate . '">
+                <button type="button" id="saveButton">Save Results</button>                    
+            </form>
+
+            <div id="message"></div>
+            <p><strong>To track your progress, remember to Save Results.</strong> <br>
+            <small>Saved Results will be graphed and used to tailor Recommended Meal and Exercise Plans, and will appear on your profile upon revisit.</small></p>
+            <p><strong>Results as of:</strong> ' . $formattedDate . '</p>';
+                }
+                ?>
+                <button onclick="printResults()">Print</button>
             </div>
         </div>
+    </div>
 
-        <!-- Save and Print Button -->
-        <div class="container">
-            <div class="row">
-                <div class="calculator-form form-section border-0">
+    <script>
+        // Save results using AJAX
+        document.getElementById('saveButton').addEventListener('click', function (event) {
+            const formData = new FormData(document.getElementById('resultsForm'));
+
+            fetch('store_results.php', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const messageDiv = document.getElementById('message');
+                    if (data.success) {
+                        messageDiv.innerHTML = '<span style="color: #28a745;">' + data.message + '</span>';
+                    } else {
+                        messageDiv.innerHTML = '<span style="color: #e13a3b;">' + data.message + '</span>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('message').innerHTML = '<span style="color: #e13a3b;">An error occurred while saving the results.</span>';
+                });
+        });
+
+    </script>
+
+    <script>
+        function printResults() {
+            // Select main sections for printing
+            const resultsSection = document.getElementById('resultsSection').innerHTML;
+            const lowerSection = document.querySelector('.lower-section').innerHTML;
+
+            // Combine sections with styles, hiding elements with the 'btn' class
+            const printContent = `
+        <html>
+        <head>
+            <title>Print Results</title>
+            <style>
+                /* Existing styles from the document */
+                ${document.querySelector('style').innerHTML}
+
+                /* Additional print-specific styling */
+                .btn { display: none; } /* Hide buttons */
+                
+                /* Optional: Style adjustments to match on-screen layout */
+                body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+                .container { padding: 20px; margin: 0 auto; }
+                .results-form, .calculator-form, .our_schedule_content { 
+                    border: 1px solid #ddd; 
+                    padding: 15px; 
+                    margin-bottom: 20px; 
+                    text-align: center; 
+                }
+                h2 { font-size: 24px; margin-bottom: 10px; }
+                p { margin: 5px 0; }
+                table { width: 100%; border-collapse: collapse; }
+                table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
+                th { background-color: #f0f0f0; color: black; }
+            </style>
+        </head>
+        <body>
+            ${resultsSection}
+            ${lowerSection}
+        </body>
+        </html>
+        `;
+
+            // Open a new window for printing
+            const printWindow = window.open('', '_blank', 'height=800,width=800');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+
+            // Print after loading content
+            printWindow.onload = function () {
+                printWindow.print();
+                printWindow.close();
+            };
+        }
+    </script>
+
+
+
+    <?php if ($showDietPlanningSection): ?>
+        <div class="results-container" style="border: 1px solid #ddd; padding: 15px;">
+            <div class="our_schedule_content" style="text-align: center;"> <!-- Center the content -->
+                <?php if (!isset($intakeResults) && isset($bodyFatResults)): ?>
+                    <h5 class="mt-5" style="font-size: 80px;">PROGRESS TRACKING</h5>
+                    <h2 class="mt-5"><u>
+                            <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
+                        </u></h2>
+                </div>
+
+                <!-- Recommended Goal Description Section -->
+                <div id="goalDescription" style="margin-top: 20px; text-align: center;"> <!-- Centered description -->
                     <?php
-                    if (isset($intakeResults)) {
-                        echo '
-        <form id="resultsForm">
-            <input type="hidden" name="bmi" id="bmi" value="' . $bmi . '">
-            <input type="hidden" name="bmiCategory" id="bmiCategory" value="' . $bmiCategory . '">
-            <input type="hidden" name="recommendedGoal" id="recommendedGoal" value="' . $recommendedGoal . '">
-            <input type="hidden" name="bodyFatPercentage" id="bodyFatPercentage" value="' . $bodyFatPercentage . '">
-            <input type="hidden" name="fatMass" id="fatMass" value="' . $fatMass . '">
-            <input type="hidden" name="leanMass" id="leanMass" value="' . $leanMass . '">
-            <input type="hidden" name="caloricIntake" id="caloricIntake" value="' . $caloricIntake . '">
-            <input type="hidden" name="proteinIntake" id="proteinIntake" value="' . $proteinIntake . '">
-            <button type="button" id="saveButton">Save Results</button>                    
-        </form>
-
-        <div id="message"></div>
-        <p><strong>To track your progress, remember to Save Results.</strong> <br><small> Saved Results will be graphed and used to tailor Recommended Meal and Exercise Plans, and will appear on your profile upon revisit.</small></p>';
+                    $goalDescription = "";
+                    if ($bodyFatResults['recommendedGoal'] === 'weight-loss') {
+                        $goalDescription = "Your goal is weight loss. You should aim for a gradual decrease in weight, body fat percentage, fat mass, and BMI over time. In your chart, look for a downward trend in these metrics.";
+                    } elseif ($bodyFatResults['recommendedGoal'] === 'weight-gain') {
+                        $goalDescription = "Your goal is weight gain. You should aim for a gradual increase in weight and lean mass. In the chart, watch for an upward trend in weight and lean mass while keeping body fat percentage steady.";
+                    } elseif ($bodyFatResults['recommendedGoal'] === 'maintenance') {
+                        $goalDescription = "Your goal is maintenance. You should aim to keep your weight, BMI, and body fat percentage steady. Look for minimal fluctuations in your chart to ensure you're staying within your maintenance zone.";
                     }
                     ?>
-                    <button onclick="printResults()">Print</button>
+                    <p style="font-size: 20px; line-height: 1.5; margin: 0 auto; max-width: 800px;">
+                        <strong><?php echo $goalDescription; ?></strong>
+                    </p>
                 </div>
-            </div>
-        </div>
 
-        <script>
-            // Function to handle form submission using AJAX
-            document.getElementById('saveButton').addEventListener('click', function (event) {
-                event.preventDefault(); // Prevent form from submitting the traditional way
+                <!-- Chart Section -->
+                <div id="chartContainer" style="text-align: center; margin-top: 20px;"> <!-- Center the chart -->
+                    <canvas id="bodyReportsChart"></canvas>
+                </div>
 
-                const formData = new FormData(document.getElementById('resultsForm'));
+                <!-- Chart Table Section -->
+                <?php
+                $previousData = null; // To hold the previous row data
+                ?>
 
-                fetch('store_results.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        const messageDiv = document.getElementById('message');
-                        if (data.success) {
-                            messageDiv.innerHTML = '<span style="color: #28a745;">' + data.message + '</span>';
-                        } else {
-                            messageDiv.innerHTML = '<span style="color: #e13a3b;">' + data.message + '</span>';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        document.getElementById('message').innerHTML = '<span style="color: #e13a3b;">An error occurred while saving the results.</span>';
-                    });
-            });
-        </script>
-
-
-        <script>
-            function printResults() {
-                var content = document.getElementById('resultsSection').innerHTML;
-                var myWindow = window.open('', '', 'width=800,height=600');
-
-                // Construct the printable content with styles
-                myWindow.document.write('<html><head><title>Print Results</title>');
-
-                // Link external stylesheets here
-                myWindow.document.write('<link rel="stylesheet" href="assets/bootstrap/bootstrap.min.css" type="text/css">');
-                myWindow.document.write('<link rel="stylesheet" href="assets/css/style.css" type="text/css">');
-                myWindow.document.write('<link rel="stylesheet" href="assets/css/mediaqueries.css" type="text/css">');
-
-                // Optional: Add inline styles for further customization
-                myWindow.document.write('<style>body { font-family: Arial, sans-serif; } .btn { display: none; }</style>');
-
-                // Close head and add the content in the body
-                myWindow.document.write('</head><body>');
-                myWindow.document.write(content);
-                myWindow.document.write('</body></html>');
-
-                // Finish writing, close the document, and trigger print
-                myWindow.document.close();
-                myWindow.print();
-            }
-
-        </script>
-
-        <?php if ($showDietPlanningSection): ?>
-            <div class="results-container" style="border: 1px solid #ddd; padding: 15px;">
-                <div class="our_schedule_content" style="text-align: center;"> <!-- Center the content -->
-                    <?php if (!isset($intakeResults) && isset($bodyFatResults)): ?>
-                        <h5 class="mt-5" style="font-size: 80px;">PROGRESS TRACKING</h5>
-                        <h2 class="mt-5"><u>
-                                <?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'])); ?>
-                            </u></h2>
-                    </div>
-
-                    <!-- Recommended Goal Description Section -->
-                    <div id="goalDescription" style="margin-top: 20px; text-align: center;"> <!-- Centered description -->
-                        <?php
-                        $goalDescription = "";
-                        if ($bodyFatResults['recommendedGoal'] === 'weight-loss') {
-                            $goalDescription = "Your goal is weight loss. You should aim for a gradual decrease in weight, body fat percentage, fat mass, and BMI over time. In your chart, look for a downward trend in these metrics.";
-                        } elseif ($bodyFatResults['recommendedGoal'] === 'weight-gain') {
-                            $goalDescription = "Your goal is weight gain. You should aim for a gradual increase in weight and lean mass. In the chart, watch for an upward trend in weight and lean mass while keeping body fat percentage steady.";
-                        } elseif ($bodyFatResults['recommendedGoal'] === 'maintenance') {
-                            $goalDescription = "Your goal is maintenance. You should aim to keep your weight, BMI, and body fat percentage steady. Look for minimal fluctuations in your chart to ensure you're staying within your maintenance zone.";
-                        }
-                        ?>
-                        <p style="font-size: 20px; line-height: 1.5; margin: 0 auto; max-width: 800px;">
-                            <strong><?php echo $goalDescription; ?></strong>
-                        </p>
-                    </div>
-
-                    <!-- Chart Section -->
-                    <div id="chartContainer" style="text-align: center; margin-top: 20px;"> <!-- Center the chart -->
-                        <canvas id="bodyReportsChart"></canvas>
-                    </div>
-
-                    <!-- Chart Table Section -->
-                    <?php
-                    $previousData = null; // To hold the previous row data
-                    ?>
-
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;" id="progressTable">
-                        <thead>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;" id="progressTable">
+                    <thead>
+                        <tr>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: #f0f0f0; color: black;">
+                                Date</th>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(153, 102, 255, 1); color: black;">
+                                Weight</th>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(75, 192, 192, 1); color: black;">
+                                BMI</th>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(255, 99, 132, 1); color: black;">
+                                Body Fat Percentage</th>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(54, 162, 235, 1); color: black;">
+                                Fat Mass</th>
+                            <th
+                                style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(255, 206, 86, 1); color: black;">
+                                Lean Mass</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($mergedData as $data): ?>
                             <tr>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: #f0f0f0; color: black;">
-                                    Date</th>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(153, 102, 255, 1); color: black;">
-                                    Weight</th>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(75, 192, 192, 1); color: black;">
-                                    BMI</th>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(255, 99, 132, 1); color: black;">
-                                    Body Fat Percentage</th>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(54, 162, 235, 1); color: black;">
-                                    Fat Mass</th>
-                                <th
-                                    style="border: 1px solid #ddd; padding: 8px; text-align: center; background-color: rgba(255, 206, 86, 1); color: black;">
-                                    Lean Mass</th>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">
+                                    <?php echo date('M d, Y', strtotime($data['created_at'])); ?>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                    <?php echo round($data['weight']); ?>
+                                    <?php if ($previousData): ?>
+                                        <?php echo getArrow(round($data['weight']), round($previousData['weight']), $bodyFatResults['recommendedGoal']); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                    <?php echo round($data['bmi']); ?>
+                                    <?php if ($previousData): ?>
+                                        <?php echo getArrow(round($data['bmi']), round($previousData['bmi']), $bodyFatResults['recommendedGoal']); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                    <?php echo round($data['bodyFatPercentage']); ?>
+                                    <?php if ($previousData): ?>
+                                        <?php echo getArrow(round($data['bodyFatPercentage']), round($previousData['bodyFatPercentage']), $bodyFatResults['recommendedGoal']); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                    <?php echo round($data['fatMass']); ?>
+                                    <?php if ($previousData): ?>
+                                        <?php echo getArrow(round($data['fatMass']), round($previousData['fatMass']), $bodyFatResults['recommendedGoal']); ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                    <?php echo round($data['leanMass']); ?>
+                                    <?php if ($previousData): ?>
+                                        <?php echo getArrow(round($data['leanMass']), round($previousData['leanMass']), $bodyFatResults['recommendedGoal']); ?>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($mergedData as $data): ?>
-                                <tr>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">
-                                        <?php echo date('M d, Y', strtotime($data['created_at'])); ?>
-                                    </td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo round($data['weight']); ?>
-                                        <?php if ($previousData): ?>
-                                            <?php echo getArrow(round($data['weight']), round($previousData['weight']), $bodyFatResults['recommendedGoal']); ?>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo round($data['bmi']); ?>
-                                        <?php if ($previousData): ?>
-                                            <?php echo getArrow(round($data['bmi']), round($previousData['bmi']), $bodyFatResults['recommendedGoal']); ?>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo round($data['bodyFatPercentage']); ?>
-                                        <?php if ($previousData): ?>
-                                            <?php echo getArrow(round($data['bodyFatPercentage']), round($previousData['bodyFatPercentage']), $bodyFatResults['recommendedGoal']); ?>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo round($data['fatMass']); ?>
-                                        <?php if ($previousData): ?>
-                                            <?php echo getArrow(round($data['fatMass']), round($previousData['fatMass']), $bodyFatResults['recommendedGoal']); ?>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                                        <?php echo round($data['leanMass']); ?>
-                                        <?php if ($previousData): ?>
-                                            <?php echo getArrow(round($data['leanMass']), round($previousData['leanMass']), $bodyFatResults['recommendedGoal']); ?>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                                <?php
-                                $previousData = $data; // Set the current data as the previous data for the next iteration
-                                ?>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            <?php
+                            $previousData = $data; // Set the current data as the previous data for the next iteration
+                            ?>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
 
-                    <!-- Print Progress Button -->
-                    <div style="text-align: center; margin-top: 30px;">
-                        <button onclick="printProgress();" class="btn-print"
-                            style="background-color: #007bff; color: white; padding: 10px 20px; font-size: 18px; border: none; cursor: pointer;">
-                            Print Progress
-                        </button>
-                    </div>
+                <!-- Print Progress Button -->
+                <div style="text-align: center; margin-top: 30px;">
+                    <button onclick="printProgress();" class="btn-print"
+                        style="background-color: #007bff; color: white; padding: 10px 20px; font-size: 18px; border: none; cursor: pointer;">
+                        Print Progress
+                    </button>
+                </div>
 
-                    <style>
-                        .green {
-                            color: green;
-                            font-weight: bold;
-                        }
+                <style>
+                    .green {
+                        color: green;
+                        font-weight: bold;
+                    }
 
-                        .red {
-                            color: red;
-                            font-weight: bold;
-                        }
-                    </style>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
+                    .red {
+                        color: red;
+                        font-weight: bold;
+                    }
+                </style>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
+    <!-- JavaScript to print only chart and table -->
+    <script>
+        function printProgress() {
+            const chartCanvas = document.getElementById('bodyReportsChart');
+            const progressTable = document.getElementById('progressTable').outerHTML;
+            const goalDescription = document.getElementById('goalDescription').innerHTML; // Capture goal description content
+            const goalName = '<?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'] ?? 'N/A')); ?>'; // Add null check
 
-        <!-- JavaScript to print only chart and table -->
-        <script>
-            function printProgress() {
-                const chartCanvas = document.getElementById('bodyReportsChart');
-                const progressTable = document.getElementById('progressTable').outerHTML;
-                const goalDescription = document.getElementById('goalDescription').innerHTML; // Capture goal description content
-                const goalName = '<?php echo strtoupper(str_replace('-', ' ', $bodyFatResults['recommendedGoal'] ?? 'N/A')); ?>'; // Add null check
+            // Convert the canvas to an image
+            const chartImage = chartCanvas.toDataURL('image/png');
 
-                // Convert the canvas to an image
-                const chartImage = chartCanvas.toDataURL('image/png');
+            // Open a new window for printing
+            const printWindow = window.open('', '', 'height=600,width=800');
+            printWindow.document.write('<html><head><title>Print Progress</title>');
+            printWindow.document.write('<style>body {font - family: Arial, sans-serif; } table {width: 100%; border-collapse: collapse; } th, td {border: 1px solid #ddd; padding: 8px; text-align: center; } img {max - width: 100%; display: block; margin: auto; }</style>');
+            printWindow.document.write('</head><body>');
 
-                // Open a new window for printing
-                const printWindow = window.open('', '', 'height=600,width=800');
-                printWindow.document.write('<html><head><title>Print Progress</title>');
-                printWindow.document.write('<style>body { font-family: Arial, sans-serif; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 8px; text-align: center; } img { max-width: 100%; display: block; margin: auto; }</style>');
-                printWindow.document.write('</head><body>');
+            // Add content to the print window
+            printWindow.document.write('<h2 style="text-align: center;">' + goalName + '</h2>'); // Add the goal name to the print window
+            printWindow.document.write('<div style="text-align: center; margin-top: 20px;">' + goalDescription + '</div>'); // Add the goal description
+            printWindow.document.write('<img src="' + chartImage + '" alt="Progress Chart"><br>'); // Add the chart image to print
+            printWindow.document.write(progressTable); // Add the progress table to print
+            printWindow.document.write('</body></html>');
 
-                // Add content to the print window
-                printWindow.document.write('<h2 style="text-align: center;">' + goalName + '</h2>'); // Add the goal name to the print window
-                printWindow.document.write('<div style="text-align: center; margin-top: 20px;">' + goalDescription + '</div>'); // Add the goal description
-                printWindow.document.write('<img src="' + chartImage + '" alt="Progress Chart"><br>'); // Add the chart image to print
-                printWindow.document.write(progressTable); // Add the progress table to print
-                printWindow.document.write('</body></html>');
-
-                // Finalize and trigger print
-                printWindow.document.close();
-                printWindow.focus();
-                printWindow.onload = function () {
-                    printWindow.print();
-                    printWindow.onafterprint = function () {
-                        printWindow.close(); // Close the window after printing
-                    };
+            // Finalize and trigger print
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.onload = function () {
+                printWindow.print();
+                printWindow.onafterprint = function () {
+                    printWindow.close(); // Close the window after printing
                 };
-            }
+            };
+        }
 
-        </script>
+    </script>
     </div>
 
     <!-- UNSUBSCRIBED USER SECTION -->
@@ -2462,174 +2483,6 @@ $mysqli->close();
                 </div>
             </section>
         <?php endif; ?>
-
-        <!-- ACTIVITY FEED TRACKER -->
-        <section class="activity-feed">
-            <h3>Daily Activity Tracker</h3>
-            <div style="display: flex; justify-content: space-between;">
-                <div style="width: 30%;">
-                    <h4>Calories Consumed</h4>
-                    <canvas id="caloriesChart" width="400" height="200"></canvas>
-                </div>
-                <div style="width: 30%;">
-                    <h4>Protein Intake</h4>
-                    <canvas id="proteinChart" width="400" height="200"></canvas>
-                </div>
-                <div style="width: 30%;">
-                    <h4>Exercises Completed</h4>
-                    <canvas id="exerciseChart" width="400" height="200"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                // Common data fetching for all charts
-                const labels = <?php echo json_encode(array_keys($foodLogData)); ?>; // Days of the week as labels
-
-                const caloriesData = <?php echo json_encode(array_column($foodLogData, 'total_calories')); ?>;
-                const proteinData = <?php echo json_encode(array_column($foodLogData, 'total_protein')); ?>;
-                const exerciseData = <?php echo json_encode(array_column($exerciseLogData, 'exercises_completed')); ?>;
-
-                // Define dynamic limits/goals
-                const calorieGoal = <?php echo $bodyFatResults['caloricIntake']; ?>; // Set your dynamic goal for calories
-                const proteinGoal = <?php echo $bodyFatResults['proteinIntake']; ?>; // Set your dynamic goal for protein
-                const exerciseGoal = 5; // This could be dynamically set as well based on fitness level
-
-                // Chart for Calories Consumed
-                const ctxCalories = document.getElementById('caloriesChart').getContext('2d');
-                new Chart(ctxCalories, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Calories Consumed',
-                            data: caloriesData,
-                            backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1,
-                        }, {
-                            label: 'Goal',
-                            data: Array(labels.length).fill(calorieGoal),
-                            type: 'line',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 2,
-                            fill: false,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        indexAxis: 'y',
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Calories',
-                                    font: { size: 14 }
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Days',
-                                    font: { size: 14 }
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // Chart for Protein Intake
-                const ctxProtein = document.getElementById('proteinChart').getContext('2d');
-                new Chart(ctxProtein, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Protein Intake (g)',
-                            data: proteinData,
-                            backgroundColor: 'rgba(153, 102, 255, 0.7)',
-                            borderColor: 'rgba(153, 102, 255, 1)',
-                            borderWidth: 1,
-                        }, {
-                            label: 'Goal',
-                            data: Array(labels.length).fill(proteinGoal),
-                            type: 'line',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 2,
-                            fill: false,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        indexAxis: 'y',
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Protein (g)',
-                                    font: { size: 14 }
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Days',
-                                    font: { size: 14 }
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // Chart for Exercises Completed
-                const ctxExercise = document.getElementById('exerciseChart').getContext('2d');
-                new Chart(ctxExercise, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Exercises Completed',
-                            data: exerciseData,
-                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 1,
-                        }, {
-                            label: 'Goal',
-                            data: Array(labels.length).fill(exerciseGoal),
-                            type: 'line',
-                            borderColor: 'rgba(255, 206, 86, 1)',
-                            borderWidth: 2,
-                            fill: false,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        indexAxis: 'y',
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Exercises',
-                                    font: { size: 14 }
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Days',
-                                    font: { size: 14 }
-                                }
-                            }
-                        }
-                    }
-                });
-            });
-        </script>
 
         <!-- UNIFIED DIET AND EXERCISE PLANNING SECTION -->
         <?php if ($showDietPlanningSection && isset($goal_name)): ?>
@@ -2987,32 +2840,33 @@ $mysqli->close();
                 // Clone the section to capture the current state
                 var clonedSection = section.cloneNode(true);
 
-                // Apply inline styles to preserve the color changes for the completed items
+                // Apply inline styles for completed, uncompleted, and blurred items
                 clonedSection.querySelectorAll('.exerciseItem.completed').forEach(function (item) {
                     item.style.backgroundColor = 'green';
                     item.style.color = 'white';
                 });
 
-                // Apply inline styles for uncompleted items
-                clonedSection.querySelectorAll('.exerciseItem:not(.completed)').forEach(function (item) {
-                    item.style.backgroundColor = 'yellow';
-                    item.style.color = 'black';
+                clonedSection.querySelectorAll('.exerciseItem.blurred').forEach(function (item) {
+                    item.style.backgroundColor = 'gray';
+                    item.style.color = 'lightgray';
                 });
 
                 // Create a new document for printing
                 var printWindow = window.open('', '', 'height=500, width=800');
                 printWindow.document.write('<html><head><title>Print Plan</title>');
 
-                // Add inline CSS for printing the dynamically changed styles
+                // Add inline CSS for printing the dynamically changed styles and hide buttons
                 var styles = `
-        <style>
-            body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; }
-            table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
-            th { background-color: #f0f0f0; color: black; }
-            .exerciseItem.completed { background-color: green; color: white; }
-            .exerciseItem { background-color: yellow; color: black; }
-        </style>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+                table { width: 100%; border-collapse: collapse; }
+                table, th, td { border: 1px solid black; padding: 10px; text-align: center; }
+                th { background-color: #f0f0f0; color: black; }
+                .exerciseItem.completed { background-color: green; color: white; }
+
+                .exerciseItem.blurred { background-color: gray; color: lightgray; }
+                .btn { display: none; } /* Hide print button */
+            </style>
         `;
 
                 printWindow.document.write(styles);
@@ -3159,30 +3013,10 @@ $mysqli->close();
             });
         });
 
-        // Function to log activity to the database via AJAX
-        function logActivity(type, data) {
-            fetch('log_activity.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ type, data })
-            })
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        console.log('Activity logged successfully');
-                    } else {
-                        console.error('Failed to log activity:', result.message);
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        }
-
         // Function to attach event listeners to meal items
         function attachEventListeners() {
             const mealItems = document.querySelectorAll('.mealItem');
-            const tooltip = document.getElementById('tooltip'); // Tooltip element
+            const tooltip = document.getElementById('tooltip');  // Tooltip element
 
             mealItems.forEach(item => {
                 item.addEventListener('mouseenter', (e) => {
@@ -3201,8 +3035,8 @@ $mysqli->close();
                     const proteinColor = currentProtein >= maxProtein ? 'lightgreen' : 'white';
 
                     tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
-            <span style="color:${calorieColor};">Calories: ${currentCalories} / ${maxCalories}</span><br>
-            <span style="color:${proteinColor};">Protein: ${currentProtein} g / ${maxProtein} g</span>`;
+                    <span style="color:${calorieColor};">Calories: ${currentCalories} / ${maxCalories}</span><br>
+                    <span style="color:${proteinColor};">Protein: ${currentProtein} g / ${maxProtein} g</span>`;
 
                     tooltip.style.display = 'block';
                 });
@@ -3259,102 +3093,110 @@ $mysqli->close();
                     const proteinColor = newProteinValue >= maxProtein ? 'lightgreen' : 'white';
 
                     tooltip.innerHTML = `<strong style="color: white;"><u>Total Consumed:</u></strong><br>
-            <span style="color:${calorieColor};">Calories: ${newCalorieValue} / ${maxCalories}</span><br>
-            <span style="color:${proteinColor};">Protein: ${newProteinValue} g / ${maxProtein} g</span>`;
+                                                                                <span style="color:${calorieColor};">Calories: ${newCalorieValue} / ${maxCalories}</span><br>
+                                                                                    <span style="color:${proteinColor};">Protein: ${newProteinValue} g / ${maxProtein} g</span>`;
 
                     if (newCalorieValue >= maxCalories) {
                         alert('You have reached the maximum calorie intake for the day.');
                     }
-
-                    // Log the food consumption activity
-                    logActivity('food', {
-                        foodItem: item.innerText.trim(), // Get the food name from the cell
-                        calories,
-                        protein
-                    });
                 });
             });
         }
 
-        // Function to attach event listeners to exercise items
-        function attachExerciseEventListeners() {
-            const exerciseItems = document.querySelectorAll('.exerciseItem');
-            let tooltip = null;
-
-            exerciseItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    if (tooltip) {
-                        tooltip.style.display = 'none';
-                    }
-
-                    item.classList.toggle('completed');
-                    const day = item.closest('table').id.split('-')[1];
-                    updateExerciseCounter(day);
-
-                    // Log the exercise activity
-                    const exerciseName = item.querySelector('strong').innerText.trim(); // Get the exercise name
-                    const caloriesBurnt = 100; // Adjust based on your logic for calories burnt
-
-                    logActivity('exercise', {
-                        day,
-                        exerciseName,
-                        caloriesBurnt
-                    });
-                });
-
-                item.addEventListener('mouseenter', (e) => {
-                    const imageUrl = item.getAttribute('data-image');
-                    const description = item.getAttribute('data-description');
-
-                    if (imageUrl || description) {
-                        if (!tooltip) {
-                            tooltip = document.createElement('div');
-                            tooltip.className = 'exercise-tooltip';
-                            tooltip.style.position = 'absolute';
-                            tooltip.style.zIndex = '1000';
-                            document.body.appendChild(tooltip);
-                        }
-
-                        tooltip.innerHTML = `
-                <div style="background-color: white; padding: 15px; max-width: 400px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); border-radius: 15px;">
-                    <img src="${imageUrl}" alt="Exercise Image" style="width: 100%; max-width: 400px; height: auto; border-radius: 10px;">
-                    <p style="margin-top: 10px; font-size: 18px;">${description}</p>
-                </div>
-                `;
-
-                        tooltip.style.display = 'block';
-                        tooltip.style.left = `${e.pageX + 10}px`;
-                        tooltip.style.top = `${e.pageY + 10}px`;
-                    }
-                });
-
-                item.addEventListener('mousemove', (e) => {
-                    if (tooltip) {
-                        tooltip.style.left = `${e.pageX + 10}px`;
-                        tooltip.style.top = `${e.pageY + 10}px`;
-                    }
-                });
-
-                item.addEventListener('mouseleave', () => {
-                    if (tooltip) {
-                        tooltip.style.display = 'none';
-                    }
-                });
-            });
-        }
-
-        // Initialize the event listeners
         document.addEventListener('DOMContentLoaded', () => {
             attachEventListeners();
             attachExerciseEventListeners();
+        });
 
-            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-            days.forEach(day => {
+        // Function to attach event listeners to exercise items
+        const exerciseItems = document.querySelectorAll('.exerciseItem');
+
+        let tooltip = null;
+
+        exerciseItems.forEach(item => {
+            item.addEventListener('click', () => {
+                if (tooltip) {
+                    tooltip.style.display = 'none';
+                }
+
+                item.classList.toggle('completed');
+                const day = item.closest('table').id.split('-')[1];
                 updateExerciseCounter(day);
+            });
+
+            item.addEventListener('mouseenter', (e) => {
+                const imageUrl = item.getAttribute('data-image');
+                const description = item.getAttribute('data-description');
+
+                if (imageUrl || description) {
+                    if (!tooltip) {
+                        tooltip = document.createElement('div');
+                        tooltip.className = 'exercise-tooltip';
+                        tooltip.style.position = 'absolute';
+                        tooltip.style.zIndex = '1000';
+                        document.body.appendChild(tooltip);
+                    }
+
+                    tooltip.innerHTML = `
+                                                                                    <div style="background-color: white; padding: 15px; max-width: 400px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); border-radius: 15px;">
+                                                                                        <img src="${imageUrl}" alt="Exercise Image" style="width: 100%; max-width: 400px; height: auto; border-radius: 10px;">
+                                                                                            <p style="margin-top: 10px; font-size: 18px;">${description}</p>
+                                                                                    </div>
+                                                                                    `;
+
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = `${e.pageX + 10}px`;
+                    tooltip.style.top = `${e.pageY + 10}px`;
+                }
+            });
+
+            item.addEventListener('mousemove', (e) => {
+                if (tooltip) {
+                    tooltip.style.left = `${e.pageX + 10}px`;
+                    tooltip.style.top = `${e.pageY + 10}px`;
+                }
+            });
+
+            item.addEventListener('mouseleave', () => {
+                if (tooltip) {
+                    tooltip.style.display = 'none';
+                }
             });
         });
 
-        // Function to get minimum exercises based on fitness level
+        document.addEventListener('DOMContentLoaded', function () {
+            const fitnessLevel = '<?php echo $fitnessLevel; ?>';
+            let maxExercises;
+
+            switch (fitnessLevel.toLowerCase()) {
+                case 'beginner':
+                    maxExercises = 5;
+                    break;
+                case 'intermediate':
+                    maxExercises = 8;
+                    break;
+                case 'advanced':
+                    maxExercises = 12;
+                    break;
+                default:
+                    maxExercises = 6;
+            }
+
+            const exerciseTables = document.querySelectorAll('table[id^="exercisePlanTable-"]');
+            exerciseTables.forEach(table => {
+                const exercises = table.querySelectorAll('.exerciseItem');
+                const shuffledExercises = Array.from(exercises).sort(() => Math.random() - 0.5);
+
+                shuffledExercises.forEach((exercise, index) => {
+                    if (index >= maxExercises) {
+                        exercise.classList.add('blurred');
+                    } else {
+                        exercise.classList.remove('blurred');
+                    }
+                });
+            });
+        });
+
         function getMinimumExercises(fitnessLevel) {
             switch (fitnessLevel.toLowerCase()) {
                 case 'beginner':
@@ -3368,7 +3210,6 @@ $mysqli->close();
             }
         }
 
-        // Function to update the exercise counter
         function updateExerciseCounter(day) {
             const fitnessLevel = document.getElementById('userFitnessLevel').value;
             const completedExercises = document.querySelectorAll(`#exercisePlanTable-${day} .exerciseItem.completed`).length;
@@ -3384,6 +3225,12 @@ $mysqli->close();
             }
         }
 
+        document.addEventListener('DOMContentLoaded', () => {
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            days.forEach(day => {
+                updateExerciseCounter(day);
+            });
+        });
 
         document.addEventListener("DOMContentLoaded", function () {
             const ctx = document.getElementById('bodyReportsChart').getContext('2d');
